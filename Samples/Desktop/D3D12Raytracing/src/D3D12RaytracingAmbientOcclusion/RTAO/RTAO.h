@@ -65,6 +65,7 @@ public:
 
     UINT RaytracingWidth() { return m_raytracingWidth; }
     UINT RaytracingHeight() { return m_raytracingHeight; }
+    void RequestRecreateAOSamples() { m_isRecreateAOSamplesRequested = true; }
 
 private:
     void UpdateConstantBuffer(UINT frameIndex);
@@ -105,9 +106,11 @@ private:
     
     // ToDo remove
     ConstantBuffer<RTAOConstantBuffer> m_CB;
+    UINT c_NumSampleSets = 83;
     Samplers::MultiJittered m_randomSampler;
     StructuredBuffer<AlignedUnitSquareSample2D> m_samplesGPUBuffer;
     StructuredBuffer<AlignedHemisphereSample3D> m_hemisphereSamplesGPUBuffer;
+    BOOL m_isRecreateAOSamplesRequested = true;
 
     UINT		    m_numAORayGeometryHits;
     bool            m_checkerboardGenerateRaysForEvenPixels = false;

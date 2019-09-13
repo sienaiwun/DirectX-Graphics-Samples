@@ -90,6 +90,8 @@ public:
     virtual void SetValue(float value); // ToDo add to all
     void SetMaxValue(float value) { m_MaxValue = value; m_MinValue = std::min(m_MinValue, value); }
     void SetMinValue(float value) { m_MinValue = value; m_MaxValue = std::max(m_MaxValue, value); }
+    float MaxValue() const { return m_MaxValue; }
+    float MinValue() const { return m_MinValue; }
 
 private:
     using EngineVar::Initialize;
@@ -139,6 +141,8 @@ public:
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
     void SetMaxValue(int32_t value) { m_MaxValue = value; m_MinValue = std::min(m_MinValue, value); }
     void SetMinValue(int32_t value) { m_MinValue = value; m_MaxValue = std::max(m_MaxValue, value); }
+    int32_t MaxValue() const { return m_MaxValue; }
+    int32_t MinValue() const { return m_MinValue; }
 
 private:
     using EngineVar::Initialize;

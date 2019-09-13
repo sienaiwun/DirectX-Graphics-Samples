@@ -58,6 +58,10 @@ const wchar_t* RTAO::c_hitGroupName = L"HitGroup_Triangle";
        
 namespace RTAO_Args
 {
+    void OnRecreateSamples(void*)
+    {
+        Sample::instance().RTAOComponent().RequestRecreateAOSamples();
+    }
 
     IntVar AOTileX(L"Render/AO/Tile X", 1, 1, 128, 1);
     IntVar AOTileY(L"Render/AO/Tile Y", 1, 1, 128, 1);
@@ -69,6 +73,8 @@ namespace RTAO_Args
 
     // ToDO remove obsolete
     NumVar Rpp(L"Render/AO/RTAO/Rays per pixel", 1, 0.5f, 1, 0.5f);
+    BoolVar GroundTruth_IsEnabled(L"Render/AO/RTAO/GroundTruth/Enabled", false, OnRecreateSamples);
+    IntVar GroundTruth_Rpp(L"Render/AO/RTAO/GroundTruth/Rays per pixel", 64, 1, 1024, 1, OnRecreateSamples);
     IntVar RTAORayGen_MaxFrameAge(L"Render/AO/RTAO/Ray Sorting/Adaptive Ray Gen/Max frame age", 32, 1, 32, 1); // ToDo link this to smoothing factor?
     IntVar RTAORayGen_MinAdaptiveFrameAge(L"Render/AO/RTAO/Ray Sorting/Adaptive Ray Gen/Min frame age for adaptive sampling", 16, 1, 32, 1);
     IntVar RTAORayGen_MaxRaysPerQuad(L"Render/AO/RTAO/Ray Sorting/Adaptive Ray Gen/Max rays per quad", 2, 1, 16, 1);
@@ -86,8 +92,8 @@ namespace RTAO_Args
 
     // ToDo remove
     // ToDo make this static for GroundTruth
-    IntVar AOSampleCountPerDimension(L"Render/AO/RTAO/Samples per pixel NxN", AO_SPP_N, 1, AO_SPP_N_MAX, 1);
-    IntVar AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", 8, 1, 8, 1);
+    IntVar AOSampleCountPerDimension(L"Render/AO/RTAO/Samples per pixel NxN", AO_SPP_N, 1, AO_SPP_N_MAX, 1, OnRecreateSamples);
+    IntVar AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", 8, 1, 8, 1, OnRecreateSamples);
 
 
 #if LOAD_PBRT_SCENE
@@ -166,8 +172,6 @@ void RTAO::CreateDeviceDependentResources(Scene& scene)
     CreateConstantBuffers();
 
     BuildShaderTables(scene);
-
-    CreateSamplesRNG();
 }
 
 
@@ -179,10 +183,21 @@ void RTAO::CreateAuxilaryDeviceResources()
     auto commandList = m_deviceResources->GetCommandList();
     auto FrameCount = m_deviceResources->GetBackBufferCount();
 
-    // ToDo move?
     m_reduceSumKernel.Initialize(device, GpuKernels::ReduceSum::Uint);
     m_rayGen.Initialize(device, FrameCount);
     m_raySorter.Initialize(device, FrameCount);
+
+    // Random sample buffers
+    {
+        UINT maxGroundTruthSamples = RTAO_Args::GroundTruth_Rpp.MaxValue();
+        UINT lowRpp = 1;
+        UINT maxPixelsInSampleSet1D = RTAO_Args::AOSampleSetDistributedAcrossPixels.MaxValue();
+        UINT maxLowRppSamples = lowRpp * maxPixelsInSampleSet1D * maxPixelsInSampleSet1D;
+        UINT maxSamplesPerSet = max(maxGroundTruthSamples, maxLowRppSamples);
+
+        m_samplesGPUBuffer.Create(device, maxSamplesPerSet * c_NumSampleSets, FrameCount, L"GPU buffer: Random unit square samples");
+        m_hemisphereSamplesGPUBuffer.Create(device, maxSamplesPerSet * c_NumSampleSets, FrameCount, L"GPU buffer: Random hemisphere samples");
+    }
 }
 
 void RTAO::Release()
@@ -448,35 +463,31 @@ void RTAO::BuildShaderTables(Scene& scene)
 // ToDo rename
 void RTAO::CreateSamplesRNG()
 {
-    auto device = m_deviceResources->GetD3DDevice();
-    auto FrameCount = m_deviceResources->GetBackBufferCount();
-
-    UINT spp = RTAO_Args::AOSampleCountPerDimension * RTAO_Args::AOSampleCountPerDimension;
-    UINT samplesPerSet = spp * RTAO_Args::AOSampleSetDistributedAcrossPixels * RTAO_Args::AOSampleSetDistributedAcrossPixels;
-    UINT NumSampleSets = 83;
-    m_randomSampler.Reset(samplesPerSet, NumSampleSets, Samplers::HemisphereDistribution::Cosine);
-
-
-
-    // Create shader resources
+    UINT samplesPerSet;
+    if (RTAO_Args::GroundTruth_IsEnabled)
     {
-        // ToDo rename GPU from resource names?
-        m_samplesGPUBuffer.Create(device, m_randomSampler.NumSamples() * m_randomSampler.NumSampleSets(), FrameCount, L"GPU buffer: Random unit square samples");
-        m_hemisphereSamplesGPUBuffer.Create(device, m_randomSampler.NumSamples() * m_randomSampler.NumSampleSets(), FrameCount, L"GPU buffer: Random hemisphere samples");
+        samplesPerSet = RTAO_Args::GroundTruth_Rpp;
+    }
+    else
+    {
+        UINT lowRpp = 1;
+        UINT maxPixelsInSampleSet1D = RTAO_Args::AOSampleSetDistributedAcrossPixels.MaxValue();
+        samplesPerSet = lowRpp * maxPixelsInSampleSet1D * maxPixelsInSampleSet1D;
+    }
+    m_randomSampler.Reset(samplesPerSet, c_NumSampleSets, Samplers::HemisphereDistribution::Cosine);
 
-        for (UINT i = 0; i < m_randomSampler.NumSamples() * m_randomSampler.NumSampleSets(); i++)
-        {
-            XMFLOAT3 p = m_randomSampler.GetHemisphereSample3D();
-            // Convert [-1,1] to [0,1].
-            m_samplesGPUBuffer[i].value = XMFLOAT2(p.x * 0.5f + 0.5f, p.y * 0.5f + 0.5f);
-            m_hemisphereSamplesGPUBuffer[i].value = p;
-        }
+    for (UINT i = 0; i < m_randomSampler.NumSamples() * m_randomSampler.NumSampleSets(); i++)
+    {
+        XMFLOAT3 p = m_randomSampler.GetHemisphereSample3D();
+        // Convert [-1,1] to [0,1].
+        m_samplesGPUBuffer[i].value = XMFLOAT2(p.x * 0.5f + 0.5f, p.y * 0.5f + 0.5f);
+        m_hemisphereSamplesGPUBuffer[i].value = p;
     }
 }
 
 void RTAO::GetRayGenParameters(bool* isCheckerboardSamplingEnabled, bool* checkerboardLoadEvenPixels)
 {
-    *isCheckerboardSamplingEnabled = RTAO_Args::Rpp != 1;
+    *isCheckerboardSamplingEnabled = RTAO_Args::GroundTruth_IsEnabled ? false : RTAO_Args::Rpp != 1;
     *checkerboardLoadEvenPixels = m_checkerboardGenerateRaysForEvenPixels;
 }
 
@@ -530,11 +541,11 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
 
     m_CB->numSamplesPerSet = m_randomSampler.NumSamples();
     m_CB->numSampleSets = m_randomSampler.NumSampleSets();
-    m_CB->numPixelsPerDimPerSet = RTAO_Args::AOSampleSetDistributedAcrossPixels;
+    m_CB->numPixelsPerDimPerSet = RTAO_Args::GroundTruth_IsEnabled ? 1 : RTAO_Args::AOSampleSetDistributedAcrossPixels;
 
     m_CB->RTAO_UseSortedRays = RTAO_Args::RTAOUseRaySorting;
 
-    bool doCheckerboardRayGeneration = RTAO_Args::Rpp != 1;
+    bool doCheckerboardRayGeneration = RTAO_Args::GroundTruth_IsEnabled ? false : RTAO_Args::Rpp != 1;
     m_checkerboardGenerateRaysForEvenPixels = !m_checkerboardGenerateRaysForEvenPixels;
     m_CB->doCheckerboardSampling = doCheckerboardRayGeneration;
     m_CB->areEvenPixelsActive = m_checkerboardGenerateRaysForEvenPixels;
@@ -583,6 +594,12 @@ void RTAO::Run(
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
 
     ScopedTimer _prof(L"CalculateAmbientOcclusion_Root", commandList);
+
+    if (m_isRecreateAOSamplesRequested)
+    {
+        CreateSamplesRNG();
+        m_isRecreateAOSamplesRequested = false;
+    }
 
     // Copy dynamic buffers to GPU.
     {
@@ -637,7 +654,7 @@ void RTAO::Run(
 
     if (RTAO_Args::RTAOUseRaySorting)
     {
-        bool doCheckerboardRayGeneration = RTAO_Args::Rpp != 1;
+        bool doCheckerboardRayGeneration = RTAO_Args::GroundTruth_IsEnabled ? false : RTAO_Args::Rpp != 1;
 
         // Todo verify odd width resolutions when using cb
         UINT activeRaytracingWidth =
@@ -652,7 +669,7 @@ void RTAO::Run(
             m_CB->seed, // ToDo retrieve from a nonCB variable
             m_randomSampler.NumSamples(),
             m_randomSampler.NumSampleSets(),
-            RTAO_Args::AOSampleSetDistributedAcrossPixels,
+            RTAO_Args::GroundTruth_IsEnabled ? 1 : RTAO_Args::AOSampleSetDistributedAcrossPixels,
             doCheckerboardRayGeneration,
             m_checkerboardGenerateRaysForEvenPixels,
             m_cbvSrvUavHeap->GetHeap(),

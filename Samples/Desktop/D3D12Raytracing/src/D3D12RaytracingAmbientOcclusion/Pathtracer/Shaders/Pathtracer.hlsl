@@ -824,11 +824,9 @@ void MyClosestHitShader_ShadowRay(inout ShadowRayPayload rayPayload, in BuiltInT
 //**********************------ Miss shaders -------**************************
 //***************************************************************************
 
-// ToDo - remove miss shader for GBuffer
 [shader("miss")]
 void MyMissShader_GBuffer(inout GBufferRayPayload rayPayload)
 {
-    rayPayload.AOGBuffer.tHit = HitDistanceOnMiss;      // ToDo redundant
     rayPayload.radiance = g_texEnvironmentMap.SampleLevel(LinearWrapSampler, WorldRayDirection(), 0).xyz;
 }
 

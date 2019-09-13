@@ -76,6 +76,7 @@ namespace Sample
 
         void RequestSceneInitialization() { m_isSceneInitializationRequested = true; }
         void RequestRecreateRaytracingResources() { m_isRecreateRaytracingResourcesRequested = true; }
+        RTAO& RTAOComponent() { return m_RTAO; }
 
     private:
         std::mt19937 m_generatorURNG;
