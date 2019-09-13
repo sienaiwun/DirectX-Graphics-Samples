@@ -37,7 +37,7 @@ float4 RenderPBRResult(in uint2 DTid)
 {
     float4 color;
     bool hit = g_texGBufferPositionHits[DTid] > 0;
-    if (hit)
+    if (1)//hit)
     {
         float3 surfaceNormal;
         DecodeNormal(g_texGBufferNormalDepth[DTid], surfaceNormal);
@@ -48,14 +48,17 @@ float4 RenderPBRResult(in uint2 DTid)
         DecodeMaterial16b(materialInfo, materialID, albedo);
         PrimitiveMaterialBuffer material = g_materials[materialID];
         float3 specular = RemoveSRGB(material.Ks);      // ToDo review SRGB calls
-        float3 phongColor = g_texColor[DTid].xyz;
+        float3 PBRcolor = g_texColor[DTid].xyz;
 
-        // Subtract the default ambient illumination that has already been added to the color in raytrace pass.
-        float ambientCoef = cb.isAOEnabled ? g_texAO[DTid] : cb.defaultAmbientIntensity;
-        ambientCoef -= cb.defaultAmbientIntensity;
+        float ambientCoef = 0;
+        if (hit && cb.isAOEnabled)
+        {
+            // Subtract the default ambient illumination that has already been added to the color in pathtracing pass.
+            ambientCoef = g_texAO[DTid] - cb.defaultAmbientIntensity;
+        }
 
         float3 ambientColor = ambientCoef * g_texAOSurfaceAlbedo[DTid].xyz;
-        color = float4(phongColor + ambientColor, 1);
+        color = float4(PBRcolor + ambientColor, 1);
 
         // Apply visibility falloff.
         float3 hitPosition = g_texGBufferPositionRT[DTid].xyz;

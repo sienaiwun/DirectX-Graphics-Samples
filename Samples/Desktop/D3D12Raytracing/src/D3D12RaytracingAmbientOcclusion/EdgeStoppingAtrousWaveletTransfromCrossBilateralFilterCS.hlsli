@@ -9,6 +9,10 @@
 //
 //*********************************************************
 
+// Atrous Wavelet Transform Cross Bilateral Filter
+// Ref: Dammertz 2010, Edge-Avoiding A-Trous Wavelet Transform for Fast Global Illumination Filtering
+// ToDo
+
 #define HLSL
 #include "RaytracingHlslCompat.h"
 #include "RaytracingShaderHelper.hlsli"
@@ -76,7 +80,6 @@ void AddFilterContribution(
     in uint kernelStepShift,
     in float2 varianceSigmaScale)   // ToDo or remove
 {
-
     const float valueSigma = cb.valueSigma;
     const float normalSigma = cb.normalSigma;
     const float depthSigma = cb.depthSigma;
@@ -101,7 +104,6 @@ void AddFilterContribution(
             return;
         }
 
-
         // ToDo explain/remove
         float w_s = 1;
 #if RTAO_MARK_CACHED_VALUES_NEGATIVE
@@ -117,34 +119,25 @@ void AddFilterContribution(
         float w_fa = 1;
         uint iFrameAge = g_inFrameAge[id].x;
 
-        // Enforce frame age of at least 1 for reprojection for valid values.
+        // TODO
+        // Enforce frame age of at least 1 for reprojected values.
         // This is because the denoiser will fill in invalid values with filtered 
-        // ones if it can. But it doesn't increase frame age.
+        // ones if it can. But it doesn't increase the frame age.
         iFrameAge = max(iFrameAge, 1);
 
         w_fa = cb.weightByFrameAge ? iFrameAge : 1;
-        
-        // Value based weight.
-        float w_x = 1;
-        if (valueSigma > 0)
-        {
-            const float errorOffset = 0.005f;
-            float e_x = -abs(value - iValue) / (valueSigma * stdDeviation + errorOffset);
-            w_x = exp(e_x);
-        }
 
+
+        // Value based weight.
+        const float errorOffset = 0.005f;
+        float e_x = -abs(value - iValue) / (valueSigma * stdDeviation + errorOffset);
+        float w_x = exp(e_x);
  
         // Normal based weight.
-        float w_n = 1;
-        if (normalSigma > 0)
-        {
-            w_n = pow(max(0, dot(normal, iNormal)), normalSigma);
-        }
-
+        float w_n = pow(max(0, dot(normal, iNormal)), normalSigma);
 
         // Depth based weight.
-        float w_d = 1;
-        if (depthSigma > 0)
+        float w_d;
         {
             float2 pixelOffsetForDepth = pixelOffset;
 
@@ -182,7 +175,7 @@ void AddFilterContribution(
         // Filter kernel weight.
         float w_h = FilterKernel::Kernel[row][col];
         
-
+        // Final weight.
         float w = w_fa * w_s * w_h * w_n * w_x * w_d;
    
 
@@ -198,8 +191,6 @@ void AddFilterContribution(
     }
 }
 
-// Atrous Wavelet Transform Cross Bilateral Filter
-// Ref: Dammertz 2010, Edge-Avoiding A-Trous Wavelet Transform for Fast Global Illumination Filtering
 [numthreads(AtrousWaveletTransformFilterCS::ThreadGroup::Width, AtrousWaveletTransformFilterCS::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 {
@@ -254,8 +245,6 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
         // Calculate a kernel step given a ray hit distance.
         uint2 kernelStep = 1 << cb.kernelStepShift;
-            // Blur more aggressively on smaller kernels.
-            // ToDo remove?
 
         // Adaptive kernel size
         // Scale the kernel span by AO ray hit distance. 

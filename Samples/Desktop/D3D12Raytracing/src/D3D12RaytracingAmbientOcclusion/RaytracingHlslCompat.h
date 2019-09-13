@@ -93,6 +93,7 @@ AppSetup
     - White halo under tiers.
     - Upsampling artifacts on 1080(540p)
     - RTAO invisible wall inside kitchen on long rays
+    - use max tex LOD.
 
 - Cleanup:
     // ToDo double check all CS for out of bounds.
