@@ -36,46 +36,34 @@ Texture2D<float4> g_texLocalMeanVariance : register(t14);
 float4 RenderPBRResult(in uint2 DTid)
 {
     float4 color;
+
+    float3 surfaceNormal;
+    DecodeNormal(g_texGBufferNormalDepth[DTid], surfaceNormal);
+
+    uint2 materialInfo = g_texGBufferMaterial[DTid];
+    UINT materialID;
+    float3 albedo;
+    DecodeMaterial16b(materialInfo, materialID, albedo);
+    PrimitiveMaterialBuffer material = g_materials[materialID];
+    float3 specular = RemoveSRGB(material.Ks);      // ToDo review SRGB calls
+    float3 PBRcolor = g_texColor[DTid].xyz;
+
+    float ambientCoef = 0;
     bool hit = g_texGBufferPositionHits[DTid] > 0;
-    if (1)//hit)
+    if (hit && cb.isAOEnabled)
     {
-        float3 surfaceNormal;
-        DecodeNormal(g_texGBufferNormalDepth[DTid], surfaceNormal);
-
-        uint2 materialInfo = g_texGBufferMaterial[DTid];
-        UINT materialID;
-        float3 albedo;
-        DecodeMaterial16b(materialInfo, materialID, albedo);
-        PrimitiveMaterialBuffer material = g_materials[materialID];
-        float3 specular = RemoveSRGB(material.Ks);      // ToDo review SRGB calls
-        float3 PBRcolor = g_texColor[DTid].xyz;
-
-        float ambientCoef = 0;
-        if (hit && cb.isAOEnabled)
-        {
-            // Subtract the default ambient illumination that has already been added to the color in pathtracing pass.
-            ambientCoef = g_texAO[DTid] - cb.defaultAmbientIntensity;
-        }
-
-        float3 ambientColor = ambientCoef * g_texAOSurfaceAlbedo[DTid].xyz;
-        color = float4(PBRcolor + ambientColor, 1);
-
-        // Apply visibility falloff.
-        float3 hitPosition = g_texGBufferPositionRT[DTid].xyz;
-        float t = length(hitPosition);
-        color = lerp(color, BackgroundColor, 1.0 - exp(-DISTANCE_FALLOFF * t * t * t * t));
+        // Subtract the default ambient illumination that has already been added to the color in pathtracing pass.
+        ambientCoef = g_texAO[DTid] - cb.defaultAmbientIntensity;
     }
-    else
-    {
-        uint2 materialInfo = g_texGBufferMaterial[DTid];
-        UINT materialID;
-        float3 albedo;
-        DecodeMaterial16b(materialInfo, materialID, albedo);
-        albedo = RemoveSRGB(albedo);
-        float3 hitPosition = g_texGBufferPositionRT[DTid].xyz;
-        float t = (clamp(hitPosition.y, 0.015, 0.025) - 0.015) * 100;       // ToDo
-        color = lerp(BackgroundColor, float4(albedo, 1), t);
-    }
+
+    float3 ambientColor = ambientCoef * g_texAOSurfaceAlbedo[DTid].xyz;
+    color = float4(PBRcolor + ambientColor, 1);
+
+    // Apply visibility falloff.
+    float3 hitPosition = g_texGBufferPositionRT[DTid].xyz;
+    float t = length(hitPosition);
+    color = lerp(color, BackgroundColor, 1.0 - exp(-DISTANCE_FALLOFF * t * t * t * t));
+
     return color;
 }
 

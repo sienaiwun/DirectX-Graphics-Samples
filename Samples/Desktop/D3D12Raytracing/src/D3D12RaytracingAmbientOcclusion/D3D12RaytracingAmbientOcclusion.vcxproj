@@ -276,7 +276,6 @@
     <ClInclude Include="util\Camera.h" />
     <ClInclude Include="util\CameraController.h" />
     <ClInclude Include="util\DeviceResources.h" />
-    <ClInclude Include="util\DXRTextWithPrimitiveScene.h" />
     <ClInclude Include="util\DXSample.h" />
     <ClInclude Include="util\DXSampleHelper.h" />
     <ClInclude Include="util\EngineProfiling.h" />
@@ -320,11 +319,6 @@
     </ClCompile>
     <ClCompile Include="util\CameraController.cpp" />
     <ClCompile Include="util\DeviceResources.cpp" />
-    <ClCompile Include="util\DXRTextWithPrimitiveScene.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="util\DXSample.cpp" />
     <ClCompile Include="util\EngineProfiling.cpp" />
     <ClCompile Include="util\EngineTuning.cpp">

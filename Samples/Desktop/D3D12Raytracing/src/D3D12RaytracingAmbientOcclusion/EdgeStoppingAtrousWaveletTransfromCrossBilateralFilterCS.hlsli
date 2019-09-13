@@ -236,10 +236,11 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         if (isValidValue)
         {
             float pixelWeight = cb.weightByFrameAge ? frameAge : 1;
-            weightSum = pixelWeight * FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
+            float w = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
+            weightSum = pixelWeight * w;
             weightedValueSum = weightSum * value;
-            weightedVarianceSum = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius] * FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius]
-                * variance;
+            float filterWeight1D = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
+            weightedVarianceSum = w * w * variance;
             stdDeviation = sqrt(variance);
         }
 
@@ -256,10 +257,10 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
             float perPixelViewAngle = (FOVY / cb.textureDim.y) * PI / 180; 
             float tan_a = tan(perPixelViewAngle);
-            float2 projectedSurfaceDim = GetProjectedSurfaceDimensionsPerPixel(depth, ddxy, tan_a);
+            float2 projectedSurfaceDim = ApproximateProjectedSurfaceDimensionsPerPixel(depth, ddxy, tan_a);
 
             // Calculate kernel width as a ratio of hitDistance / projected surface dim per pixel
-            float k = 0.5 * cb.minHitDistanceToKernelWidthScale;
+            float k = cb.minHitDistanceToKernelWidthScale;
             kernelStep = max(1, round(k * avgRayHitDistance / projectedSurfaceDim));
 
             uint2 targetKernelStep = clamp(kernelStep, (cb.minKernelWidth - 1) / 2, (cb.maxKernelWidth - 1) / 2);

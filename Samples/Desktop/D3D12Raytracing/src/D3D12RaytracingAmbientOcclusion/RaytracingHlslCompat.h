@@ -205,7 +205,7 @@ typedef uint NormalDepthTexFormat;
 #define AO_RAY_T_MAX 150
 #define SCENE_SCALE 2000
 #define FACE_CULLING 1
-#define USE_UV_DERIVATIVES 1
+#define USE_UV_DERIVATIVES 0
 #endif
 #define INDEX_FORMAT_UINT 1
 

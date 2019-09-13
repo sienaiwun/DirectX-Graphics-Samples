@@ -698,7 +698,12 @@ float3 NormalMap(
         tangent = CalculateTangent(v0, v1, v2, uv0, uv1, uv2);
     }
 
-    float3 bumpNormal = normalize(l_texNormalMap.SampleGrad(LinearWrapSampler, texCoord, ddx, ddy).xyz) * 2.f - 1.f;
+#if USE_UV_DERIVATIVES
+    float3 texSample = l_texNormalMap.SampleGrad(LinearWrapSampler, texCoord, ddx, ddy).xyz;
+#else
+    float3 texSample = l_texNormalMap.SampleLevel(LinearWrapSampler, texCoord, 0).xyz;
+#endif
+    float3 bumpNormal = normalize(texSample * 2.f - 1.f);
     return BumpMapNormalToWorldSpaceNormal(bumpNormal, normal, tangent);
 }
 
@@ -768,7 +773,12 @@ void MyClosestHitShader_GBuffer(inout GBufferRayPayload rayPayload, in BuiltInTr
 
     if (material.hasDiffuseTexture && !g_cb.useDiffuseFromMaterial)
     {
-        material.Kd = RemoveSRGB(l_texDiffuse.SampleGrad(LinearWrapSampler, texCoord, ddx, ddy).xyz);
+#if USE_UV_DERIVATIVES
+        float3 texSample = l_texDiffuse.SampleGrad(LinearWrapSampler, texCoord, ddx, ddy).xyz;
+#else
+        float3 texSample = l_texDiffuse.SampleLevel(LinearWrapSampler, texCoord, 0).xyz;
+#endif
+        material.Kd = RemoveSRGB(texSample);
     }
 
     if (material.type == MaterialType::AnalyticalCheckerboardTexture)

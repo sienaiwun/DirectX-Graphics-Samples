@@ -129,9 +129,6 @@
     <ClInclude Include="util\CameraController.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
-    <ClInclude Include="util\DXRTextWithPrimitiveScene.h">
-      <Filter>Assets\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="util\GpuKernels.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
@@ -231,9 +228,6 @@
       <Filter>Source Files\Util</Filter>
     </ClCompile>
     <ClCompile Include="util\SquidRoom.cpp">
-      <Filter>Assets\Scene</Filter>
-    </ClCompile>
-    <ClCompile Include="util\DXRTextWithPrimitiveScene.cpp">
       <Filter>Assets\Scene</Filter>
     </ClCompile>
     <ClCompile Include="util\GpuKernels.cpp">
