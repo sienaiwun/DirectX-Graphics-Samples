@@ -125,7 +125,7 @@ namespace RTAO_Args
     IntVar Rpp(L"Render/AO/RTAO/Rpp/Rays per pixel", 1, 1, 1024, 1, OnRppSampleSetChange);
     IntVar Rpp_AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, 1, 8, 1, OnRppSampleSetChange);
     BoolVar Rpp_doCheckerboard(L"Render/AO/RTAO/Rpp/Overrides/Do checkerboard 0.5 rpp", false, OnToggleRppCheckerboard);
-    BoolVar Rpp_useGroundTruthRpp(L"Render/AO/RTAO/Rpp/Overrides/Do ground truth rpp: " STRINGIZE(GROUND_TRUTH_RPP), true, OnToggleRppGroundTruth);
+    BoolVar Rpp_useGroundTruthRpp(L"Render/AO/RTAO/Rpp/Overrides/Do ground truth rpp: " STRINGIZE(GROUND_TRUTH_RPP), false, OnToggleRppGroundTruth);
 
     BoolVar RTAORandomFrameSeed(L"Render/AO/RTAO/Random per-frame seed", true);
 
