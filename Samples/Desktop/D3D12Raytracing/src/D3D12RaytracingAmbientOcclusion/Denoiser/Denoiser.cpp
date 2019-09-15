@@ -121,8 +121,6 @@ namespace Denoiser_Args
     NumVar Denoising_2ndPass_DepthSigma(L"Render/AO/RTAO/Denoising_/2nd+ pass/Depth Sigma", 1.0f, 0.0f, 10.0f, 0.02f);
 
     // ToDo remove
-    IntVar Denoising_MaxFrameAgeToDenoiseAfter1stPass(L"Render/AO/RTAO/Denoising_/Max Frame Age To Denoise 2nd+ pass", 33, 1, 34, 1);
-    IntVar Denoising_MaxFrameAgeToDenoiseOn1stPass(L"Render/AO/RTAO/Denoising_/1st pass/Max Frame Age To Denoise", 16, 1, 64, 1);
     IntVar Denoising_ExtraRaysToTraceSinceTemporalMovement(L"Render/AO/RTAO/Denoising_/Heuristics/Num rays to cast since Temporal movement", 32, 0, 64);
     IntVar Denoising_numFramesToDenoiseAfterLastTracedRay(L"Render/AO/RTAO/Denoising_/Heuristics/Num frames to denoise after last traced ray", 32, 0, 64);
 

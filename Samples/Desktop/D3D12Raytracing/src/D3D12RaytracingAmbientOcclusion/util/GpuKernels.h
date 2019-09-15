@@ -713,7 +713,7 @@ namespace GpuKernels
         ComPtr<ID3D12RootSignature>         m_rootSignature;
         ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
 
-        ConstantBuffer<AdaptiveRayGenConstantBuffer> m_CB;
+        ConstantBuffer<RayGenConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
     };
 

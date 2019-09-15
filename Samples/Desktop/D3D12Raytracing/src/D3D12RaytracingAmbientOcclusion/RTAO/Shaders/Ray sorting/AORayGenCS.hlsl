@@ -26,7 +26,7 @@ Texture2D<float4> g_texRayOriginPosition : register(t1);
 
 RWTexture2D<NormalDepthTexFormat> g_rtRaysDirectionOriginDepth : register(u0);
 
-ConstantBuffer<AdaptiveRayGenConstantBuffer> cb: register(b0);
+ConstantBuffer<RayGenConstantBuffer> cb: register(b0);
 StructuredBuffer<AlignedHemisphereSample3D> g_sampleSets : register(t3);
 
 
@@ -53,7 +53,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID)
     float3 rayDirection = 0;
     if (rayOriginDepth != INVALID_RAY_ORIGIN_DEPTH)
     {
-        rayDirection = GetRandomRayDirection(DTid, surfaceNormal, cb.textureDim);
+        rayDirection = GetRandomRayDirection(DTid, surfaceNormal, cb.textureDim, 0);
     }
 
     g_rtRaysDirectionOriginDepth[DTid] = EncodeNormalDepth(rayDirection, rayOriginDepth);

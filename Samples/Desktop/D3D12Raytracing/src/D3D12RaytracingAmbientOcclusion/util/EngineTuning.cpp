@@ -33,7 +33,7 @@ namespace EngineTuning
     enum { kMaxUnregisteredTweaks = 1024 };
     WCHAR s_UnregisteredPath[kMaxUnregisteredTweaks][128];
     EngineVar* s_UnregisteredVariable[kMaxUnregisteredTweaks] = { nullptr };
-    int32_t s_UnregisteredCount = 0;
+    int s_UnregisteredCount = 0;
 
     float s_ScrollOffset = 0.0f;
     float s_ScrollTopTrigger = 1080.0f * 0.2f;
@@ -440,7 +440,7 @@ void ExpVar::SetValue(FILE* file, const wstring& setting)
         *this = valueRead;
 }
 
-IntVar::IntVar(const wstring& path, int32_t val, int32_t minVal, int32_t maxVal, int32_t stepSize, function<void(void*)> callback, void* args)
+IntVar::IntVar(const wstring& path, int val, int minVal, int maxVal, int stepSize, function<void(void*)> callback, void* args)
     : EngineVar(path, callback, args)
 {
     ThrowIfFalse(minVal <= maxVal);
@@ -450,7 +450,7 @@ IntVar::IntVar(const wstring& path, int32_t val, int32_t minVal, int32_t maxVal,
     m_StepSize = stepSize;
 }
 
-void IntVar::Initialize(const wstring& path, int32_t val, int32_t minVal, int32_t maxVal, int32_t stepSize, function<void(void*)> callback, void* args)
+void IntVar::Initialize(const wstring& path, int val, int minVal, int maxVal, int stepSize, function<void(void*)> callback, void* args)
 {
     EngineVar::Initialize(path, callback, args);
 
@@ -477,14 +477,19 @@ wstring IntVar::ToString(void) const
 void IntVar::SetValue(FILE* file, const wstring& setting) 
 {
     wstring scanString = L"\n" + setting + L": %d";
-    int32_t valueRead;
+    int valueRead;
     
     if (fwscanf_s(file, scanString.c_str(), &valueRead))
         *this = valueRead;
 }
 
+void IntVar::SetValue(int value)
+{
+    m_Value = Clamp(value);
+}
 
-EnumVar::EnumVar(const wstring& path, int32_t initialVal, int32_t listLength, const WCHAR** listLabels, function<void(void*)> callback, void* args)
+
+EnumVar::EnumVar(const wstring& path, int initialVal, int listLength, const WCHAR** listLabels, function<void(void*)> callback, void* args)
     : EngineVar(path, callback, args)
 {
     ThrowIfFalse(listLength > 0);
@@ -493,7 +498,7 @@ EnumVar::EnumVar(const wstring& path, int32_t initialVal, int32_t listLength, co
     m_Value = Clamp(initialVal);
 }
 
-void EnumVar::Initialize(const wstring& path, int32_t initialVal, int32_t listLength, const WCHAR** listLabels, function<void(void*)> callback, void* args)
+void EnumVar::Initialize(const wstring& path, int initialVal, int listLength, const WCHAR** listLabels, function<void(void*)> callback, void* args)
 {
     EngineVar::Initialize(path, callback, args);
 
@@ -524,7 +529,7 @@ void EnumVar::SetValue(FILE* file, const wstring& setting)
         valueReadStr = valueReadStr.substr(0, valueReadStr.length() - 1);
 
         //if we don't find the wstring, then leave m_EnumLabes[m_Value] as default
-        for(int32_t i = 0; i < m_EnumLength; ++i)
+        for(int i = 0; i < m_EnumLength; ++i)
         {
             if (m_EnumLabels[i] == valueReadStr)
             {
@@ -535,7 +540,7 @@ void EnumVar::SetValue(FILE* file, const wstring& setting)
     }
 }
 
-void EnumVar::SetValue(int32_t value)
+void EnumVar::SetValue(int value)
 {
     m_Value = Clamp(value);
     // ToDO call the callback
@@ -569,7 +574,7 @@ void CallbackTrigger::SetValue(FILE* file, const wstring& setting)
 
 void EngineTuning::Initialize(void)
 {
-    for (int32_t i = 0; i < s_UnregisteredCount; ++i)
+    for (int i = 0; i < s_UnregisteredCount; ++i)
     {
         ThrowIfFalse(wcslen(s_UnregisteredPath[i]) > 0, L"Register = %d\n", i);
         ThrowIfFalse(s_UnregisteredVariable[i] != nullptr);
@@ -724,7 +729,7 @@ void EngineTuning::RegisterVariable(const wstring& path, EngineVar& var)
 {
     if (s_UnregisteredCount >= 0)
     {
-        int32_t Idx = s_UnregisteredCount++;
+        int Idx = s_UnregisteredCount++;
         wcscpy_s(s_UnregisteredPath[Idx], path.c_str());
         s_UnregisteredVariable[Idx] = &var;
     }

@@ -20,7 +20,7 @@
 #include "RTAO.hlsli"
 
 // ToDo pix doesn't show output for AO pass
-
+// ToDo remove redundant
 RaytracingAccelerationStructure g_scene : register(t0);
 
 // ToDo remove unneccessary, move ray computation to CS
@@ -39,7 +39,6 @@ Texture2D<uint> g_texInputAOFrameAge : register(t14);
 RWTexture2D<float> g_rtAOcoefficient : register(u10);
 RWTexture2D<uint> g_rtAORayHits : register(u11);
 RWTexture2D<float> g_rtAORayHitDistance : register(u15);
-RWTexture2D<NormalDepthTexFormat> g_rtAORaysDirectionOriginDepth : register(u22);
 
 ConstantBuffer<RTAOConstantBuffer> cb : register(b0);          // ToDo standardize cb var naming
 StructuredBuffer<AlignedHemisphereSample3D> g_sampleSets : register(t4);
@@ -133,9 +132,9 @@ float CalculateAO(out float tHit, in uint2 srcPixelIndex, in Ray AOray, in float
         // Approximate interreflections of light from blocking surfaces which are generally not completely dark and tend to have similar radiance.
         // Ref: Ch 11.3.3 Accounting for Interreflections, Real-Time Rendering (4th edition).
         // The approximation assumes:
-        //      o All surfaces incoming and outgoing radiance is the same 
+        //      o All surfaces' incoming and outgoing radiance is the same 
         //      o Current surface color is the same as that of the occluders
-        // Since this sample uses scalar ambient coefficient, we use the scalar luminance of the surface color.
+        // Since this sample uses scalar ambient coefficient, it usse the scalar luminance of the surface color.
         // This will generally brighten the AO making it closer to the result of full Global Illumination, including interreflections.
         if (cb.RTAO_approximateInterreflections)
         {
@@ -159,16 +158,6 @@ float CalculateAO(out float tHit, in uint2 srcPixelIndex, in Ray AOray, in float
 [shader("raygeneration")]
 void RayGenShader()
 {
-#if 0
-    uint2 srcRayIndex = DispatchRaysIndex().xy;
-    float3 hitPosition = g_texRayOriginPosition[srcRayIndex].xyz;
-    Ray AORay = { hitPosition, float3(0.2, 0.4, 0.2) };
-    const float tMax = cb.RTAO_maxShadowRayHitTime; // ToDo make sure its FLT_10BIT_MAX or less since we use 10bit origin depth in RaySort
-    float3 surfaceNormal = float3(0, 1, 0);
-    float tHit;
-    TraceAORayAndReportIfHit(tHit, AORay, tMax, surfaceNormal);
-#else
-    // ToDo move to a CS if always using a raysort.
     uint2 srcRayIndex = DispatchRaysIndex().xy;
     
     // ToDo
@@ -181,12 +170,16 @@ void RayGenShader()
     float ambientCoef = RTAO::InvalidAOValue;
 	if (hit)
 	{
-		float3 hitPosition = g_texRayOriginPosition[srcRayIndex].xyz;     
-        float3 rayDirection = GetRandomRayDirection(srcRayIndex, surfaceNormal, cb.raytracingDim);
-        Ray AORay = { hitPosition, rayDirection };
-        ambientCoef = CalculateAO(tHit, srcRayIndex, AORay, surfaceNormal);
+        float3 hitPosition = g_texRayOriginPosition[srcRayIndex].xyz;
+        ambientCoef = 0;
+        for (uint r = 0; r < cb.rpp; r++)
+        {
+            float3 rayDirection = GetRandomRayDirection(srcRayIndex, surfaceNormal, cb.raytracingDim, r);
+            Ray AORay = { hitPosition, rayDirection };
+            ambientCoef += CalculateAO(tHit, srcRayIndex, AORay, surfaceNormal);
+        }
+        ambientCoef /= cb.rpp;
     }
-#endif
 
     g_rtAOcoefficient[srcRayIndex] = ambientCoef;
     g_rtAORayHitDistance[srcRayIndex] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.RTAO_maxTheoreticalShadowRayHitTime;

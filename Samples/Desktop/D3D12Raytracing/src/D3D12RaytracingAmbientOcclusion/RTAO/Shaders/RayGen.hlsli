@@ -11,7 +11,7 @@
 #ifndef RAYGEN_HLSLI
 #define RAYGEN_HLSLI
 
-float3 GetRandomRayDirection(in uint2 srcRayIndex, in float3 surfaceNormal, in uint2 textureDim)
+float3 GetRandomRayDirection(in uint2 srcRayIndex, in float3 surfaceNormal, in uint2 textureDim, in uint raySampleIndexOffset)
 {
     // Calculate coordinate system for the hemisphere.
     // ToDo AO has square alias due to same hemisphere
@@ -52,7 +52,7 @@ float3 GetRandomRayDirection(in uint2 srcRayIndex, in float3 surfaceNormal, in u
         // Randomize starting sample position within a sample set per neighbor group 
         // to break group to group correlation resulting in square alias.
         uint numPixelsPerSet = cb.numPixelsPerDimPerSet * cb.numPixelsPerDimPerSet;
-        sampleJump = pixeIDPerSet + RNG::Random(RNGState, 0, numPixelsPerSet - 1);
+        sampleJump = pixeIDPerSet + RNG::Random(RNGState, 0, numPixelsPerSet - 1) + raySampleIndexOffset;
     }
 
     // Load a pregenerated random sample from the sample set.

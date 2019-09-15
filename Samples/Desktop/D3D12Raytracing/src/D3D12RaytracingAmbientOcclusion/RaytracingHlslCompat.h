@@ -111,6 +111,11 @@ AppSetup
 - Sample generic
     - Add device removal support
 
+    Readme:
+    -   Open issues/that can be improved:
+        - Variable rate ray tracing
+        - Improve disocclusion detection (trailing below car AO)
+
 */
 
 //**********************************************************************************************
@@ -156,7 +161,6 @@ Incompatible macros
 
 #define PRINT_OUT_TC_MATRICES 0
 #define PRINT_OUT_CAMERA_CONFIG 0
-#define DEBUG_PRINT_OUT_SEED_VALUE 0
 
 #ifdef HLSL
 typedef uint NormalDepthTexFormat;
@@ -398,7 +402,7 @@ struct CalculateMeanVarianceConstantBuffer
 };
 
 // ToDo standardzie capitalization
-struct AdaptiveRayGenConstantBuffer
+struct RayGenConstantBuffer
 {
     XMUINT2 textureDim;
     BOOL doCheckerboardRayGeneration;
@@ -491,6 +495,9 @@ struct RTAOConstantBuffer
     float RTAO_exponentialFalloffDecayConstant;
     BOOL doCheckerboardSampling;
     BOOL areEvenPixelsActive;
+
+    UINT rpp;
+    float padding[3];
 };
 
  

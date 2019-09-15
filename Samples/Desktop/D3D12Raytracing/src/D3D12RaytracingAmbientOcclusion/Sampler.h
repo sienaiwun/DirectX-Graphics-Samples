@@ -13,7 +13,7 @@
 
 namespace Samplers {
 
-    typedef DirectX::XMFLOAT2 UnitSquareSample2D;        // unit square sample with a valid range of <0,1>
+    typedef DirectX::XMFLOAT2 UnitSquareSample2D;  // unit square sample with a valid range of <0,1>
     typedef DirectX::XMFLOAT3 HemisphereSample3D;  // hemisphere sample <0,1>
 
     namespace HemisphereDistribution {

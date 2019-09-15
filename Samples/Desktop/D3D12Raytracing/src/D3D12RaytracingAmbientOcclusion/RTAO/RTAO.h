@@ -34,7 +34,11 @@ namespace RTAORayGenShaderType {
 namespace RTAO_Args
 {
     extern BoolVar QuarterResAO;
-    extern NumVar Rpp;
+    extern IntVar Rpp;
+    extern IntVar Rpp_AOSampleSetDistributedAcrossPixels;
+    extern BoolVar Rpp_doCheckerboard;
+    extern BoolVar Rpp_useGroundTruthRpp;
+    extern BoolVar RTAOUseRaySorting;
 }
 
 

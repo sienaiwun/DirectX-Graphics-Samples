@@ -64,6 +64,7 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
+    virtual void SetValue(bool value) { m_Flag = value; }
 
 private:
     using EngineVar::Initialize;
@@ -86,8 +87,8 @@ public:
 
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
-    virtual void SetValue(FILE* file, const std::wstring& setting)  override;       // ToDo remove/rename
-    virtual void SetValue(float value); // ToDo add to all
+    virtual void SetValue(FILE* file, const std::wstring& setting)  override;  
+    virtual void SetValue(float value); 
     void SetMaxValue(float value) { m_MaxValue = value; m_MinValue = std::min(m_MinValue, value); }
     void SetMinValue(float value) { m_MinValue = value; m_MaxValue = std::max(m_MaxValue, value); }
     float MaxValue() const { return m_MaxValue; }
@@ -127,11 +128,11 @@ class IntVar : public EngineVar
 {
 public:
     IntVar() : EngineVar() {}
-    IntVar(const std::wstring& path, int32_t val, int32_t minValue = 0, int32_t maxValue = (1 << 24) - 1, int32_t stepSize = 1, std::function<void(void*)> callback = nullptr, void* args = nullptr);
-    IntVar& operator=(int32_t val) { m_Value = Clamp(val); return *this; }
-    operator int32_t() const { return m_Value; }
+    IntVar(const std::wstring& path, int val, int minValue = 0, int maxValue = (1 << 24) - 1, int stepSize = 1, std::function<void(void*)> callback = nullptr, void* args = nullptr);
+    IntVar& operator=(int val) { m_Value = Clamp(val); return *this; }
+    operator int() const { return m_Value; }
 
-    void Initialize(const std::wstring& path, int32_t val, int32_t minValue = 0, int32_t maxValue = (1 << 24) - 1, int32_t stepSize = 1, std::function<void(void*)> callback = nullptr, void* args = nullptr);
+    void Initialize(const std::wstring& path, int val, int minValue = 0, int maxValue = (1 << 24) - 1, int stepSize = 1, std::function<void(void*)> callback = nullptr, void* args = nullptr);
 
     virtual void Increment() override { m_Value = Clamp(m_Value + m_StepSize); OnChanged(); }
 	virtual void Decrement() override { m_Value = Clamp(m_Value - m_StepSize); OnChanged(); }
@@ -139,32 +140,33 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
-    void SetMaxValue(int32_t value) { m_MaxValue = value; m_MinValue = std::min(m_MinValue, value); }
-    void SetMinValue(int32_t value) { m_MinValue = value; m_MaxValue = std::max(m_MaxValue, value); }
-    int32_t MaxValue() const { return m_MaxValue; }
-    int32_t MinValue() const { return m_MinValue; }
+    virtual void SetValue(int value);
+    void SetMaxValue(int value) { m_MaxValue = value; m_MinValue = std::min(m_MinValue, value); }
+    void SetMinValue(int value) { m_MinValue = value; m_MaxValue = std::max(m_MaxValue, value); }
+    int MaxValue() const { return m_MaxValue; }
+    int MinValue() const { return m_MinValue; }
 
 private:
     using EngineVar::Initialize;
 
 protected:
-    int32_t Clamp(int32_t val) { return val > m_MaxValue ? m_MaxValue : val < m_MinValue ? m_MinValue : val; }
+    int Clamp(int val) { return val > m_MaxValue ? m_MaxValue : val < m_MinValue ? m_MinValue : val; }
 
-    int32_t m_Value;
-    int32_t m_MinValue;
-    int32_t m_MaxValue;
-    int32_t m_StepSize;
+    int m_Value;
+    int m_MinValue;
+    int m_MaxValue;
+    int m_StepSize;
 };
 
 class EnumVar : public EngineVar
 {
 public:
     EnumVar() : EngineVar() {}
-    EnumVar(const std::wstring& path, int32_t initialVal, int32_t listLength, const WCHAR** listLabels, std::function<void(void*)> callback = nullptr, void* args = nullptr);
-    EnumVar& operator=(int32_t val) { m_Value = Clamp(val); return *this; }
-    operator int32_t() const { return m_Value; }
+    EnumVar(const std::wstring& path, int initialVal, int listLength, const WCHAR** listLabels, std::function<void(void*)> callback = nullptr, void* args = nullptr);
+    EnumVar& operator=(int val) { m_Value = Clamp(val); return *this; }
+    operator int() const { return m_Value; }
 
-    void Initialize(const std::wstring& path, int32_t initialVal, int32_t listLength, const WCHAR** listLabels, std::function<void(void*)> callback = nullptr, void* args = nullptr);
+    void Initialize(const std::wstring& path, int initialVal, int listLength, const WCHAR** listLabels, std::function<void(void*)> callback = nullptr, void* args = nullptr);
 
     virtual void Increment() override { m_Value = (m_Value + 1) % m_EnumLength; OnChanged(); }
     virtual void Decrement() override { m_Value = (m_Value + m_EnumLength - 1) % m_EnumLength; OnChanged();	}
@@ -172,16 +174,16 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
-    virtual void SetValue(int32_t value); // ToDo add to all
+    virtual void SetValue(int value); // ToDo add to all
 
-    void SetListLength(int32_t listLength) { m_EnumLength = listLength; m_Value = Clamp(m_Value); }
+    void SetListLength(int listLength) { m_EnumLength = listLength; m_Value = Clamp(m_Value); }
 
 private:
     using EngineVar::Initialize;
-    int32_t Clamp(int32_t val) { return val < 0 ? 0 : val >= m_EnumLength ? m_EnumLength - 1 : val; }
+    int Clamp(int val) { return val < 0 ? 0 : val >= m_EnumLength ? m_EnumLength - 1 : val; }
 
-    int32_t m_Value;
-    int32_t m_EnumLength;
+    int m_Value;
+    int m_EnumLength;
     const WCHAR** m_EnumLabels;
 };
 
