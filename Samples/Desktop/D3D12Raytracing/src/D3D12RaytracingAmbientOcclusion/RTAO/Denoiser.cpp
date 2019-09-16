@@ -158,11 +158,6 @@ void Denoiser::Setup(shared_ptr<DeviceResources> deviceResources, shared_ptr<DX:
     CreateDeviceDependentResources();
 }
 
-void Denoiser::Release()
-{
-    // ToDo
-}
-
 // Create resources that depend on the device.
 void Denoiser::CreateDeviceDependentResources()
 {

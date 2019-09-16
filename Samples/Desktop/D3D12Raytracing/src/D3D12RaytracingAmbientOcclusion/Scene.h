@@ -35,7 +35,6 @@ public:
     void InitializeAccelerationStructures();
     void OnUpdate();
     void OnRender();
-    void Release();
 
     const GameCore::Camera& Camera() { return m_camera; }
     const GameCore::Camera& PrevFrameCamera() { return m_prevFrameCamera; }
@@ -56,10 +55,7 @@ public:
     void ToggleAnimateScene() { m_animateScene = !m_animateScene; }
 private:
     void CreateDeviceDependentResources();
-    void CreateConstantBuffers();
     void CreateAuxilaryDeviceResources();
-    void CreateTextureResources();
-    void CreateResolutionDependentResources();
 
     void GenerateGrassGeometry();
     void CreateIndexAndVertexBuffers(const GeometryDescriptor& desc, D3DGeometry* geometry);
@@ -83,7 +79,6 @@ private:
     bool m_hasCameraChanged = true;
     GameCore::Camera m_camera;
     GameCore::Camera m_prevFrameCamera;
-    float m_manualCameraRotationAngle = 0; // ToDo remove
     std::unique_ptr<GameCore::CameraController> m_cameraController;
     
     // Geometry.

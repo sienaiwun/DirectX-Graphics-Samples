@@ -47,7 +47,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
     uint numDenoisePasses = 0x7F & numRaysToGenerateOrDenoisePasses;
 
     float4 cachedValues = float4(frameAge, f16tof32(encodedCachedValues.yzw));
-    g_texOutputDebug1[DTid] = cachedValues;
 
     bool isCurrentFrameRayActive = true;
     if (cb.doCheckerboardSampling)
@@ -55,22 +54,19 @@ void main(uint2 DTid : SV_DispatchThreadID)
         bool isEvenPixel = ((DTid.x + DTid.y) & 1) == 0;
         isCurrentFrameRayActive = cb.areEvenPixelsActive == isEvenPixel;
     }
-    float value = isCurrentFrameRayActive ? g_texInputCurrentFrameValue[DTid] : RTAO::InvalidAOValue;
-    
-    bool isValidValue = value != RTAO::InvalidAOValue;
 
+    float value = isCurrentFrameRayActive ? g_texInputCurrentFrameValue[DTid] : RTAO::InvalidAOValue;
+    bool isValidValue = value != RTAO::InvalidAOValue;
     float valueSquaredMean = isValidValue ? value * value : RTAO::InvalidAOValue;
     float rayHitDistance = RTAO::InvalidAOValue;
     float variance = RTAO::InvalidAOValue;
     
-    // ToDo can this ever fail? reproject sets frameage to 1 at minimum.
     if (frameAge > 0)
     {     
         uint maxFrameAge = 1 / cb.minSmoothingFactor;
         frameAge = isValidValue ? min(frameAge + 1, maxFrameAge) : frameAge;
 
         float cachedValue = cachedValues.y;
-
 
         float2 localMeanVariance = g_texInputCurrentFrameLocalMeanVariance[DTid];
         float localMean = localMeanVariance.x;
@@ -90,6 +86,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
         }
         float invFrameAge = 1.f / frameAge;
         float a = cb.forceUseMinSmoothingFactor ? cb.minSmoothingFactor : max(invFrameAge, cb.minSmoothingFactor);
+        float MaxSmoothingFactor = 1;
+        a = min(a, MaxSmoothingFactor);
 
         // Suggestion/ToDo: use average weighting instead of exponential for the first few samples 
         // to even out the weights for the noisy start instead of weighting first samples much more.

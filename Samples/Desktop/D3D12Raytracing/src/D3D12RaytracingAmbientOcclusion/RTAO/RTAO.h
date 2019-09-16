@@ -58,7 +58,6 @@ public:
     void Setup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DX::DescriptorHeap> descriptorHeap, Scene& scene);
     void Run(D3D12_GPU_VIRTUAL_ADDRESS accelerationStructure, D3D12_GPU_DESCRIPTOR_HANDLE rayOriginSurfaceHitPositionResource, D3D12_GPU_DESCRIPTOR_HANDLE rayOriginSurfaceNormalDepthResource, D3D12_GPU_DESCRIPTOR_HANDLE rayOriginSurfaceAlbedoResource);
     void SetResolution(UINT width, UINT height); 
-    void Release();
 
     // Getters & setters.
     GpuResource(&AOResources())[AOResource::Count]{ return m_AOResources; }

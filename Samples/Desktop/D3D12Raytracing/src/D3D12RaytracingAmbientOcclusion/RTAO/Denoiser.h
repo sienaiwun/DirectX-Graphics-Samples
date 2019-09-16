@@ -24,7 +24,6 @@
 
 class RTAO;
 
-// ToDo rename to AO denoiser?
 namespace Denoiser_Args
 {
     extern BoolVar Denoising_UseSmoothedVariance;
@@ -43,15 +42,11 @@ public:
         Denoise_Stage2_Denoise = 0x1 << 1,
         Denoise_StageAll = Denoise_Stage1_TemporalReverseReproject | Denoise_Stage2_Denoise
     };
-    // Ctors.
-    Denoiser() {}
-    ~Denoiser() {} // ToDo
 
     // Public methods.
     void Setup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DX::DescriptorHeap> descriptorHeap);
     void Run(Scene& scene, Pathtracer& pathtracer, RTAO& rtao, DenoiseStage stage = Denoise_StageAll);
     void SetResolution(UINT width, UINT height);
-    void Release();
         
     // Getters/Setters.
     static DXGI_FORMAT ResourceFormat(ResourceType resourceType);

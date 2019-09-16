@@ -152,20 +152,6 @@ void Pathtracer::Setup(shared_ptr<DeviceResources> deviceResources, shared_ptr<D
     CreateDeviceDependentResources(scene);
 }
 
-void Pathtracer::Release()
-{ 
-    // ToDo 
-
-    m_dxrStateObject.Reset();
-
-    m_raytracingGlobalRootSignature.Reset();
-    m_raytracingLocalRootSignature.Reset();
-
-    ResetComPtrArray(&m_rayGenShaderTables);
-    m_missShaderTable.Reset();
-    m_hitGroupShaderTable.Reset();
-}
-
 // Create resources that depend on the device.
 void Pathtracer::CreateDeviceDependentResources(Scene& scene)
 {

@@ -68,10 +68,6 @@ void Scene::Setup(shared_ptr<DeviceResources> deviceResources, shared_ptr<DX::De
     CreateDeviceDependentResources();
 }
 
-void Scene::Release()
-{
-}
-
 void Scene::CreateDeviceDependentResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
@@ -82,13 +78,11 @@ void Scene::CreateDeviceDependentResources()
     m_prevFrameBottomLevelASInstanceTransforms.Create(device, MaxNumBottomLevelInstances, Sample::FrameCount, L"GPU buffer: Bottom Level AS Instance transforms for previous frame");
 }
 
-// ToDo rename
 void Scene::CreateAuxilaryDeviceResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
     auto commandQueue = m_deviceResources->GetCommandQueue();
 
-    // ToDo pass this from sample?
     ResourceUploadBatch resourceUpload(device);
     resourceUpload.Begin();
 
@@ -123,12 +117,8 @@ void Scene::OnUpdate()
     if (!m_isCameraFrozen)
     {
         m_hasCameraChanged = m_cameraController->Update(elapsedTime);
-        // ToDo
-        // if (CameraChanged)
-        //m_bClearTemporalSupersampling = true;
     }
 
-    // ToDO make sure not to update grass on disabled scen animation
     if (m_animateScene)
     {
         float animationDuration = 180.0f;
@@ -136,16 +126,6 @@ void Scene::OnUpdate()
         float rotAngle1 = XMConvertToRadians(t * 360.0f / animationDuration);
         float rotAngle2 = XMConvertToRadians((t + 12) * 360.0f / animationDuration);
         float rotAngle3 = XMConvertToRadians((t + 24) * 360.0f / animationDuration);
-        //m_accelerationStructure->GetBottomLevelASInstance(5).SetTransform(XMMatrixRotationAxis(XMVectorSet(0, 1, 0, 0), rotAngle1)
-        //    * XMMatrixTranslationFromVector(XMVectorSet(-10, 4, -10, 0)));
-        //m_accelerationStructure->GetBottomLevelASInstance(6).SetTransform(XMMatrixRotationAxis(XMVectorSet(0, 1, 0, 0), rotAngle2)
-        //    * XMMatrixTranslationFromVector(XMVectorSet(-15, 4, -10, 0)));
-        //m_accelerationStructure->GetBottomLevelASInstance(7).SetTransform(XMMatrixRotationAxis(XMVectorSet(0, 1, 0, 0), rotAngle3)
-        //    * XMMatrixTranslationFromVector(XMVectorSet(-5, 4, -10, 0)));
-
-        //m_accelerationStructure->GetBottomLevelASInstance(3).SetTransform(XMMatrixTranslationFromVector(XMVectorSet(-5 + 10 * t, 0, 0, 0)));
-        //m_accelerationStructure->GetBottomLevelASInstance(0).SetTransform(XMMatrixTranslationFromVector(XMVectorSet(0, 10 * t, 0, 0)));
-        //m_accelerationStructure->GetBottomLevelASInstance(1).SetTransform(XMMatrixRotationX(XMConvertToRadians((t-0.5f) * 20)));
 
         // Animated car.
         {
@@ -169,7 +149,6 @@ void Scene::OnUpdate()
     if (m_animateCamera)
     {
         m_hasCameraChanged = true;
-        // ToDo
         float secondsToRotateAround = Scene_Args::CameraRotationDuration;
         float angleToRotateBy = 360.0f * (elapsedTime / secondsToRotateAround);
         XMMATRIX axisCenter = XMMatrixTranslation(5.87519f, 0, 8.52134f);
@@ -184,16 +163,6 @@ void Scene::OnUpdate()
         m_camera.Set(eye, at, up);
     }
 
-    // ToDo remove
-    if (fabs(m_manualCameraRotationAngle) > 0)
-    {
-        m_hasCameraChanged = true;
-        m_cameraChangedIndex = 2;
-        m_camera.RotateAroundYAxis(XMConvertToRadians(m_manualCameraRotationAngle));
-        m_manualCameraRotationAngle = 0;
-    }
-
-
     // Rotate the second light around Y axis.
     if (m_animateLight)
     {
@@ -204,14 +173,6 @@ void Scene::OnUpdate()
 
         m_lightPosition = XMVector3Transform(m_lightPosition, rotate);
     }
-}
-
-void Scene::CreateResolutionDependentResources()
-{
-}
-
-void Scene::CreateTextureResources()
-{
 }
 
 void Scene::CreateIndexAndVertexBuffers(

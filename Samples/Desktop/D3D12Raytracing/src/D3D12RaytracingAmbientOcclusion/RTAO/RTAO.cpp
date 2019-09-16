@@ -205,9 +205,6 @@ void RTAO::CreateDeviceDependentResources(Scene& scene)
     CreateConstantBuffers();
 
     BuildShaderTables(scene);
-
-    // ToDO remove
-    RTAO_Args::OnToggleRppGroundTruth(nullptr);
 }
 
 void RTAO::CreateAuxilaryDeviceResources()
@@ -229,11 +226,6 @@ void RTAO::CreateAuxilaryDeviceResources()
         m_samplesGPUBuffer.Create(device, maxSamplesPerSet * c_NumSampleSets, FrameCount, L"GPU buffer: Random unit square samples");
         m_hemisphereSamplesGPUBuffer.Create(device, maxSamplesPerSet * c_NumSampleSets, FrameCount, L"GPU buffer: Random hemisphere samples");
     }
-}
-
-void RTAO::Release()
-{
-    // ToDo
 }
 
 // Create constant buffers.

@@ -27,7 +27,7 @@ using namespace SceneEnums;
 
 namespace Composition_Args
 {
-    // ToDO standardize capitalization
+    // ToDO remove obsolete/not working
     const WCHAR* CompositionModes[CompositionType::Count] = {
         L"Specular Pathtracer",
         L"Denoised AO",
@@ -65,18 +65,12 @@ void Composition::Setup(shared_ptr<DeviceResources> deviceResources, shared_ptr<
     CreateDeviceDependentResources();
 }
 
-void Composition::Release()
-{
-    m_csHemisphereVisualizationCB.Release();
-}
 
 // Create resources that depend on the device.
 void Composition::CreateDeviceDependentResources()
 {
     CreateAuxilaryDeviceResources();
-
-    // ToDo move/rename
-    CreateComposeRenderPassesCSResources();
+    CreateShaderResources();
 }
 
 
@@ -115,7 +109,7 @@ void Composition::CreateTextureResources()
     CreateRenderTargetResource(device, Denoiser::ResourceFormat(Denoiser::ResourceType::LocalMeanVariance), m_renderingWidth, m_renderingHeight, m_cbvSrvUavHeap.get(), &m_upsampledLocalMeanVarianceResource, initialResourceState, L"Upsampled Local Mean Variance");
 }
 
-void Composition::CreateComposeRenderPassesCSResources()
+void Composition::CreateShaderResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
     auto FrameCount = m_deviceResources->GetBackBufferCount();
@@ -124,14 +118,14 @@ void Composition::CreateComposeRenderPassesCSResources()
     {
         using namespace CSRootSignature::CompositionCS;
 
-        CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; // Perfomance TIP: Order from most frequent to least frequent.
-        ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
-        ranges[Slot::GBufferResources].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0);  // 5 input GBuffer textures
-        ranges[Slot::AO].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  // 1 input AO texture
-        ranges[Slot::AORayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9);  // 1 input AO ray hit distance texture
-        ranges[Slot::FrameAge].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); // 1 input disocclusion map texture
-        ranges[Slot::Color].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11); // 1 input color texture
-        ranges[Slot::AOSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 12); // 1 input AO diffuse texture
+        CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; 
+        ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  
+        ranges[Slot::GBufferResources].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0); 
+        ranges[Slot::AO].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  
+        ranges[Slot::AORayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9); 
+        ranges[Slot::FrameAge].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); 
+        ranges[Slot::Color].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
+        ranges[Slot::AOSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
         ranges[Slot::Variance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13);
         ranges[Slot::LocalMeanVariance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 14);
 
@@ -153,10 +147,7 @@ void Composition::CreateComposeRenderPassesCSResources()
         SerializeAndCreateRootSignature(device, rootSignatureDesc, &m_computeRootSigs[CSType::CompositionCS], L"Root signature: CompositionCS");
     }
 
-    // Create shader resources
-    {
-        m_csComposeRenderPassesCB.Create(device, FrameCount, L"Constant Buffer: CompositionCS");
-    }
+    m_csComposeRenderPassesCB.Create(device, FrameCount, L"Constant Buffer: CompositionCS");
 
     // Create compute pipeline state.
     {

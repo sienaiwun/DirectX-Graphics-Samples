@@ -10,7 +10,6 @@
 //*********************************************************
 #pragma once
 
-// ToDo move to cpp
 #include "RaytracingSceneDefines.h"
 #include "DirectXRaytracingHelper.h"
 #include "RaytracingAccelerationStructure.h"
@@ -35,17 +34,13 @@ class Denoiser;
 class Composition
 {
 public:
-    // Ctors.
-    Composition() {}
-
     // Public methods.
     void Setup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DX::DescriptorHeap> descriptorHeap);
     void Render(GpuResource* outputResource, Scene& scene, Pathtracer& pathtracer, RTAO& rtao, Denoiser& denoiser, UINT GBufferWidth, UINT GBufferHeight);
     void SetResolution(UINT width, UINT height);
-    void Release();
 
 private:
-    void CreateComposeRenderPassesCSResources();
+    void CreateShaderResources();
     void CreateDeviceDependentResources();
     void CreateAuxilaryDeviceResources();
     void CreateTextureResources();

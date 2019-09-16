@@ -506,21 +506,6 @@ namespace Sample
     void D3D12RaytracingAmbientOcclusion::ReleaseDeviceDependentResources()
     {
         EngineProfiling::ReleaseDevice();
-
-        if (m_enableUI)
-        {
-            m_uiLayer.reset();
-        }
-
-        m_cbvSrvUavHeap.reset();
-
-        m_pathtracer.Release();
-        m_RTAO.Release();
-        m_denoiser.Release();
-        m_composition.Release();
-        m_scene.Release();
-
-        m_raytracingOutput.resource.Reset();
     }
 
     void D3D12RaytracingAmbientOcclusion::RecreateD3D()

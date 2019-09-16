@@ -63,7 +63,7 @@ float4 RenderPBRResult(in uint2 DTid)
     float3 hitPosition = g_texGBufferPositionRT[DTid].xyz;
     float t = length(hitPosition);
     float distFalloff = 0.000000005;
-    color = lerp(color, BackgroundColor, 1.0 - exp(-DISTANCE_FALLOFF * t * t * t * t));
+    color = lerp(color, BackgroundColor, 1.0 - exp(-distFalloff * t * t * t * t));
 
     return color;
 }

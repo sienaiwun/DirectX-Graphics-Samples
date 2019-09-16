@@ -38,7 +38,6 @@ public:
     void Setup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DX::DescriptorHeap> descriptorHeap, Scene& scene);
     void Run(Scene& scene);
     void SetResolution(UINT GBufferWidth, UINT GBufferHeight, UINT RTAOWidth, UINT RTAOHeight);
-    void Release();
 
     // Getters & setters.
     // ToDo remove
