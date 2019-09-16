@@ -58,6 +58,8 @@ public:
     UINT DenoisingWidth() { return m_denoisingWidth; }
     UINT DenoisingHeight() { return m_denoisingHeight; }
 
+    static const UINT c_MaxAtrousDesnoisePasses = 5;
+
 private:
     void TemporalReverseReproject(Scene& scene, Pathtracer& pathtracer);
     void TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao);

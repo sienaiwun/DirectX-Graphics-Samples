@@ -1368,15 +1368,6 @@ namespace GpuKernels
         {
             XMUINT2 groupSize(CeilDivide(resourceDim.x, ThreadGroup::Width), CeilDivide(resourceDim.y, ThreadGroup::Height));
 
-#if ATROUS_ONELEVEL_ONLY
-            UINT i = numFilterPasses - 1;
-            numFilterPasses = 1;
-
-            GpuResource* outValueResources[2] = { outputResource, &m_intermediateValueOutput };
-
-            commandList->SetComputeRootDescriptorTable(Slot::Input, inputValuesResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::Output, outValueResources[0]->gpuDescriptorWriteAccess);
-#else
             // Order the resources such that the final pass writes to outputResource.
             GpuResource* outValueResources[2] =
             {
@@ -1396,7 +1387,6 @@ namespace GpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::VarianceOutput, m_intermediateVarianceOutputs[0].gpuDescriptorWriteAccess);
 
             for (UINT i = 0; i < numFilterPasses; i++)
-#endif
             {
                 commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, cb.GpuVirtualAddress(m_CBinstanceID + i));
                                 

@@ -133,14 +133,10 @@ namespace RTAO_Args
     EnumVar RTAO_AmbientCoefficientResourceFormat(L"Render/Texture Formats/AO/RTAO/Ambient Coefficient", TextureResourceFormatR::R16_FLOAT, TextureResourceFormatR::Count, FloatingPointFormatsR, Sample::OnRecreateRaytracingResources);
 
 
-#if LOAD_PBRT_SCENE
     NumVar RTAOMaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", 2*AO_RAY_T_MAX, 0.0f, 50.0f, 0.2f);
-#else
-    NumVar RTAOMaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", AO_RAY_T_MAX, 0.0f, 1000.0f, 4);
-#endif
     BoolVar RTAOApproximateInterreflections(L"Render/AO/RTAO/Approximate Interreflections/Enabled", true);
     NumVar RTAODiffuseReflectanceScale(L"Render/AO/RTAO/Approximate Interreflections/Diffuse Reflectance Scale", 0.5f, 0.0f, 1.0f, 0.1f);
-    NumVar  RTAO_MinimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
+    NumVar  minimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
     BoolVar RTAOIsExponentialFalloffEnabled(L"Render/AO/RTAO/Exponential Falloff", true);
     NumVar RTAO_ExponentialFalloffDecayConstant(L"Render/AO/RTAO/Exponential Falloff Decay Constant", 2.f, 0.0f, 20.f, 0.25f);
     NumVar RTAO_ExponentialFalloffMinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);       // ToDo Finetune document perf.
@@ -562,11 +558,11 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
     m_CB->rpp = RTAO_Args::Rpp;
 
     // ToDo standardize RTAO RTAO_ prefix, or remove it since this is RTAO class
-    m_CB->RTAO_approximateInterreflections = RTAO_Args::RTAOApproximateInterreflections;
-    m_CB->RTAO_diffuseReflectanceScale = RTAO_Args::RTAODiffuseReflectanceScale;
-    m_CB->RTAO_MinimumAmbientIllumination = RTAO_Args::RTAO_MinimumAmbientIllumination;
-    m_CB->RTAO_IsExponentialFalloffEnabled = RTAO_Args::RTAOIsExponentialFalloffEnabled;
-    m_CB->RTAO_exponentialFalloffDecayConstant = RTAO_Args::RTAO_ExponentialFalloffDecayConstant;
+    m_CB->approximateInterreflections = RTAO_Args::RTAOApproximateInterreflections;
+    m_CB->diffuseReflectanceScale = RTAO_Args::RTAODiffuseReflectanceScale;
+    m_CB->minimumAmbientIllumination = RTAO_Args::minimumAmbientIllumination;
+    m_CB->isExponentialFalloffEnabled = RTAO_Args::RTAOIsExponentialFalloffEnabled;
+    m_CB->exponentialFalloffDecayConstant = RTAO_Args::RTAO_ExponentialFalloffDecayConstant;
 
     // Calculate a theoretical max ray distance to be used in occlusion factor computation.
     // Occlusion factor of a ray hit is computed based of its ray hit time, falloff exponent and a max ray hit time.
@@ -581,8 +577,8 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
         // Invert occlusionFactor = exp(-lambda * t * t), where t is tHit/tMax of a ray.
         float t = sqrt(logf(occclusionCutoff) / -lambda);
 
-        m_CB->RTAO_maxShadowRayHitTime = t * RTAO_Args::RTAOMaxRayHitTime;
-        m_CB->RTAO_maxTheoreticalShadowRayHitTime = RTAO_Args::RTAOMaxRayHitTime;
+        m_CB->maxShadowRayHitTime = t * RTAO_Args::RTAOMaxRayHitTime;
+        m_CB->maxTheoreticalShadowRayHitTime = RTAO_Args::RTAOMaxRayHitTime;
     }
 
     m_CB.CopyStagingToGpu(frameIndex);

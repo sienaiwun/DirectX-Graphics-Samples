@@ -37,10 +37,6 @@ RWTexture2D<float4> g_rtGBufferPosition : register(u7);
 RWTexture2D<NormalDepthTexFormat> g_rtGBufferNormalDepth : register(u8);
 RWTexture2D<float> g_rtGBufferDepth : register(u9);
 
-#if CALCULATE_PARTIAL_DEPTH_DERIVATIVES_IN_RAYGEN
-RWTexture2D<float2> g_rtPartialDepthDerivatives : register(u16);
-#endif
-
 RWTexture2D<float2> g_rtTextureSpaceMotionVector : register(u17);
 RWTexture2D<NormalDepthTexFormat> g_rtReprojectedNormalDepth : register(u18); // ToDo rename
 RWTexture2D<float4> g_rtColor : register(u19);
@@ -211,13 +207,7 @@ bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in UINT currentRay
     // This way closest and any hit shaders can be skipped if true tHit is not needed. 
     ShadowRayPayload shadowPayload = { TMax };
 
-    UINT rayFlags =
-#if FACE_CULLING            // ToDo remove one path?
-        RAY_FLAG_CULL_BACK_FACING_TRIANGLES
-#else
-        0
-#endif
-        | RAY_FLAG_CULL_NON_OPAQUE;             // ~skip transparent objects
+    UINT rayFlags = RAY_FLAG_CULL_NON_OPAQUE;             // ~skip transparent objects
     
     if (acceptFirstHit || !retrieveTHit)
     {
@@ -267,12 +257,7 @@ bool TraceShadowRayAndReportIfHit(in float3 hitPosition, in float3 direction, in
 }
 
 // Trace a camera ray into the scene.
-// rx, ry - auxilary rays offset in screen space by one pixel in x, y directions.
-#if USE_UV_DERIVATIVES
-GBufferRayPayload TraceGBufferRay(in Ray ray, in Ray rx, in Ray ry, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
-#else
 GBufferRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
-#endif
 {
     GBufferRayPayload rayPayload;
     rayPayload.rayRecursionDepth = currentRayRecursionDepth + 1;
@@ -283,10 +268,6 @@ GBufferRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDepth, 
     rayPayload.AOGBuffer.encodedNormal = 0;
     rayPayload.AOGBuffer._virtualHitPosition = 0;
     rayPayload.AOGBuffer._encodedNormal = 0; 
-#if USE_UV_DERIVATIVES
-    rayPayload.rx = rx;
-    rayPayload.ry = ry;
-#endif
 
     if (currentRayRecursionDepth >= g_cb.maxRadianceRayRecursionDepth)
     {
@@ -304,14 +285,7 @@ GBufferRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDepth, 
     rayDesc.TMin = tMin;
     rayDesc.TMax = tMax;
 
-    UINT rayFlags =
-#if FACE_CULLING
-        RAY_FLAG_CULL_BACK_FACING_TRIANGLES
-#else
-        0
-#endif
-        | (cullNonOpaque ? RAY_FLAG_CULL_NON_OPAQUE : 0);        
-
+    UINT rayFlags = (cullNonOpaque ? RAY_FLAG_CULL_NON_OPAQUE : 0); 
 
 	TraceRay(g_scene,
         rayFlags,
@@ -346,37 +320,13 @@ float3 TraceReflectedGBufferRay(in float3 hitPosition, in float3 wi, in float3 N
 
     float3 adjustedHitPosition = hitPosition + offsetAlongRay;
 
-
-    // Intersection points of auxilary rays with the current surface
-    // ToDo dedupe - this is already calculated in the closest hi
-#if USE_UV_DERIVATIVES
-    float3 px = RayPlaneIntersection(adjustedHitPosition, N, rayPayload.rx.origin, rayPayload.rx.direction);
-    float3 py = RayPlaneIntersection(adjustedHitPosition, N, rayPayload.ry.origin, rayPayload.ry.direction);
-
-    // Calculate reflected rx, ry
-    // ToDo safeguard this agianst reflection going behind due to grazing angles
-    Ray rx = { px, reflect(rayPayload.rx.direction, N) };
-    Ray ry = { py, reflect(rayPayload.ry.direction, N) };
-#endif
-
-#if CALCULATE_PARTIAL_DEPTH_DERIVATIVES_IN_RAYGEN
-    float3 rxRaySegment = px - rayPayload.rx.origin;
-    float3 ryRaySegment = py - rayPayload.ry.origin;
-    rayPayload.rxTHit += length(rxRaySegment);
-    rayPayload.ryTHit += length(ryRaySegment);
-#endif
-
     // ToDo offset along surface normal, and adjust tOffset subtraction below.
     Ray ray = { adjustedHitPosition,  wi };
 
     float tMin = 0; // NEAR_PLANE ToDo
     float tMax = TMax;  //  FAR_PLANE - RayTCurrent()
 
-#if USE_UV_DERIVATIVES
-    rayPayload = TraceGBufferRay(ray, rx, ry, rayPayload.rayRecursionDepth, tMin, tMax);
-#else
     rayPayload = TraceGBufferRay(ray, rayPayload.rayRecursionDepth, tMin, tMax);
-#endif
     if (rayPayload.AOGBuffer.tHit != HitDistanceOnMiss)
     {
         // Get the current planar mirror in the previous frame.
@@ -403,22 +353,6 @@ float3 TraceRefractedGBufferRay(in float3 hitPosition, in float3 wt, in float3 N
 {
     float tOffset = 0.001f;
     float3 adjustedHitPosition = hitPosition + tOffset * wt;
-    
-#if USE_UV_DERIVATIVES
-    float3 px = RayPlaneIntersection(adjustedHitPosition, N, rayPayload.rx.origin, rayPayload.rx.direction);
-    float3 py = RayPlaneIntersection(adjustedHitPosition, N, rayPayload.ry.origin, rayPayload.ry.direction);
-
-    // ToDo currently refracted rays are simply transparent rays
-    Ray rx = { px, rayPayload.rx.direction };
-    Ray ry = { py, rayPayload.ry.direction };
-#endif
-
-#if CALCULATE_PARTIAL_DEPTH_DERIVATIVES_IN_RAYGEN
-    float3 rxRaySegment = px - rayPayload.rx.origin;
-    float3 ryRaySegment = py - rayPayload.ry.origin;
-    rayPayload.rxTHit += length(rxRaySegment);
-    rayPayload.ryTHit += length(ryRaySegment);
-#endif
 
     // ToDo offset along surface normal, and adjust tOffset subtraction below.
     Ray ray = { adjustedHitPosition,  wt };
@@ -434,11 +368,8 @@ float3 TraceRefractedGBufferRay(in float3 hitPosition, in float3 wt, in float3 N
     // glass cockpit through a window in the house. The cockpit will be skipped in this case.
     bool cullNonOpaque = true;
 
-#if USE_UV_DERIVATIVES
-    rayPayload = TraceGBufferRay(ray, rayPayload.rx, rayPayload.ry, rayPayload.rayRecursionDepth, tMin, tMax, 0, cullNonOpaque);
-#else
     rayPayload = TraceGBufferRay(ray, rayPayload.rayRecursionDepth, tMin, tMax, 0, cullNonOpaque);
-#endif
+
     if (rayPayload.AOGBuffer.tHit != HitDistanceOnMiss)
     {
         // Add current thit and the added offset to the thit of the traced ray.
@@ -580,19 +511,9 @@ void MyRayGenShader_GBuffer()
 	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
 	Ray ray = GenerateCameraRay(DTid, g_cb.cameraPosition, g_cb.projectionToWorldWithCameraEyeAtOrigin);
 
-#if USE_UV_DERIVATIVES
-    Ray rx, ry;
-    GetAuxilaryCameraRays(g_cb.cameraPosition, g_cb.projectionToWorldWithCameraEyeAtOrigin, rx, ry);
-#endif
-
 	// Cast a ray into the scene and retrieve GBuffer information.
 	UINT currentRayRecursionDepth = 0;
-#if USE_UV_DERIVATIVES
-	GBufferRayPayload rayPayload = TraceGBufferRay(ray, rx, ry, currentRayRecursionDepth);
-#else
     GBufferRayPayload rayPayload = TraceGBufferRay(ray, currentRayRecursionDepth);
-#endif
-
 
     // Invalidate perfect mirror reflections that missed. 
     // There is no We don't need to calculate AO for those.
@@ -633,13 +554,6 @@ void MyRayGenShader_GBuffer()
         float3 cameraDirection = GenerateForwardCameraRayDirection(g_cb.projectionToWorldWithCameraEyeAtOrigin);
         float linearDepth = linearDistance * dot(ray.direction, cameraDirection);
 
-#if CALCULATE_PARTIAL_DEPTH_DERIVATIVES_IN_RAYGEN
-        // ToDo recalculate rx.direction to avoid live state?
-        float rxLinearDepth = rayPayload.rxTHit * dot(rx.direction, cameraDirection);
-        float ryLinearDepth = rayPayload.ryTHit * dot(ry.direction, cameraDirection);
-        float2 ddxy = abs(float2(rxLinearDepth, ryLinearDepth) - linearDepth);
-        g_rtPartialDepthDerivatives[DTid] = ddxy;
-#endif
 #if 1
         float nonLinearDepth = rayPayload.AOGBuffer.tHit > 0 ?
             (FAR_PLANE + NEAR_PLANE - 2.0 * NEAR_PLANE * FAR_PLANE / linearDepth) / (FAR_PLANE - NEAR_PLANE)
@@ -675,8 +589,6 @@ void MyRayGenShader_GBuffer()
 float3 NormalMap(
     in float3 normal,
     in float2 texCoord,
-    in float2 ddx,
-    in float2 ddy,
     in VertexPositionNormalTextureTangent vertices[3],
     in PrimitiveMaterialBuffer material,
     in BuiltInTriangleIntersectionAttributes attr)
@@ -698,11 +610,8 @@ float3 NormalMap(
         tangent = CalculateTangent(v0, v1, v2, uv0, uv1, uv2);
     }
 
-#if USE_UV_DERIVATIVES
-    float3 texSample = l_texNormalMap.SampleGrad(LinearWrapSampler, texCoord, ddx, ddy).xyz;
-#else
     float3 texSample = l_texNormalMap.SampleLevel(LinearWrapSampler, texCoord, 0).xyz;
-#endif
+#
     float3 bumpNormal = normalize(texSample * 2.f - 1.f);
     return BumpMapNormalToWorldSpaceNormal(bumpNormal, normal, tangent);
 }
@@ -733,10 +642,8 @@ void MyClosestHitShader_GBuffer(inout GBufferRayPayload rayPayload, in BuiltInTr
         float3 vertexNormals[3] = { vertices[0].normal, vertices[1].normal, vertices[2].normal };
         objectNormal = normalize(HitAttribute(vertexNormals, attr));    //ToDo normalization here is not needed
 
-#if !FACE_CULLING
         float orientation = HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE ? 1 : -1;
         objectNormal *= orientation;
-#endif
 
         // BLAS Transforms in this sample are uniformly scaled so it's OK to directly apply the BLAS transform.
         // ToDo add a note that the transform is expected to have uniform scaling
@@ -745,45 +652,25 @@ void MyClosestHitShader_GBuffer(inout GBufferRayPayload rayPayload, in BuiltInTr
 
     float3 hitPosition = HitWorldPosition();
 
-    float2 ddx = 1;
-    float2 ddy = 1;
+    // ToDo remove
 
-#if USE_UV_DERIVATIVES
-    // Calculate auxilary rays' intersection points with the triangle.
-    float3 px, py;
-    px = RayPlaneIntersection(hitPosition, normal, rayPayload.rx.origin, rayPayload.rx.direction);
-    py = RayPlaneIntersection(hitPosition, normal, rayPayload.ry.origin, rayPayload.ry.direction);
-
-    if (material.hasDiffuseTexture ||
-        (g_cb.useNormalMaps && material.hasNormalTexture) ||
-        (material.type == MaterialType::AnalyticalCheckerboardTexture))
-    {
-        float3 vertexTangents[3] = { vertices[0].tangent, vertices[1].tangent, vertices[2].tangent };
-        float3 tangent = HitAttribute(vertexTangents, attr);
-        float3 bitangent = normalize(cross(tangent, normal));
-
-        CalculateUVDerivatives(normal, tangent, bitangent, hitPosition, px, py, ddx, ddy);
-    }
-#endif
     if (g_cb.useNormalMaps && material.hasNormalTexture)
     {
         // ToDo normal map is incorrect in squid room.
-        normal = NormalMap(normal, texCoord, ddx, ddy, vertices, material, attr);
+        normal = NormalMap(normal, texCoord, vertices, material, attr);
     }
 
     if (material.hasDiffuseTexture && !g_cb.useDiffuseFromMaterial)
     {
-#if USE_UV_DERIVATIVES
-        float3 texSample = l_texDiffuse.SampleGrad(LinearWrapSampler, texCoord, ddx, ddy).xyz;
-#else
         float3 texSample = l_texDiffuse.SampleLevel(LinearWrapSampler, texCoord, 0).xyz;
-#endif
-        material.Kd = RemoveSRGB(texSample);
+        material.Kd = texSample;
     }
 
     if (material.type == MaterialType::AnalyticalCheckerboardTexture)
     {
         float2 uv = hitPosition.xz / 2;
+        float2 ddx = 1;
+        float2 ddy = 1;
         float checkers = CheckersTextureBoxFilter(uv, ddx, ddy);
         if (length(uv) < 45 && (checkers > 0.5))
         {

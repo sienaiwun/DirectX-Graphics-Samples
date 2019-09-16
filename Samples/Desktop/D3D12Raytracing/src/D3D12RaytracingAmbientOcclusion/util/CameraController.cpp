@@ -53,9 +53,6 @@ bool CameraController::Update(float deltaTime)
     Camera prevCameraState = m_camera;
 
 	float timeScale = deltaTime;
-#if MOVE_ONCE_ON_STRAFE
-    timeScale = 0.016f;
-#endif
 
     if (GameInput::IsFirstPressed(GameInput::kLThumbClick) || GameInput::IsFirstPressed(GameInput::kKey_lshift))
         m_FineMovement = !m_FineMovement;
@@ -85,9 +82,6 @@ bool CameraController::Update(float deltaTime)
         (GameInput::IsPressed(GameInput::kKey_e) ? 1.f: 0.0f) +
         (GameInput::IsPressed(GameInput::kKey_q) ? -1.f: 0.0f)
       );
-#if MOVE_ONCE_ON_STRAFE
-    strafe *= GameInput::IsFirstPressed(GameInput::kKey_a) || GameInput::IsFirstPressed(GameInput::kKey_d) ? 1 : 0;
-#endif
 
     if (m_Momentum)
     {

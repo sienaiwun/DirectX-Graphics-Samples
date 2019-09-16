@@ -126,32 +126,27 @@ AppSetup
 //
 //**********************************************************************************************
 
+
+
+// ToDO To retain
+#define GBUFFER_AO_COUNT_AO_HITS 0
 #define FOVY 45.f
+///////////////////////////////////
+
+
 // ToDo remove
 #define NEAR_PLANE 0.001f
 #define FAR_PLANE 1000.0f   // ToDo pass form the app
 
-#define MARK_PERFECT_MIRRORS_AS_NOT_OPAQUE 1
-
-#define RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS 1
-#define AO_SPP_N 1
-#define AO_SPP_N_MAX 1          // ToDo Uses no loop on 1 => saves 0.3 ms on TitanXp at 1080p
-
-#define MOVE_ONCE_ON_STRAFE 1
-
+#define RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS 1      // ToDo cleanup
 
 #define RTAO_MARK_CACHED_VALUES_NEGATIVE 1
 #define RTAO_GAUSSIAN_BLUR_AFTER_Temporal 0
 #if RTAO_GAUSSIAN_BLUR_AFTER_Temporal && RTAO_MARK_CACHED_VALUES_NEGATIVE
 Incompatible macros
 #endif
-#define STOP_TRACING_AND_DENOISING_AFTER_FEW_FRAMES 0
 
-// ToDo TAO is swimming in reflections
-#define CALCULATE_PARTIAL_DEPTH_DERIVATIVES_IN_RAYGEN 0
-
-//#define SAMPLER_FILTER D3D12_FILTER_MIN_MAG_MIP_LINEAR
-#define SAMPLER_FILTER D3D12_FILTER_ANISOTROPIC  // TODo blurry at various angles
+#define SAMPLER_FILTER D3D12_FILTER_ANISOTROPIC
 
 // ToDo
 #define ENABLE_PROFILING 0
@@ -159,7 +154,6 @@ Incompatible macros
 
 #define DISTANCE_ON_MISS 65504  // ~FLT_MAX within 16 bit format // ToDo explain
 
-#define PRINT_OUT_TC_MATRICES 0
 #define PRINT_OUT_CAMERA_CONFIG 0
 
 #ifdef HLSL
@@ -167,72 +161,29 @@ typedef uint NormalDepthTexFormat;
 #else
 #define COMPACT_NORMAL_DEPTH_DXGI_FORMAT DXGI_FORMAT_R32_UINT
 #endif
-#define GBUFFER_AO_COUNT_AO_HITS 0
 
-// ToDO enable Vsync via cmdline/or UI
 #define ENABLE_VSYNC 1
-#if ENABLE_VSYNC
-#define VSYNC_PRESENT_INTERVAL 1  
-#endif
 
-// ToDo Fix missing DirectXTK12.lib in Profile config - as the nuget doesnt provide profile
-// ToDo remove PROFILE preprocesser macro from Release
-
-#define ATROUS_DENOISER 1
-#define ATROUS_DENOISER_MAX_PASSES 10
-#define ATROUS_ONELEVEL_ONLY 0
-
-#define APPLY_SRGB_CORRECTION 0
-
-// ToDO this wasn't necessary before..
-#define VBIB_AS_NON_PIXEL_SHADER_RESOURCE 0 // ToDo spec requires it but it works without it?
-
-#define LOAD_PBRT_SCENE 1       // loads PBRT(1) or SquidRoom(0)
 #ifdef _DEBUG
-#define LOAD_ONLY_ONE_PBRT_MESH 1  // for LOAD_PBRT_SCENE == 1 only
+#define LOAD_ONLY_ONE_PBRT_MESH 1 
 #else
-#define LOAD_ONLY_ONE_PBRT_MESH 0  // for LOAD_PBRT_SCENE == 1 only
+#define LOAD_ONLY_ONE_PBRT_MESH 0 
 #endif
 
-#if LOAD_PBRT_SCENE
-#define DISTANCE_FALLOFF 0.000000005
 #define AO_RAY_T_MAX 22
-#define SCENE_SCALE 300     
-#define USE_GRASS_GEOMETRY 1
-#define GENERATE_GRASS 1
-#define FACE_CULLING 0
-#define USE_UV_DERIVATIVES 0 // Disabled due large perf hit. Slows down pathtracer by 60%.
-#else
-#define USE_GRASS_GEOMETRY 0
-#define GENERATE_GRASS 0
-#define DISTANCE_FALLOFF 0
-#define AO_RAY_T_MAX 150
-#define SCENE_SCALE 2000
-#define FACE_CULLING 1
-#define USE_UV_DERIVATIVES 0
-#endif
-#define INDEX_FORMAT_UINT 1
 
-
-
-// ToDo separate per-vertex attributes from VB
-// ToDo dedupe the ones matching default
-// ToDo move
-// ToDo encapsulate under CS namespace
 namespace ReduceSumCS {
 	namespace ThreadGroup {
 		enum Enum { Width = 8, Height = 16, Size = Width * Height, NumElementsToLoadPerThread = 10 };	
 	}
 }
 
-// ToDo perf vs 8x8?
 namespace AtrousWaveletTransformFilterCS {
     namespace ThreadGroup {
         enum Enum { Width = 16, Height = 16, Size = Width * Height };
     }
 }
 
-// ToDo combine and reuse a default 8x8 ?
 namespace DefaultComputeShaderParams {
     namespace ThreadGroup {
         enum Enum { Width = 8, Height = 8, Size = Width * Height };
@@ -242,35 +193,15 @@ namespace DefaultComputeShaderParams {
 
 #ifdef HLSL
 #include "util\HlslCompat.h"
-#if INDEX_FORMAT_UINT
 typedef UINT Index;
-#endif
 #else
 using namespace DirectX;
 
-#if INDEX_FORMAT_UINT
 typedef UINT Index;
-#else
-typedef UINT16 Index;
-#endif
 #endif
 
 
-// ToDo revise
-// PERFORMANCE TIP: Set max recursion depth as low as needed
-// as drivers may apply optimization strategies for low recursion depths.
-#define MAX_RAY_RECURSION_DEPTH 5    // ~ primary rays + 2 x reflections + shadow rays from reflected geometry.  ToDo
-// ToDo add recursion viz
 
-// ToDo:
-// Options:
-// - shading - simple/complex
-// - instanced/unique goemetry
-// - deformed geometry
-// - Dynamic options
-// - Update/Build
-
-// ToDo clean up
 struct ProceduralPrimitiveAttributes
 {
     XMFLOAT3 normal;
@@ -284,7 +215,6 @@ struct Ray
 
 struct AmbientOcclusionGBuffer
 {
-    // ToDo rearrange members for smaller size? ALignment of XMFLOAT3?
     float tHit;
     XMFLOAT3 hitPosition;           // Position of the hit for which to calculate Ambient coefficient.
     UINT diffuseByte3;              // Diffuse reflectivity of the hit surface.
@@ -305,14 +235,6 @@ struct GBufferRayPayload
     UINT rayRecursionDepth;
     XMFLOAT3 radiance;
     AmbientOcclusionGBuffer AOGBuffer;
-#if USE_UV_DERIVATIVES
-    Ray rx;    // Auxilary camera ray offset by one pixel in x dimension in screen space.
-    Ray ry;    // Auxilary camera ray offset by one pixel in y dimension in screen space.
-#endif
-#if CALCULATE_PARTIAL_DEPTH_DERIVATIVES_IN_RAYGEN
-    float rxTHit;
-    float ryTHit;
-#endif
 };
 
 struct ShadowRayPayload
@@ -320,24 +242,10 @@ struct ShadowRayPayload
     float tHit;         // Hit time <0,..> on Hit. -1 on miss.
 };
 
-struct RNGConstantBuffer
-{
-    XMUINT2 uavOffset;     // offset where [0,0] thread should write to.
-    XMUINT2 dispatchDimensions;  // for 2D dispatches
-	UINT sampleSetBase;
-    UINT numSamples;
-    UINT numSampleSets;
-    UINT numSamplesToShow; 
-    // TODo: Why is padding to 16 needed? cb gets corrupted otherwise. Put a static_assert in ConstantBuffer
-    XMUINT2 stratums;      // Stratum resolution
-    XMUINT2 grid;      // Grid resolution
-};
-
-// ToDo remove obsolete params in cbs
-
 struct AtrousWaveletTransformFilterConstantBuffer
 {
     // ToDo pad?
+    // ToDo remove obsolete
     XMUINT2 textureDim;
     UINT kernelStepShift;
     UINT kernelWidth;
@@ -401,7 +309,6 @@ struct CalculateMeanVarianceConstantBuffer
     float padding;
 };
 
-// ToDo standardzie capitalization
 struct RayGenConstantBuffer
 {
     XMUINT2 textureDim;
@@ -440,10 +347,6 @@ namespace SortRays {
 #endif
 }
 
-
-// ToDo capitalize?
-// ToDo padding? or force align.
-// ToDo remove unused
 // ToDo PIX shows empty rows (~as many as valid rows) in between entries in multi frame cb.
 struct PathtracerConstantBuffer
 {
@@ -451,7 +354,7 @@ struct PathtracerConstantBuffer
     XMMATRIX projectionToWorldWithCameraEyeAtOrigin;	// projection to world matrix with Camera at (0,0,0).
     XMFLOAT3 cameraPosition;
     BOOL     useDiffuseFromMaterial;
-    XMFLOAT3 lightPosition;     // ToDo use float3
+    XMFLOAT3 lightPosition;     
     BOOL     useNormalMaps;
     XMFLOAT3 lightColor;
     float    defaultAmbientIntensity;
@@ -468,9 +371,6 @@ struct PathtracerConstantBuffer
 
 };
 
-// ToDo split cb?
-// ToDo capitalize?
-// ToDo cleanup padding?
 // ToDo remove RTAO prefix
 struct RTAOConstantBuffer
 {
@@ -480,19 +380,19 @@ struct RTAOConstantBuffer
     UINT numPixelsPerDimPerSet;
 
     // ToDo rename to AOray
-    float RTAO_maxShadowRayHitTime;             // Max shadow ray hit time used for tMax in TraceRay.
-    BOOL RTAO_approximateInterreflections;      // Approximate interreflections. 
-    float RTAO_diffuseReflectanceScale;              // Diffuse reflectance from occluding surfaces. 
-    float RTAO_MinimumAmbientIllumination;       // Ambient illumination coef when a ray is occluded.
+    float maxShadowRayHitTime;             // Max shadow ray hit time used for tMax in TraceRay.
+    BOOL approximateInterreflections;      // Approximate interreflections. 
+    float diffuseReflectanceScale;              // Diffuse reflectance from occluding surfaces. 
+    float minimumAmbientIllumination;       // Ambient illumination coef when a ray is occluded.
 
     // toDo rename shadow to AO
-    float RTAO_maxTheoreticalShadowRayHitTime;  // Max shadow ray hit time used in falloff computation accounting for
-                                                // RTAO_ExponentialFalloffMinOcclusionCutoff and RTAO_maxShadowRayHitTime.    
+    float maxTheoreticalShadowRayHitTime;  // Max shadow ray hit time used in falloff computation accounting for
+                                                // RTAO_ExponentialFalloffMinOcclusionCutoff and maxShadowRayHitTime.    
     BOOL RTAO_UseSortedRays;
     XMUINT2 raytracingDim;
 
-    BOOL RTAO_IsExponentialFalloffEnabled;               // Apply exponential falloff to AO coefficient based on ray hit distance.    
-    float RTAO_exponentialFalloffDecayConstant;
+    BOOL isExponentialFalloffEnabled;               // Apply exponential falloff to AO coefficient based on ray hit distance.    
+    float exponentialFalloffDecayConstant;
     BOOL doCheckerboardSampling;
     BOOL areEvenPixelsActive;
 
@@ -665,9 +565,8 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
 {
-    // ToDo pix missinterprets the format
     XMUINT2 textureDim;
-    XMFLOAT2 invTextureDim; // ToDo test what impact passing inv tex dim makes
+    XMFLOAT2 invTextureDim;
 
     BOOL  forceUseMinSmoothingFactor;  // ToDo remove?
     BOOL clampCachedValues;

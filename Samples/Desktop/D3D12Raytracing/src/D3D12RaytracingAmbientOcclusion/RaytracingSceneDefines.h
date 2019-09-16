@@ -148,8 +148,7 @@ namespace TemporalSupersampling {
 namespace SampleScene {
 	namespace Type {
 		enum Enum {
-			SquidRoom,
-			PBRT,	// Rename
+			Main,
 			Count
 		};
 		extern const WCHAR* Names[Count];

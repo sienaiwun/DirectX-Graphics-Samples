@@ -45,7 +45,7 @@ float4 RenderPBRResult(in uint2 DTid)
     float3 albedo;
     DecodeMaterial16b(materialInfo, materialID, albedo);
     PrimitiveMaterialBuffer material = g_materials[materialID];
-    float3 specular = RemoveSRGB(material.Ks);      // ToDo review SRGB calls
+    float3 specular = material.Ks;      
     float3 PBRcolor = g_texColor[DTid].xyz;
 
     float ambientCoef = 0;
@@ -62,6 +62,7 @@ float4 RenderPBRResult(in uint2 DTid)
     // Apply visibility falloff.
     float3 hitPosition = g_texGBufferPositionRT[DTid].xyz;
     float t = length(hitPosition);
+    float distFalloff = 0.000000005;
     color = lerp(color, BackgroundColor, 1.0 - exp(-DISTANCE_FALLOFF * t * t * t * t));
 
     return color;
@@ -226,6 +227,6 @@ void main(uint2 DTid : SV_DispatchThreadID )
     }
 
 	// Write the composited color to the output texture.
-    g_renderTarget[DTid] = float4(ApplySRGB(color.rgb), color.a);
+    g_renderTarget[DTid] = color;
 }
 

@@ -72,13 +72,8 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
     ShadowRayPayload shadowPayload = { TMax };
 
     UINT rayFlags =
-#if FACE_CULLING            // ToDo remove one path?
-        RAY_FLAG_CULL_BACK_FACING_TRIANGLES
-#else
-        0
-#endif
         // Skip transparent objects.
-        | RAY_FLAG_CULL_NON_OPAQUE;        
+        RAY_FLAG_CULL_NON_OPAQUE;        
 
     // ToDo remove?
     // ToDo test visual impact
@@ -116,18 +111,18 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
 float CalculateAO(out float tHit, in uint2 srcPixelIndex, in Ray AOray, in float3 surfaceNormal)
 {
     float ambientCoef = 1;
-    const float tMax = cb.RTAO_maxShadowRayHitTime; // ToDo make sure its FLT_10BIT_MAX or less since we use 10bit origin depth in RaySort
+    const float tMax = cb.maxShadowRayHitTime; // ToDo make sure its FLT_10BIT_MAX or less since we use 10bit origin depth in RaySort
     if (TraceAORayAndReportIfHit(tHit, AOray, tMax, surfaceNormal))
     {
         float occlusionCoef = 1;
-        if (cb.RTAO_IsExponentialFalloffEnabled)
+        if (cb.isExponentialFalloffEnabled)
         {
-            float theoreticalTMax = cb.RTAO_maxTheoreticalShadowRayHitTime;
+            float theoreticalTMax = cb.maxTheoreticalShadowRayHitTime;
             float t = tHit / theoreticalTMax;
-            float lambda = cb.RTAO_exponentialFalloffDecayConstant;
+            float lambda = cb.exponentialFalloffDecayConstant;
             occlusionCoef = exp(-lambda * t * t);
         }
-        ambientCoef = 1 - (1 - cb.RTAO_MinimumAmbientIllumination) * occlusionCoef;
+        ambientCoef = 1 - (1 - cb.minimumAmbientIllumination) * occlusionCoef;
 
         // Approximate interreflections of light from blocking surfaces which are generally not completely dark and tend to have similar radiance.
         // Ref: Ch 11.3.3 Accounting for Interreflections, Real-Time Rendering (4th edition).
@@ -136,13 +131,13 @@ float CalculateAO(out float tHit, in uint2 srcPixelIndex, in Ray AOray, in float
         //      o Current surface color is the same as that of the occluders
         // Since this sample uses scalar ambient coefficient, it usse the scalar luminance of the surface color.
         // This will generally brighten the AO making it closer to the result of full Global Illumination, including interreflections.
-        if (cb.RTAO_approximateInterreflections)
+        if (cb.approximateInterreflections)
         {
             // ToDo test perf impact of reading the texture and move this to compose pass
             float3 surfaceAlbedo = g_texAOSurfaceAlbedo[srcPixelIndex].xyz;
 
             float kA = ambientCoef;
-            float rho = cb.RTAO_diffuseReflectanceScale * RGBtoLuminance(surfaceAlbedo);
+            float rho = cb.diffuseReflectanceScale * RGBtoLuminance(surfaceAlbedo);
 
             ambientCoef = kA / (1 - rho * (1 - kA));
         }
@@ -182,7 +177,7 @@ void RayGenShader()
     }
 
     g_rtAOcoefficient[srcRayIndex] = ambientCoef;
-    g_rtAORayHitDistance[srcRayIndex] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.RTAO_maxTheoreticalShadowRayHitTime;
+    g_rtAORayHitDistance[srcRayIndex] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalShadowRayHitTime;
  
 #if GBUFFER_AO_COUNT_AO_HITS
     // ToDo test perf impact of writing this
@@ -270,7 +265,7 @@ void RayGenShader_sortedRays()
     uint2 outPixel = srcRayIndexFullRes;
 
     g_rtAOcoefficient[outPixel] = ambientCoef;
-    g_rtAORayHitDistance[outPixel] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.RTAO_maxTheoreticalShadowRayHitTime;
+    g_rtAORayHitDistance[outPixel] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalShadowRayHitTime;
 
 #if GBUFFER_AO_COUNT_AO_HITS
     // ToDo test perf impact of writing this

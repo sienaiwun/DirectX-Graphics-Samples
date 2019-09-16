@@ -23,11 +23,6 @@
 #include "StepTimer.h"
 
 
-// ToDo remove namespce?
-namespace Scene_Args
-{
-}
-
 class Scene
 {
 public:
@@ -67,7 +62,6 @@ private:
     void CreateResolutionDependentResources();
 
     void GenerateGrassGeometry();
-    void LoadSquidRoom();
     void CreateIndexAndVertexBuffers(const GeometryDescriptor& desc, D3DGeometry* geometry);
     void LoadPBRTScene();
     void LoadSceneGeometry();

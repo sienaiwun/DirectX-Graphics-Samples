@@ -17,7 +17,6 @@
 #include "GpuTimeManager.h"
 #include "Scene.h"
 #include "D3D12RaytracingAmbientOcclusion.h"
-#include "SquidRoom.h"
 #include "RaytracingSceneDefines.h"
 
 // ToDo prune unused
@@ -29,6 +28,18 @@ using namespace GameCore;
 
 UIParameters g_UIparameters;    // ToDo move
 
+
+const D3D12_INPUT_ELEMENT_DESC StandardVertexDescription[] =
+{
+    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "TANGENT",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+};
+const UINT StandardVertexStride = 44;
+const DXGI_FORMAT StandardIndexFormat = DXGI_FORMAT_R32_UINT;
+const UINT StandardIndexStride = sizeof(UINT);
+
 namespace Scene_Args
 {
     void OnSceneChange(void*)
@@ -37,8 +48,6 @@ namespace Scene_Args
     }
 
     BoolVar EnableGeometryAndASBuildsAndUpdates(L"Render/Acceleration structure/Enable geometry & AS builds and updates", true);
-
-    EnumVar SceneType(L"Scene", SampleScene::Type::SquidRoom, SampleScene::Type::Count, SampleScene::Type::Names, OnSceneChange, nullptr);
        
     NumVar CameraRotationDuration(L"Scene2/Camera rotation time", 48.f, 1.f, 120.f, 1.f);
     BoolVar AnimateGrass(L"Scene2/Animate grass", true);
@@ -94,9 +103,7 @@ void Scene::CreateAuxilaryDeviceResources()
 
 void Scene::OnRender()
 {
-#if USE_GRASS_GEOMETRY
     GenerateGrassGeometry();
-#endif
     UpdateAccelerationStructure();
 }
 
@@ -279,10 +286,10 @@ void Scene::LoadPBRTScene()
         bottomLevelASGeometry.SetName(pbrtSceneDefinition.name);
 
         // ToDo switch to a common namespace rather than 't reference SquidRoomAssets?
-        bottomLevelASGeometry.m_indexFormat = SquidRoomAssets::StandardIndexFormat;     // ToDo use a common IB Format
-        bottomLevelASGeometry.m_ibStrideInBytes = SquidRoomAssets::StandardIndexStride;
+        bottomLevelASGeometry.m_indexFormat = StandardIndexFormat;     // ToDo use a common IB Format
+        bottomLevelASGeometry.m_ibStrideInBytes = StandardIndexStride;
         bottomLevelASGeometry.m_vertexFormat = DXGI_FORMAT_R32G32B32_FLOAT; // ToDo use common or add support to shaders 
-        bottomLevelASGeometry.m_vbStrideInBytes = SquidRoomAssets::StandardVertexStride;
+        bottomLevelASGeometry.m_vbStrideInBytes = StandardVertexStride;
 
         UINT numGeometries = static_cast<UINT>(pbrtScene.m_Meshes.size());
         auto& geometries = bottomLevelASGeometry.m_geometries;
@@ -379,11 +386,8 @@ void Scene::LoadPBRTScene()
 
             D3D12_RAYTRACING_GEOMETRY_FLAGS geometryFlags;
 
-            if (
-                cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f
-#if MARK_PERFECT_MIRRORS_AS_NOT_OPAQUE
-                && !(cb.Kr.x > 0.99f && cb.Kr.y > 0.99f && cb.Kr.z > 0.99f))
-#endif
+
+            if (cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f)
             {
                 geometryFlags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
             }
@@ -436,7 +440,7 @@ void Scene::InitializeScene()
 
     // Setup camera.
     {
-        auto& camera = SampleScene::args[Scene_Args::SceneType].camera;
+        auto& camera = SampleScene::args[SampleScene::Type::Main].camera;
         m_camera.Set(camera.position.eye, camera.position.at, camera.position.up);
         m_cameraController = make_unique<CameraController>(m_camera);
         m_cameraController->SetBoundaries(camera.boundaries.min, camera.boundaries.max);
@@ -451,59 +455,17 @@ void Scene::InitializeScene()
         m_lightColor = XMFLOAT3(0.6f, 0.6f, 0.6f);
     }
 }
-    
-// ToDo move this out as a helper
-void Scene::LoadSquidRoom()
-{
-    auto device = m_deviceResources->GetD3DDevice();
-    auto commandList = m_deviceResources->GetCommandList();
-
-    auto& bottomLevelASGeometry = m_bottomLevelASGeometries[L"Squid Room"];
-    bottomLevelASGeometry.SetName(L"Squid Room");
-    bottomLevelASGeometry.m_indexFormat = SquidRoomAssets::StandardIndexFormat; // ToDo use common or add support to shaders 
-    bottomLevelASGeometry.m_vertexFormat = DXGI_FORMAT_R32G32B32_FLOAT; // ToDo use common or add support to shaders 
-    bottomLevelASGeometry.m_ibStrideInBytes = SquidRoomAssets::StandardIndexStride;
-    bottomLevelASGeometry.m_vbStrideInBytes = SquidRoomAssets::StandardVertexStride;
-
-    bottomLevelASGeometry.m_geometries.resize(1);
-    auto& geometry = bottomLevelASGeometry.m_geometries[0];
-    auto& textures = bottomLevelASGeometry.m_textures;
-
-    SquidRoomAssets::LoadGeometry(
-        device,
-        commandList,
-        m_cbvSrvUavHeap.get(),
-        Sample::instance().GetAssetFullPath(SquidRoomAssets::DataFileName).c_str(),
-        &geometry,
-        &textures,
-        &m_materials,
-        &bottomLevelASGeometry.m_geometryInstances);
-
-    bottomLevelASGeometry.m_numTriangles = 0;
-    for (auto& geometryInstance : bottomLevelASGeometry.m_geometryInstances)
-    {
-        bottomLevelASGeometry.m_numTriangles = geometryInstance.ib.count / 3;
-    }
-}
+  
        
 void Scene::LoadSceneGeometry()
 {
-#if LOAD_PBRT_SCENE
     LoadPBRTScene();
-#if USE_GRASS_GEOMETRY
     InitializeGrassGeometry();
-#endif
-#else
-    LoadSquidRoom();
-#endif
 }
 
 // Build geometry used in the sample.
 void Scene::InitializeGrassGeometry()
 {
-#if !GENERATE_GRASS
-    return;
-#endif
     auto device = m_deviceResources->GetD3DDevice();
     auto commandList = m_deviceResources->GetCommandList();
     auto commandQueue = m_deviceResources->GetCommandQueue();
@@ -517,10 +479,10 @@ void Scene::InitializeGrassGeometry()
         wstring name = L"Grass Patch LOD " + to_wstring(i);
         auto& bottomLevelASGeometry = m_bottomLevelASGeometries[name];
         bottomLevelASGeometry.SetName(name);
-        bottomLevelASGeometry.m_indexFormat = SquidRoomAssets::StandardIndexFormat; // ToDo use common or add support to shaders 
+        bottomLevelASGeometry.m_indexFormat = StandardIndexFormat; // ToDo use common or add support to shaders 
         bottomLevelASGeometry.m_vertexFormat = DXGI_FORMAT_R32G32B32_FLOAT; // ToDo use common or add support to shaders 
-        bottomLevelASGeometry.m_ibStrideInBytes = SquidRoomAssets::StandardIndexStride;
-        bottomLevelASGeometry.m_vbStrideInBytes = SquidRoomAssets::StandardVertexStride;
+        bottomLevelASGeometry.m_ibStrideInBytes = StandardIndexStride;
+        bottomLevelASGeometry.m_vbStrideInBytes = StandardVertexStride;
 
         // Single patch geometry per bottom-level AS.
         bottomLevelASGeometry.m_geometries.resize(1);
@@ -718,8 +680,6 @@ void Scene::InitializeAccelerationStructures()
     auto device = m_deviceResources->GetD3DDevice();
 
     // Initialize bottom-level AS.
-
-#if LOAD_PBRT_SCENE
     wstring bottomLevelASnames[] = {
         L"Spaceship",
         L"GroundPlane",
@@ -730,11 +690,6 @@ void Scene::InitializeAccelerationStructures()
 #endif    
         //L"Tesselated Geometry"
     };
-#else
-    wstring bottomLevelASnames[] = {
-        L"Squid Room" };
-
-#endif
 
 
 
@@ -745,7 +700,7 @@ void Scene::InitializeAccelerationStructures()
     }
 
 
-#if LOAD_PBRT_SCENE && !LOAD_ONLY_ONE_PBRT_MESH
+#if !LOAD_ONLY_ONE_PBRT_MESH
     float radius = 75;
     XMMATRIX mTranslationSceneCenter = XMMatrixTranslation(-7, 0, 7);
     XMMATRIX mTranslation = XMMatrixTranslation(0, -1.5, radius);
@@ -771,9 +726,6 @@ void Scene::InitializeAccelerationStructures()
 #endif
 
 
-    //m_accelerationStructure->GetBottomLevelASInstance(5).SetTransform(XMMatrixTranslationFromVector(XMVectorSet(-10, 4, -10, 0)));
-
-#if GENERATE_GRASS
     UINT grassInstanceIndex = 0;
     for (int i = 0; i < NumGrassPatchesZ; i++)
         for (int j = 0; j < NumGrassPatchesX; j++)
@@ -789,7 +741,6 @@ void Scene::InitializeAccelerationStructures()
                 grassInstanceIndex++;
             }
         }
-#endif
 
     // Initialize the top-level AS.
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;    // ToDo specify via Scene_Args
@@ -829,9 +780,6 @@ void GetGrassParameters(GenerateGrassStrawsConstantBuffer_AppParams* params, UIN
 
 void Scene::GenerateGrassGeometry()
 {
-#if !GENERATE_GRASS
-    return;
-#endif
     auto commandList = m_deviceResources->GetCommandList();
     auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
     float totalTime = Scene_Args::AnimateGrass ? static_cast<float>(m_timer.GetTotalSeconds()) : 0;

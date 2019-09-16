@@ -73,7 +73,6 @@ private:
     ComPtr<ID3D12RootSignature>         m_computeRootSigs[ComputeShader::Type::Count];
 
     ConstantBuffer<ComposeRenderPassesConstantBuffer>   m_csComposeRenderPassesCB;
-    ConstantBuffer<RNGConstantBuffer>   m_csHemisphereVisualizationCB;
 
     UINT m_renderingWidth = 0;
     UINT m_renderingHeight = 0;

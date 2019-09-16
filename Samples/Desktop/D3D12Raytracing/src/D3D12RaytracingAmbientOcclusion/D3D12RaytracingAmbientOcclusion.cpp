@@ -632,7 +632,7 @@ namespace Sample
         }
 
 #if ENABLE_VSYNC
-        m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT, VSYNC_PRESENT_INTERVAL);
+        m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT, 1);
 #else
         m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT, 0);
 #endif

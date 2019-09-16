@@ -120,9 +120,6 @@
     <ClInclude Include="RandomNumberGenerator.hlsli">
       <Filter>Assets\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="util\SquidRoom.h">
-      <Filter>Assets\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="util\Camera.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
@@ -226,9 +223,6 @@
     </ClCompile>
     <ClCompile Include="util\CameraController.cpp">
       <Filter>Source Files\Util</Filter>
-    </ClCompile>
-    <ClCompile Include="util\SquidRoom.cpp">
-      <Filter>Assets\Scene</Filter>
     </ClCompile>
     <ClCompile Include="util\GpuKernels.cpp">
       <Filter>Source Files\Util</Filter>
@@ -416,10 +410,5 @@
     <FxCompile Include="util\AnalyticalTextures.hlsli">
       <Filter>Assets\Shaders\Util</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="util\SquidRoom.bin">
-      <Filter>Assets\Scene</Filter>
-    </CustomBuild>
   </ItemGroup>
 </Project>
