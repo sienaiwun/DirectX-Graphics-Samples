@@ -704,14 +704,12 @@ void RTAO::Run(
     resourceStateTracker->InsertUAVBarrier(&m_AOResources[AOResource::Coefficient]);
     resourceStateTracker->InsertUAVBarrier(&m_AOResources[AOResource::RayHitDistance]);
 
-#if GBUFFER_AO_COUNT_AO_HITS
     // Calculate AO ray hit count.
     if (m_calculateRayHitCounts)
     {
         ScopedTimer _prof(L"CalculateAORayHitCount", commandList);
         CalculateRayHitCount();
     }
-#endif
 }
 
 void RTAO::CalculateRayHitCount()

@@ -19,7 +19,7 @@
 #include "Sampler.h"
 #include "GpuKernels.h"
 #include "EngineTuning.h"
-#include "Composition/Composition.h"
+#include "Composition.h"
 #include "Scene.h"
 
 // ToDo move to cpp
@@ -135,7 +135,7 @@ private:
 
     // Compute shader & resources.
     GpuKernels::ReduceSum		m_reduceSumKernel;
-    GpuKernels::AORayGenerator m_rayGen;
+    GpuKernels::AORayGenerator  m_rayGen;
     GpuKernels::SortRays        m_raySorter;
 
 

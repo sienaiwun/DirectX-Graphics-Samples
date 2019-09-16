@@ -130,7 +130,6 @@ AppSetup
 
 
 // ToDO To retain
-#define GBUFFER_AO_COUNT_AO_HITS 0
 #define FOVY 45.f
 ///////////////////////////////////
 
@@ -193,7 +192,7 @@ namespace DefaultComputeShaderParams {
 
 
 #ifdef HLSL
-#include "util\HlslCompat.h"
+#include "HlslCompat.hlsli"
 typedef UINT Index;
 #else
 using namespace DirectX;

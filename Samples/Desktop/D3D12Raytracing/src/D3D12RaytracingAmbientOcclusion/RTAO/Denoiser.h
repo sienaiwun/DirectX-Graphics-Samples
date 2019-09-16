@@ -96,12 +96,10 @@ private:
     GpuKernels::TemporalSupersampling_ReverseReproject m_temporalCacheReverseReprojectKernel;
     GpuKernels::TemporalSupersampling_BlendWithCurrentFrame m_temporalCacheBlendWithCurrentFrameKernel;
     GpuKernels::AtrousWaveletTransformCrossBilateralFilter m_atrousWaveletTransformFilter;
-    GpuKernels::CalculateVariance       m_calculateVarianceKernel;
     GpuKernels::CalculateMeanVariance   m_calculateMeanVarianceKernel;
     const UINT                          MaxCalculateVarianceKernelInvocationsPerFrame =
         1
         + 1; // Temporal Super-Sampling.
-    GpuKernels::FillInMissingValuesFilter m_fillInMissingValuesFilterKernel;
     GpuKernels::BilateralFilter m_bilateralFilterKernel;
 
     friend class Composition;

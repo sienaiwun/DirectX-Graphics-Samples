@@ -17,7 +17,7 @@
 #include "GpuTimeManager.h"
 #include "Denoiser.h"
 #include "D3D12RaytracingAmbientOcclusion.h"
-#include "Composition/Composition.h"
+#include "Composition.h"
 
 // ToDo prune unused
 using namespace std;
@@ -173,10 +173,8 @@ void Denoiser::CreateAuxilaryDeviceResources()
     m_temporalCacheReverseReprojectKernel.Initialize(device, Sample::FrameCount);
     m_temporalCacheBlendWithCurrentFrameKernel.Initialize(device, Sample::FrameCount);
     m_atrousWaveletTransformFilter.Initialize(device, c_MaxAtrousDesnoisePasses, Sample::FrameCount);
-    m_calculateVarianceKernel.Initialize(device, Sample::FrameCount, MaxCalculateVarianceKernelInvocationsPerFrame);
     m_calculateMeanVarianceKernel.Initialize(device, Sample::FrameCount, 5 * MaxCalculateVarianceKernelInvocationsPerFrame); // ToDo revise the ount
     m_bilateralFilterKernel.Initialize(device, Sample::FrameCount, MAX_NUM_PASSES_LOW_TSPP);
-    m_fillInMissingValuesFilterKernel.Initialize(device, Sample::FrameCount, 2);
 }
 
 
@@ -456,25 +454,6 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         resourceStateTracker->TransitionResource(&m_localMeanVarianceResources[AOVarianceResource::Raw], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         resourceStateTracker->InsertUAVBarrier(&m_localMeanVarianceResources[AOVarianceResource::Raw]);
     }
-#if 0 // !VARIABLE_RATE_RAYTRACING
-    // ToDo - the filter needs to check for invalid values...
-    // ToDo should we be smoothing before temporal?
-    // Smoothen the local variance which is prone to error due to undersampled input.
-    {
-        {
-            ScopedTimer _prof(L"Mean Variance Smoothing", commandList);
-            resourceStateTracker->FlushResourceBarriers();
-            m_gaussianSmoothingKernel.Run(
-                commandList,
-                m_denoisingWidth,
-                m_denoisingHeight,
-                GpuKernels::GaussianFilter::Filter3x3RG,
-                m_cbvSrvUavHeap->GetHeap(),
-                m_localMeanVarianceResources[AOVarianceResource::Raw].gpuDescriptorReadAccess,
-                m_localMeanVarianceResources[AOVarianceResource::Smoothed].gpuDescriptorWriteAccess);
-        }
-    }
-#endif
 
     {
         resourceStateTracker->InsertUAVBarrier(&m_localMeanVarianceResources[AOVarianceResource::Smoothed]);
@@ -572,8 +551,6 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
     {
         // Fill in missing/disoccluded values.
         {
-#if 1
-            // ToDo should we use a wider filter?
             if (isCheckerboardSamplingEnabled)
             {
                 bool fillEvenPixels = !checkerboardLoadEvenPixels;
@@ -587,38 +564,7 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
                     m_localMeanVarianceResources[AOVarianceResource::Smoothed].gpuDescriptorReadAccess,
                     TemporalOutCoefficient->gpuDescriptorWriteAccess,
                     fillEvenPixels);
-
             }
-#else
-            ScopedTimer _prof(L"Fill in missing values filter", commandList);
-            {
-                resourceStateTracker->TransitionResource(&m_temporalAOCoefficient[m_temporalCacheCurrentFrameResourceIndex], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-                resourceStateTracker->InsertUAVBarrier(&TemporalOutCoefficient->resource.Get()),
-            }
-
-            resourceStateTracker->FlushResourceBarriers();
-            m_fillInMissingValuesFilterKernel.Run(
-                commandList,
-                m_denoisingWidth,
-                m_denoisingHeight,
-                GpuKernels::FillInMissingValuesFilter::DepthAware_GaussianFilter7x7,
-                1,
-                isCheckerboardSamplingEnabled,
-                checkerboardLoadEvenPixels,
-                m_cbvSrvUavHeap->GetHeap(),
-                TemporalOutCoefficient->gpuDescriptorReadAccess,
-                GBufferResources[GBufferResource::Depth].gpuDescriptorReadAccess,
-                m_temporalAOCoefficient[m_temporalCacheCurrentFrameResourceIndex].gpuDescriptorWriteAccess);
-
-            {
-                D3D12_RESOURCE_STATES before = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-                D3D12_RESOURCE_STATES after = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-                D3D12_RESOURCE_BARRIER barriers[] = {
-                    resourceStateTracker->TransitionResource(&m_temporalAOCoefficient[m_temporalCacheCurrentFrameResourceIndex], after);
-                };
-                commandList->ResourceBarrier(ARRAYSIZE(barriers), barriers);
-            }
-#endif
         }
     }
     resourceStateTracker->TransitionResource(TemporalOutCoefficient, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
