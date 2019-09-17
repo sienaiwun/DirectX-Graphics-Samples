@@ -275,7 +275,6 @@ namespace GpuKernels
         ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
         GpuResource			                m_intermediateValueOutput;
         GpuResource			                m_intermediateVarianceOutputs[2];
-        GpuResource			                m_filterWeightOutput;
         ConstantBuffer<AtrousWaveletTransformFilterConstantBuffer> m_CB;
         ConstantBuffer<AtrousWaveletTransformFilterConstantBuffer> m_CBfilterWeight;
         UINT                                m_CBinstanceID = 0;

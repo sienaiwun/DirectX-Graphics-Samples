@@ -119,7 +119,6 @@ namespace GBufferResource {
 namespace AOResource {
 	enum Enum {
 		Coefficient = 0,
-		HitCount,
         Smoothed,   // ToDo remove
         RayHitDistance,
 		Count

@@ -248,17 +248,15 @@ void RTAO::CreateRootSignatures()
         using namespace GlobalRootSignature;
 
         // ToDo use slot index in ranges everywhere
-        CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; // Perfomance TIP: Order from most frequent to least frequent.
-                                                        // ToDo reorder
-        ranges[Slot::AOResourcesOut].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 2, 10);      // 2 output AO textures
-        ranges[Slot::AORayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 15);    // 1 output ray hit distance texture
-
-        ranges[Slot::RayOriginPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);  // 1 input surface hit position texture
-        ranges[Slot::RayOriginSurfaceNormalDepth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);  // 1 input surface normal depth
-        ranges[Slot::AOFrameAge].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 14);  // 1 input AO frame age
-        ranges[Slot::AORayDirectionOriginDepthHitSRV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 22);  // 1 AO ray direction and origin depth texture
-        ranges[Slot::AOSortedToSourceRayIndex].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 23);  // 1 input AO ray group thread offsets
-        ranges[Slot::AOSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 24);  // 1 input AO surface diffuse texture
+        CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; 
+        ranges[Slot::AOResourcesOut].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 10);    
+        ranges[Slot::AORayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 15);   
+        ranges[Slot::RayOriginPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);  
+        ranges[Slot::RayOriginSurfaceNormalDepth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);  
+        ranges[Slot::AOFrameAge].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 14);
+        ranges[Slot::AORayDirectionOriginDepthHitSRV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 22);
+        ranges[Slot::AOSortedToSourceRayIndex].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 23);  
+        ranges[Slot::AOSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 24); 
 
         CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
         rootParameters[Slot::RayOriginPosition].InitAsDescriptorTable(1, &ranges[Slot::RayOriginPosition]);
@@ -377,16 +375,12 @@ void RTAO::CreateTextureResources()
         // ToDo cleanup raytracing resolution - twice for coefficient.
         CreateRenderTargetResource(device,  ResourceFormat(ResourceType::AOCoefficient), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::Coefficient], initialResourceState, L"Render/AO Coefficient");
         CreateRenderTargetResource(device,  ResourceFormat(ResourceType::AOCoefficient), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::Smoothed], initialResourceState, L"Render/AO Denoised Coefficient");
-
-        // ToDo 8 bit hit count? / remove
-        CreateRenderTargetResource(device, DXGI_FORMAT_R32_UINT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::HitCount], initialResourceState, L"Render/AO Hit Count");
-
+        
         // ToDo use lower bit float?
         CreateRenderTargetResource(device, ResourceFormat(ResourceType::RayHitDistance), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::RayHitDistance], initialResourceState, L"Render/AO Hit Distance");
     }
 
-
-    CreateRenderTargetResource(device, DXGI_FORMAT_R8G8_UINT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_sortedToSourceRayIndexOffset, initialResourceState, L"Sorted To Source Ray Index"); // ToDo remove
+    CreateRenderTargetResource(device, DXGI_FORMAT_R8G8_UINT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_sortedToSourceRayIndexOffset, initialResourceState, L"Sorted To Source Ray Index");
     CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AORayDirectionOriginDepth, initialResourceState, L"AO Rays Direction, Origin Depth and Hit");
 }
 
@@ -601,7 +595,6 @@ void RTAO::Run(
         m_hemisphereSamplesGPUBuffer.CopyStagingToGpu(frameIndex);
     }
 
-    resourceStateTracker->TransitionResource(&m_AOResources[AOResource::HitCount], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     resourceStateTracker->TransitionResource(&m_AOResources[AOResource::Coefficient], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     resourceStateTracker->TransitionResource(&m_AOResources[AOResource::RayHitDistance], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     
@@ -698,34 +691,10 @@ void RTAO::Run(
         }
     }
 
-    resourceStateTracker->TransitionResource(&m_AOResources[AOResource::HitCount], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     resourceStateTracker->TransitionResource(&m_AOResources[AOResource::Coefficient], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     resourceStateTracker->TransitionResource(&m_AOResources[AOResource::RayHitDistance], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     resourceStateTracker->InsertUAVBarrier(&m_AOResources[AOResource::Coefficient]);
     resourceStateTracker->InsertUAVBarrier(&m_AOResources[AOResource::RayHitDistance]);
-
-    // Calculate AO ray hit count.
-    if (m_calculateRayHitCounts)
-    {
-        ScopedTimer _prof(L"CalculateAORayHitCount", commandList);
-        CalculateRayHitCount();
-    }
-}
-
-void RTAO::CalculateRayHitCount()
-{
-    auto device = m_deviceResources->GetD3DDevice();
-    auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
-    auto commandList = m_deviceResources->GetCommandList();
-    auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
-
-    resourceStateTracker->FlushResourceBarriers();
-    m_reduceSumKernel.Run(
-        commandList,
-        m_cbvSrvUavHeap->GetHeap(),
-        frameIndex,
-        m_AOResources[AOResource::HitCount].gpuDescriptorReadAccess,
-        &m_numAORayGeometryHits);
 }
 
 void RTAO::CreateResolutionDependentResources()

@@ -85,7 +85,6 @@ private:
     void CreateResolutionDependentResources();
     void BuildShaderTables(Scene& scene);
     void DispatchRays(ID3D12Resource* rayGenShaderTable, UINT width = 0, UINT height = 0);
-    void CalculateRayHitCount();
 
     UINT m_raytracingWidth = 0;
     UINT m_raytracingHeight = 0;
@@ -138,9 +137,6 @@ private:
     GpuKernels::AORayGenerator  m_rayGen;
     GpuKernels::SortRays        m_raySorter;
 
-
-    // Parameters
-    bool m_calculateRayHitCounts = false;
 
     friend class Composition;
 };

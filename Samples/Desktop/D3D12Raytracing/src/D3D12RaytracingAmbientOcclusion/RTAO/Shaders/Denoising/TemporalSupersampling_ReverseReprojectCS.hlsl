@@ -21,33 +21,24 @@
 
 // ToDo some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
 // ToDo sharp edges fail temporal reprojection due to clamping even for static scene
-
-// ToDO pack value and depth beforehand?
-// ToDo standardize in vs input, out vs output
 Texture2D<NormalDepthTexFormat> g_texInputCurrentFrameNormalDepth : register(t0);
-// ToDo should ddxy be calculated from reprojectedNormalDepth?
-Texture2D<float2> g_texInputCurrentFrameLinearDepthDerivative : register(t1); // ToDo standardize naming across files
-
-Texture2D<NormalDepthTexFormat> g_texInputReprojectedNormalDepth : register(t2);  // ToDo add encoded prefix
+Texture2D<float2> g_texInputCurrentFrameLinearDepthDerivative : register(t1);
+Texture2D<NormalDepthTexFormat> g_texInputReprojectedNormalDepth : register(t2); 
 Texture2D<float2> g_texInputTextureSpaceMotionVector : register(t3);
-
 Texture2D<NormalDepthTexFormat> g_texInputCachedNormalDepth : register(t4);
-Texture2D<float> g_texInputCachedValue : register(t5);  // ToDo store 1bit 0/1 in an auxilary reseource instead?
+Texture2D<float> g_texInputCachedValue : register(t5);
 Texture2D<uint2> g_texInputCachedFrameAge : register(t6);
 Texture2D<float> g_texInputCachedValueSquaredMean : register(t7);
 Texture2D<float> g_texInputCachedRayHitDepth : register(t8);
 
-// ToDo combine some outputs?
+
 RWTexture2D<uint2> g_texOutputCachedFrameAge : register(u0);
 RWTexture2D<uint4> g_texOutputReprojectedCachedValues : register(u1);
 
-
-// ToDo remove
 RWTexture2D<float4> g_texOutputDebug1 : register(u10);
 RWTexture2D<float4> g_texOutputDebug2 : register(u11);
 
 ConstantBuffer<TemporalSupersampling_ReverseReprojectConstantBuffer> cb : register(b0);
-
 SamplerState ClampSampler : register(s0);
 
 // ToDo

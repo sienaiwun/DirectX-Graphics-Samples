@@ -9,8 +9,8 @@
 //
 //*********************************************************
 
-// ToDo shaders are in root while this is in Util...
 // ToDo standardize naming
+// ToDo move resource descs to rootsigs
 #include "../stdafx.h"
 #include "EngineProfiling.h"
 #include "GpuKernels.h"
@@ -131,7 +131,6 @@ namespace GpuKernels
 					&m_csReduceSumOutputs[i], D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"UAV texture: ReduceSum intermediate output");
 			}
 
-			// ToDo should we allocate FrameCount + 1 in GPUTImeras we're depending on Present to stall?
             switch (m_resultType)
             {
             case Uint: m_resultSize = sizeof(UINT); break;
@@ -159,8 +158,7 @@ namespace GpuKernels
 	{
 		using namespace RootSignature::ReduceSum;
 		
-		// ToDo move out or rename
-        ScopedTimer _prof(L"CalculateNumCameraRayHits", commandList);
+        ScopedTimer _prof(L"ReduceSum", commandList);
 
 		// Set pipeline state.
 		{
@@ -201,10 +199,7 @@ namespace GpuKernels
 				}
 			}
 
-            // ToDo move copy to CPU out to separate kernel
-
 			// Copy the sum result to the readback buffer.
-            // ToDo should the readback take frameIndex into consideration in addition to invocationIndex if we dont wait on GPU below?
 			auto destDesc = m_readbackResources[invocationIndex]->GetDesc();
 			auto srcDesc = m_csReduceSumOutputs.back().resource.Get()->GetDesc();
 			D3D12_PLACED_SUBRESOURCE_FOOTPRINT bufferFootprint = {};
@@ -272,14 +267,12 @@ namespace GpuKernels
         }
     }
 
-    // ToDo move the Type parameter to Run?
     void DownsampleNormalDepthHitPositionGeometryHitBilateralFilter::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
         {
             using namespace RootSignature::DownsampleNormalDepthHitPositionGeometryHitBilateralFilter;
 
-            // ToDo review access frequency or remove performance tip
             CD3DX12_DESCRIPTOR_RANGE ranges[18]; 
             ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
             ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);  // 1 input normal texture
@@ -804,12 +797,12 @@ namespace GpuKernels
             ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
             ranges[Slot::Normals].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); 
             ranges[Slot::Variance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);  
-            ranges[Slot::SmoothedVariance]].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  
-            ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-            ranges[Slot::VarianceOutput].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
+            ranges[Slot::SmoothedVariance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
             ranges[Slot::RayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
             ranges[Slot::PartialDistanceDerivatives].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
             ranges[Slot::FrameAge].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
+            ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+            ranges[Slot::VarianceOutput].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
             ranges[Slot::Debug1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
             ranges[Slot::Debug2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
 
@@ -825,7 +818,7 @@ namespace GpuKernels
             rootParameters[Slot::PartialDistanceDerivatives].InitAsDescriptorTable(1, &ranges[Slot::PartialDistanceDerivatives]);
             rootParameters[Slot::FrameAge].InitAsDescriptorTable(1, &ranges[Slot::FrameAge]);
             rootParameters[Slot::Debug1].InitAsDescriptorTable(1, &ranges[Slot::Debug1]);
-            rootParameters[Slot::Debug2].InitAsDescriptorTable(1, &ranges[13]);
+            rootParameters[Slot::Debug2].InitAsDescriptorTable(1, &ranges[Slot::Debug2]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
             CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
@@ -875,7 +868,6 @@ namespace GpuKernels
     {
         // Create shader resources
         {
-            // ToDo pass in the format
             CreateRenderTargetResource(device, format, width, height, descriptorHeap,
                 &m_intermediateValueOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"UAV texture: AtrousWaveletTransformCrossBilateralFilter intermediate value output");
 
@@ -884,10 +876,6 @@ namespace GpuKernels
 
             CreateRenderTargetResource(device, format, width, height, descriptorHeap,
                 &m_intermediateVarianceOutputs[1], D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"UAV texture: AtrousWaveletTransformCrossBilateralFilter intermediate variance output 1");
-
-            // ToDo remove
-            CreateRenderTargetResource(device, format, width, height, descriptorHeap,
-                &m_filterWeightOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"UAV texture: AtrousWaveletTransformCrossBilateralFilter filter weight sum output");
         }
     }
 

@@ -37,7 +37,6 @@ Texture2D<uint> g_texInputAOFrameAge : register(t14);
 // ToDo remove AOcoefficient and use AO hits instead?
 //todo remove rt?
 RWTexture2D<float> g_rtAOcoefficient : register(u10);
-RWTexture2D<uint> g_rtAORayHits : register(u11);
 RWTexture2D<float> g_rtAORayHitDistance : register(u15);
 
 ConstantBuffer<RTAOConstantBuffer> cb : register(b0);          // ToDo standardize cb var naming
@@ -154,11 +153,9 @@ float CalculateAO(out float tHit, in uint2 srcPixelIndex, in Ray AOray, in float
 void RayGenShader()
 {
     uint2 srcRayIndex = DispatchRaysIndex().xy;
-    
-    // ToDo
+
     float3 surfaceNormal;
     float depth;
-    // ToDO use full precision here?
     DecodeNormalDepth(g_texRayOriginSurfaceNormalDepth[srcRayIndex], surfaceNormal, depth);
 	bool hit = depth != 0;   // ToDo use a common func to determine
     float tHit = RTAO::RayHitDistanceOnMiss;
