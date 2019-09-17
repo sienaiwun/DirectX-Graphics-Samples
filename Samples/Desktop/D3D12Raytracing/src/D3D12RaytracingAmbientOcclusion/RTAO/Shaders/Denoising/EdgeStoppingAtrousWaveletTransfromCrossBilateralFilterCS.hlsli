@@ -23,10 +23,10 @@
 Texture2D<float> g_inValues : register(t0);
 
 Texture2D<NormalDepthTexFormat> g_inNormalDepth : register(t1);
-Texture2D<float> g_inVariance : register(t4);   // ToDo remove
+Texture2D<float> g_inVariance : register(t4); 
 Texture2D<float> g_inSmoothedVariance : register(t5); 
-Texture2D<float> g_inHitDistance : register(t6);   // ToDo remove?
-Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);   // ToDo remove?
+Texture2D<float> g_inHitDistance : register(t6);
+Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);
 Texture2D<uint2> g_inFrameAge : register(t8);
 
 RWTexture2D<float> g_outFilteredValues : register(u0);
@@ -36,6 +36,7 @@ RWTexture2D<float4> g_outDebug2 : register(u4);
 
 ConstantBuffer<AtrousWaveletTransformFilterConstantBuffer> cb: register(b0);
 
+// ToDO use a common one
 float DepthThreshold(float distance, float2 ddxy, float2 pixelOffset)
 {
     float depthThreshold;

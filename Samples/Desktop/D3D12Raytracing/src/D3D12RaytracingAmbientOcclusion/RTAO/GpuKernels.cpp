@@ -425,7 +425,7 @@ namespace GpuKernels
         }
     }
 
-    // ToDo test downsample,upsample on odd resolution
+    // ToDo test downsample, upsample on odd resolution
     void UpsampleBilateralFilter::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
@@ -605,7 +605,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo fix up input order to be same among kernels
 
     // Blurs input resource with a Gaussian filter.
     // width, height - dimensions of the input resource.
@@ -714,7 +713,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo fix up input order to be same among kernels
 
     // Blurs input resource with a Gaussian filter.
     // width, height - dimensions of the input resource.
@@ -774,14 +772,12 @@ namespace GpuKernels
     }
 
 
-    // ToDo prune
     namespace RootSignature {
         namespace AtrousWaveletTransformCrossBilateralFilter {
             namespace Slot {
                 enum Enum {
                     Output = 0,
                     VarianceOutput,
-                    // ToDo standardize naming in RootSigs
                     Input,
                     Normals,
                     Variance,
@@ -790,7 +786,6 @@ namespace GpuKernels
                     PartialDistanceDerivatives,
                     FrameAge,
                     ConstantBuffer,
-                    // ToDo remove
                     Debug1,
                     Debug2,
                     Count
@@ -799,40 +794,37 @@ namespace GpuKernels
         }
     }
 
-    // ToDo move type to execute
     void AtrousWaveletTransformCrossBilateralFilter::Initialize(ID3D12Device5* device, UINT frameCount, UINT maxFilterPasses, UINT numCallsPerFrame)
     {
         // Create root signature.
         {
             using namespace RootSignature::AtrousWaveletTransformCrossBilateralFilter;
 
-            // ToDo reorganize slots and descriptors
-            CD3DX12_DESCRIPTOR_RANGE ranges[14];
-            ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // input values
-            ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);  // input normals
-            ranges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);  // input variance
-            ranges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  // input smoothed variance
-            ranges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // output filtered values
-            ranges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);  // output filtered variance
-            ranges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);  // output filter weight sum
-            ranges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);  // input hit distance
-            ranges[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);  // input hit distance
-            ranges[11].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
-            ranges[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
-            ranges[13].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
+            CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
+            ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+            ranges[Slot::Normals].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); 
+            ranges[Slot::Variance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);  
+            ranges[Slot::SmoothedVariance]].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  
+            ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+            ranges[Slot::VarianceOutput].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
+            ranges[Slot::RayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
+            ranges[Slot::PartialDistanceDerivatives].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
+            ranges[Slot::FrameAge].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
+            ranges[Slot::Debug1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
+            ranges[Slot::Debug2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
 
 
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
-            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[0]);
-            rootParameters[Slot::Normals].InitAsDescriptorTable(1, &ranges[1]);
-            rootParameters[Slot::Variance].InitAsDescriptorTable(1, &ranges[4]);
-            rootParameters[Slot::SmoothedVariance].InitAsDescriptorTable(1, &ranges[5]);
-            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[6]);
-            rootParameters[Slot::VarianceOutput].InitAsDescriptorTable(1, &ranges[7]);
-            rootParameters[Slot::RayHitDistance].InitAsDescriptorTable(1, &ranges[9]);
-            rootParameters[Slot::PartialDistanceDerivatives].InitAsDescriptorTable(1, &ranges[10]);
-            rootParameters[Slot::FrameAge].InitAsDescriptorTable(1, &ranges[11]);
-            rootParameters[Slot::Debug1].InitAsDescriptorTable(1, &ranges[12]);
+            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
+            rootParameters[Slot::Normals].InitAsDescriptorTable(1, &ranges[Slot::Normals]);
+            rootParameters[Slot::Variance].InitAsDescriptorTable(1, &ranges[Slot::Variance]);
+            rootParameters[Slot::SmoothedVariance].InitAsDescriptorTable(1, &ranges[Slot::SmoothedVariance]);
+            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
+            rootParameters[Slot::VarianceOutput].InitAsDescriptorTable(1, &ranges[Slot::VarianceOutput]);
+            rootParameters[Slot::RayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::RayHitDistance]);
+            rootParameters[Slot::PartialDistanceDerivatives].InitAsDescriptorTable(1, &ranges[Slot::PartialDistanceDerivatives]);
+            rootParameters[Slot::FrameAge].InitAsDescriptorTable(1, &ranges[Slot::FrameAge]);
+            rootParameters[Slot::Debug1].InitAsDescriptorTable(1, &ranges[Slot::Debug1]);
             rootParameters[Slot::Debug2].InitAsDescriptorTable(1, &ranges[13]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
