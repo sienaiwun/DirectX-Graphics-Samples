@@ -13,8 +13,6 @@
 // Supports up to 9x9 kernels.
 // Requirements:
 // - wave lane size 16 or higher.
-// Performance: 
-// ToDo: 0.235ms for 7x7 kernel at 4K on 2080Ti.
 
 // ToDo handle inactive pixels
 // ToDo check WaveLaneCountMin cap to be 16 or higher and fail or disable using this shader.

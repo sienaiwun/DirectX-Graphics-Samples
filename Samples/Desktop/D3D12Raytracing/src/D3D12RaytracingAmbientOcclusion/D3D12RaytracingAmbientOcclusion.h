@@ -11,9 +11,7 @@
 
 #pragma once
 
-// ToDo move some to cpp or stdafx?
 #include "DXSample.h"
-#include "StepTimer.h"  // ToDo remove
 #include "DirectXRaytracingHelper.h"
 #include "RaytracingAccelerationStructure.h"
 #include "PerformanceTimers.h"
@@ -70,8 +68,8 @@ namespace Sample
         virtual void OnUpdate();
         virtual void OnRender();
         virtual void OnSizeChanged(UINT width, UINT height, bool minimized);
-        virtual IDXGISwapChain* GetSwapchain() { return m_deviceResources->GetSwapChain(); }
 
+        virtual IDXGISwapChain* GetSwapchain() { return m_deviceResources->GetSwapChain(); }
         const DX::DeviceResources& GetDeviceResources() { return *m_deviceResources; }
 
         void RequestSceneInitialization() { m_isSceneInitializationRequested = true; }
@@ -85,14 +83,13 @@ namespace Sample
         UINT64                              m_fenceValues[FrameCount];
         Microsoft::WRL::Wrappers::Event     m_fenceEvent;
 
-        // ToDo move to deviceResources
         std::shared_ptr<DX::DescriptorHeap> m_cbvSrvUavHeap;
-        std::unique_ptr<DX::DescriptorHeap> m_samplerHeap;
 
         // Raytracing scene
         bool m_isProfiling = false;
         UINT m_numRemainingFramesToProfile = 0;
         std::map<std::wstring, std::list<std::wstring>> m_profilingResults;
+        GpuResource m_raytracingOutput;
 
         // Sample components
         Pathtracer m_pathtracer;
@@ -101,26 +98,18 @@ namespace Sample
         Composition m_composition;
         Scene m_scene;
 
-        // Raytracing output
-        // ToDo use the struct
-        GpuResource m_raytracingOutput;
-    private:
-
+        // Application state
         UINT m_raytracingWidth;
         UINT m_raytracingHeight;
-
-        // Application state
         DX::GPUTimer m_sampleGpuTimes[Sample_GPUTime::Count];
+        float m_fps;
+        bool m_isSceneInitializationRequested;
+        bool m_isRecreateRaytracingResourcesRequested;
 
         // UI
         std::unique_ptr<UILayer> m_uiLayer;
 
-        float m_fps;
-
-        bool m_isSceneInitializationRequested;
-        bool m_isRecreateRaytracingResourcesRequested;
-
-        // Utility functions      // ToDo standardize const& vs *
+        // Utility functions
         void ParseCommandLineArgs(WCHAR* argv[], int argc);
         void RecreateD3D();
         void UpdateUI();

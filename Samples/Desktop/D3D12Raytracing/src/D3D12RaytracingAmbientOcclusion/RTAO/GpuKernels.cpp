@@ -1737,8 +1737,6 @@ namespace GpuKernels
             commandList->SetPipelineState(m_pipelineStateObject.Get());
         }
 
-        // ToDo - streak artifacts on dragons nose on reprojection
-
         // Dispatch.
         XMUINT2 groupSize(CeilDivide(width, ThreadGroup::Width), CeilDivide(height, ThreadGroup::Height));
         commandList->Dispatch(groupSize.x, groupSize.y, 1);
@@ -1979,8 +1977,6 @@ namespace GpuKernels
         using namespace RootSignature::GenerateGrassPatch;
         using namespace DefaultComputeShaderParams;
         
-        // ToDo move out or rename
-        // ToDo add spaces to names?
         ScopedTimer _prof(L"Generate Grass Patch", commandList);
 
         // Set pipeline state.

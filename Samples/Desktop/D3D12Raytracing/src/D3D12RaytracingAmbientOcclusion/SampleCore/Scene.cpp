@@ -316,7 +316,7 @@ void Scene::LoadPBRTScene()
             {
                 wstring filename(textureFilename.begin(), textureFilename.end());
                 D3DTexture texture;
-                // ToDo use a hel
+
                 if (filename.find(L".dds") != wstring::npos)
                 {
                     LoadDDSTexture(device, commandList, filename.c_str(), m_cbvSrvUavHeap.get(), &texture);
@@ -348,7 +348,9 @@ void Scene::LoadPBRTScene()
             D3D12_RAYTRACING_GEOMETRY_FLAGS geometryFlags;
 
 
-            if (cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f)
+            if (cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f &&
+                // Mark fully reflective mirrors as non opaque so that AO rays skip them as occluders.
+                !(cb.type == MaterialType::Mirror && cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f))
             {
                 geometryFlags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
             }
@@ -369,30 +371,10 @@ void Scene::LoadPBRTScene()
     finish.wait();
 }
 
-// ToDo rename
 void Scene::InitializeScene()
 {
     // Setup materials.
     {
-        auto SetAttributes = [&](
-            UINT primitiveIndex,
-            const XMFLOAT4& albedo,
-            float reflectanceCoef = 0.0f,
-            float diffuseCoef = 0.9f,
-            float specularCoef = 0.7f,
-            float specularPower = 50.0f,
-            float stepScale = 1.0f)
-        {
-            // ToDo
-            //auto& attributes = m_aabbMaterialCB[primitiveIndex];
-            //attributes.albedo = albedo;
-            //attributes.reflectanceCoef = reflectanceCoef;
-            //attributes.diffuseCoef = diffuseCoef;
-            //attributes.specularCoef = specularCoef;
-            //attributes.specularPower = specularPower;
-            //attributes.stepScale = stepScale;
-        };
-
         // Albedos
         XMFLOAT4 green = XMFLOAT4(0.1f, 1.0f, 0.5f, 1.0f);
         XMFLOAT4 red = XMFLOAT4(1.0f, 0.5f, 0.5f, 1.0f);
@@ -405,7 +387,6 @@ void Scene::InitializeScene()
         m_camera.Set(camera.position.eye, camera.position.at, camera.position.up);
         m_cameraController = make_unique<CameraController>(m_camera);
         m_cameraController->SetBoundaries(camera.boundaries.min, camera.boundaries.max);
-        // ToDo
         m_cameraController->EnableMomentum(false);
         m_prevFrameCamera = m_camera;
     }
@@ -440,8 +421,8 @@ void Scene::InitializeGrassGeometry()
         wstring name = L"Grass Patch LOD " + to_wstring(i);
         auto& bottomLevelASGeometry = m_bottomLevelASGeometries[name];
         bottomLevelASGeometry.SetName(name);
-        bottomLevelASGeometry.m_indexFormat = StandardIndexFormat; // ToDo use common or add support to shaders 
-        bottomLevelASGeometry.m_vertexFormat = DXGI_FORMAT_R32G32B32_FLOAT; // ToDo use common or add support to shaders 
+        bottomLevelASGeometry.m_indexFormat = StandardIndexFormat; 
+        bottomLevelASGeometry.m_vertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
         bottomLevelASGeometry.m_ibStrideInBytes = StandardIndexStride;
         bottomLevelASGeometry.m_vbStrideInBytes = StandardVertexStride;
 
@@ -490,7 +471,6 @@ void Scene::InitializeGrassGeometry()
                 AllocateUAVBuffer(device, NumVertices, sizeof(VertexPositionNormalTextureTangent), &vb, DXGI_FORMAT_UNKNOWN, m_cbvSrvUavHeap.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, L"Vertex Buffer: Grass geometry");
             }
 
-            // ToDo add comment
             geometry.vb.buffer.resource = m_grassPatchVB[i][0].resource;
             geometry.vb.buffer.gpuDescriptorHandle = m_grassPatchVB[i][0].gpuDescriptorReadAccess;
             geometry.vb.buffer.heapIndex = m_grassPatchVB[i][0].srvDescriptorHeapIndex;
@@ -512,7 +492,6 @@ void Scene::InitializeGrassGeometry()
             };
             LoadTexture(&diffuseTexture, L"assets\\grass\\albedo.png");
 
-            // ToDo load everything via single resource upload?
             // Upload the resources to the GPU.
             auto finish = resourceUpload.End(commandQueue);
 
@@ -542,10 +521,10 @@ void Scene::InitializeGrassGeometry()
             materialCB.Kt = XMFLOAT3(0, 0, 0);
             materialCB.opacity = XMFLOAT3(1, 1, 1);
             materialCB.eta = XMFLOAT3(1, 1, 1);
-            materialCB.roughness = 0.1f; // ToDO  
+            materialCB.roughness = 0.1f;
             materialCB.hasDiffuseTexture = true;
             materialCB.hasNormalTexture = false;
-            materialCB.hasPerVertexTangents = false;    // ToDo calculate these when geometry is generated?
+            materialCB.hasPerVertexTangents = false;
             materialCB.type = MaterialType::Matte;
 
             materialID = static_cast<UINT>(m_materials.size());
@@ -596,7 +575,6 @@ void Scene::InitializeGeometry()
     m_materialBuffer.Create(device, static_cast<UINT>(m_materials.size()), 1, L"Structured buffer: materials");
     copy(m_materials.begin(), m_materials.end(), m_materialBuffer.begin());
 
-    // ToDo move
     LoadDDSTexture(device, commandList, L"Assets\\Textures\\FlowerRoad\\flower_road_8khdri_1kcubemap.BC7.dds", m_cbvSrvUavHeap.get(), &m_environmentMap, D3D12_SRV_DIMENSION_TEXTURECUBE);
 
     m_materialBuffer.CopyStagingToGpu();
@@ -611,13 +589,13 @@ void Scene::InitializeAllBottomLevelAccelerationStructures()
 
     m_accelerationStructure = make_unique<RaytracingAccelerationStructureManager>(device, MaxNumBottomLevelInstances, FrameCount);
 
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;    // ToDo specify via Scene_Args
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
     for (auto& bottomLevelASGeometryPair : m_bottomLevelASGeometries)
     {
         auto& bottomLevelASGeometry = bottomLevelASGeometryPair.second;
         bool updateOnBuild = false;
-        bool compactAS = false;
-        // ToDO parametrize?
+        bool compactAS = false; // ToDo remove
+   
         if (bottomLevelASGeometry.GetName().find(L"Grass Patch LOD") != wstring::npos)
         {
             updateOnBuild = true;
@@ -649,32 +627,34 @@ void Scene::InitializeAccelerationStructures()
         L"Car",
         L"House"
 #endif    
-        //L"Tesselated Geometry"
     };
 
 
-
-    // Initialize the bottom-level AS instances.
+    // Initialize the bottom-level AS instances, one for each BLAS.
     for (auto& bottomLevelASname : bottomLevelASnames)
     {
         m_accelerationStructure->AddBottomLevelASInstance(bottomLevelASname);
     }
 
+    // Add one more instace of a Car BLAS for an animated car moving in circle.
+    m_animatedCarInstanceIndex = m_accelerationStructure->AddBottomLevelASInstance(L"Car", UINT_MAX, XMMatrixIdentity());
 
 #if !LOAD_ONLY_ONE_PBRT_MESH
+    // Set up a ring of quads around the house.
     float radius = 75;
     XMMATRIX mTranslationSceneCenter = XMMatrixTranslation(-7, 0, 7);
     XMMATRIX mTranslation = XMMatrixTranslation(0, -1.5, radius);
     XMMATRIX mScale = XMMatrixScaling(10, 20, 1);
-    int NumMirrorQuads = 12;
-    for (int i = 0; i < NumMirrorQuads; i++)
+    int NumOpaqueQuads = 12;
+    for (int i = 0; i < NumOpaqueQuads; i++)
     {
-        float angleToRotateBy = 360.0f * (2.f * i / (2.f * NumMirrorQuads));
+        float angleToRotateBy = 360.0f * (2.f * i / (2.f * NumOpaqueQuads));
         XMMATRIX mRotate = XMMatrixRotationY(XMConvertToRadians(angleToRotateBy));
         XMMATRIX mTransform = mScale * mTranslation * mRotate * mTranslationSceneCenter;
         m_accelerationStructure->AddBottomLevelASInstance(L"Quad", UINT_MAX, mTransform);
     }
 
+    int NumMirrorQuads = 12;
     for (int i = 0; i < NumMirrorQuads; i++)
     {
         float angleToRotateBy = 360.0f * ((2.f * i + 1) / (2.f * NumMirrorQuads));
@@ -682,11 +662,9 @@ void Scene::InitializeAccelerationStructures()
         XMMATRIX mTransform = mScale * mTranslation * mRotate * mTranslationSceneCenter;
         m_accelerationStructure->AddBottomLevelASInstance(L"MirrorQuad", UINT_MAX, mTransform);
     }
-
-    m_animatedCarInstanceIndex = m_accelerationStructure->AddBottomLevelASInstance(L"Car", UINT_MAX, XMMatrixIdentity());
 #endif
 
-
+    // Set up grass patches.
     UINT grassInstanceIndex = 0;
     for (int i = 0; i < NumGrassPatchesZ; i++)
         for (int j = 0; j < NumGrassPatchesX; j++)
@@ -704,15 +682,12 @@ void Scene::InitializeAccelerationStructures()
         }
 
     // Initialize the top-level AS.
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;    // ToDo specify via Scene_Args
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
     bool allowUpdate = false;
     bool performUpdateOnBuild = false;
     m_accelerationStructure->InitializeTopLevelAS(device, buildFlags, allowUpdate, performUpdateOnBuild, L"Top-Level Acceleration Structure");
 }
 
-
-
-// ToDo move to class
 void GetGrassParameters(GenerateGrassStrawsConstantBuffer_AppParams* params, UINT LOD, float totalTime)
 {
     params->activePatchDim = XMUINT2(
@@ -728,13 +703,13 @@ void GetGrassParameters(GenerateGrassStrawsConstantBuffer_AppParams* params, UIN
     params->grassScale = g_UIparameters.GrassGeometryLOD[LOD].StrawScale;
     params->bendStrengthAlongTangent = g_UIparameters.GrassGeometryLOD[LOD].BendStrengthSideways;
 
-    params->patchSize = XMFLOAT3(   // ToDO rename to scale?
+    params->patchSize = XMFLOAT3( 
         g_UIparameters.GrassCommon.PatchWidth,
         g_UIparameters.GrassCommon.PatchHeight,
         g_UIparameters.GrassCommon.PatchWidth);
 
     params->grassThickness = g_UIparameters.GrassGeometryLOD[LOD].StrawThickness;
-    params->windDirection = XMFLOAT3(0, 0, 0); // ToDo
+    params->windDirection = XMFLOAT3(0, 0, 0); 
     params->windStrength = g_UIparameters.GrassGeometryLOD[LOD].WindStrength;
     params->positionJitterStrength = g_UIparameters.GrassGeometryLOD[LOD].RandomPositionJitterStrength;
 }
@@ -873,7 +848,7 @@ void Scene::UpdateAccelerationStructure()
 
     if (Scene_Args::EnableGeometryAndASBuildsAndUpdates)
     {
-        bool forceBuild = false;    // ToDo
+        bool forceBuild = false;
 
         resourceStateTracker->FlushResourceBarriers();
         m_accelerationStructure->Build(commandList, m_cbvSrvUavHeap->GetHeap(), frameIndex, forceBuild);

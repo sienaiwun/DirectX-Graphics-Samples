@@ -903,7 +903,7 @@ inline void AllocateRawTypelessBuffer(
     // Using raw typeless buffer. 
     // - numElements - number of 32bit dwords.
     // - elementSize - 0.
-    UINT numDWORDs = size / sizeof(UINT);        // ToDO use ceilDivide instead?
+    UINT numDWORDs = size / sizeof(UINT);
     UINT elementStride = 0;
     CreateBufferSRV(device, numDWORDs, elementStride, descriptorHeap, buffer);
 }

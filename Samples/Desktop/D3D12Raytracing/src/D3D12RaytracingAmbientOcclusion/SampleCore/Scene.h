@@ -10,7 +10,6 @@
 //*********************************************************
 #pragma once
 
-// ToDo move to cpp
 #include "RaytracingSceneDefines.h"
 #include "DirectXRaytracingHelper.h"
 #include "RaytracingAccelerationStructure.h"
@@ -28,7 +27,6 @@ class Scene
 public:
     // Ctors.
     Scene();
-    ~Scene() {} // ToDo
 
     // Public methods.
     void Setup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DX::DescriptorHeap> descriptorHeap);

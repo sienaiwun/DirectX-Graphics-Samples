@@ -9,8 +9,6 @@
 //
 //*********************************************************
 
-// ToDo move assets to common sample directory?
-
 #include "stdafx.h"
 #include "D3D12RaytracingAmbientOcclusion.h"
 #include "GameInput.h"
@@ -24,10 +22,6 @@ using namespace DirectX;
 using namespace SceneEnums;
 using namespace GameCore;
 
-namespace Sample_Args
-{
-}
-
 HWND g_hWnd = 0;
 
 namespace Sample
@@ -38,14 +32,12 @@ namespace Sample
         return *g_pSample;
     }
 
-    // ToDo remove?
     GpuResource g_debugOutput[2];
 
     void OnRecreateRaytracingResources(void*)
     {
         g_pSample->RequestRecreateRaytracingResources();
     }
-    
 
     D3D12RaytracingAmbientOcclusion::D3D12RaytracingAmbientOcclusion(UINT width, UINT height, wstring name) :
         DXSample(width, height, name),
@@ -61,7 +53,6 @@ namespace Sample
 
     }
 
-    // ToDo worth moving some common member vars and fncs to DxSampleRaytracing base class?
     void D3D12RaytracingAmbientOcclusion::OnInit()
     {
         m_deviceResources = make_shared<DeviceResources>(
@@ -90,14 +81,8 @@ namespace Sample
         ThrowIfFalse(IsDirectXRaytracingSupported(m_deviceResources->GetAdapter()),
             L"ERROR: DirectX Raytracing is not supported by your GPU and driver.\n\n");
 
-        // ToDo cleanup
         m_deviceResources->CreateDeviceResources();
-
-        // Initialize scene ToDo
-
         CreateDeviceDependentResources();
-
-
         m_deviceResources->CreateWindowSizeDependentResources();
     }
 
@@ -120,7 +105,6 @@ namespace Sample
         outputFile << L"\n";
 
         // Column results.
-
         for (size_t i = 0; i < maxNumResults; i++)
         {
             for (auto& column : m_profilingResults)
@@ -152,7 +136,6 @@ namespace Sample
         // Pathracer setup's shader table build, initialize the AS.
         // Make sure to call this before RTAO build shader tables as it queries
         // max instanceContributionToHitGroupIndex from the scene's AS.
-        // ToDo clean up dependencies? Use max instace from Pathtracer?
         m_scene.InitializeAccelerationStructures();
 
         m_RTAO.Setup(m_deviceResources, m_cbvSrvUavHeap, m_scene);
@@ -160,8 +143,6 @@ namespace Sample
         m_composition.Setup(m_deviceResources, m_cbvSrvUavHeap);
     }
 
-
-    // ToDo rename fnc and resources as its not just RTAO its the final composite.
     // Create a 2D output texture for raytracing.
     void D3D12RaytracingAmbientOcclusion::CreateRaytracingOutputResource()
     {
@@ -171,8 +152,6 @@ namespace Sample
         CreateRenderTargetResource(device, backbufferFormat, m_width, m_height, m_cbvSrvUavHeap.get(), &m_raytracingOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     }
 
-
-    // ToDo remove
     void D3D12RaytracingAmbientOcclusion::CreateDebugResources()
     {
         auto device = m_deviceResources->GetD3DDevice();
@@ -200,13 +179,12 @@ namespace Sample
         auto commandQueue = m_deviceResources->GetCommandQueue();
         auto commandList = m_deviceResources->GetCommandList();
 
-        // ToDo use backbuffer count instead of frame count everywhere
         EngineProfiling::RestoreDevice(device, commandQueue, FrameCount);
         
         for (UINT i = 0; i < Sample_GPUTime::Count; i++)
         {
             m_sampleGpuTimes[i].RestoreDevice(device, m_deviceResources->GetCommandQueue(), FrameCount);
-            m_sampleGpuTimes[i].SetAvgRefreshPeriodMS(500); // ToDo finetune
+            m_sampleGpuTimes[i].SetAvgRefreshPeriodMS(500);
         }
     }
 
@@ -214,18 +192,9 @@ namespace Sample
     {
         auto device = m_deviceResources->GetD3DDevice();
 
-        // ToDo use exact number?
-        // 2 * GeometryType::Count + 1 + 2 * MaxBLAS + 1 + ARRAYSIZE(SquidRoomAssets::Draws) * 2 + ARRAYSIZE(SquidRoomAssets::Textures) + 1;
         // Allocate large enough number of descriptors.
         UINT NumDescriptors = 10000;
         m_cbvSrvUavHeap = make_shared<DX::DescriptorHeap>(device, NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-        // TodO remove
-        // Sampler heap.
-        {
-            UINT NumDescriptors = 1;
-            m_samplerHeap = make_unique<DX::DescriptorHeap>(device, NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-        }
     }
     
     void D3D12RaytracingAmbientOcclusion::OnKeyDown(UINT8 key)
@@ -323,11 +292,9 @@ namespace Sample
 
         if (m_isRecreateRaytracingResourcesRequested)
         {
-            // ToDo what if scenargs change during rendering? race condition??
             m_isRecreateRaytracingResourcesRequested = false;
             m_deviceResources->WaitForGpu();
 
-            // ToDo split to recreate only whats needed?
             OnCreateWindowSizeDependentResources();
         }
 
@@ -391,7 +358,6 @@ namespace Sample
                 wLabel << componentName << L"[" << width << L"x" << height << "]: " << setprecision(2) << fixed << gpuTime << "ms" << L"\n";
             };
             PrintComponentInfo(L"Pathtracing", m_pathtracer.Width(), m_pathtracer.Height(), m_sampleGpuTimes[Sample_GPUTime::Pathtracing].GetAverageMS());
-            // ToDO print Gigaray/s
             PrintComponentInfo(L"AO raytracing", m_RTAO.RaytracingWidth(), m_RTAO.RaytracingHeight(), m_sampleGpuTimes[Sample_GPUTime::AOraytracing].GetAverageMS());
             PrintComponentInfo(L"AO denoising", m_denoiser.DenoisingWidth(), m_denoiser.DenoisingHeight(), m_sampleGpuTimes[Sample_GPUTime::AOdenoising].GetAverageMS());
             labels.push_back(wLabel.str());
@@ -457,14 +423,11 @@ namespace Sample
         auto commandQueue = m_deviceResources->GetCommandQueue();
         auto renderTargets = m_deviceResources->GetRenderTargets();
 
-        // ToDo move this?
         UINT GBufferWidth = m_width;
         UINT GBufferHeight = m_height;
 
-        // ToDo the resolution should be queried from RTAO.
         if (RTAO_Args::QuarterResAO)
         {
-            // Handle odd resolution.
             m_raytracingWidth = CeilDivide(GBufferWidth, 2);
             m_raytracingHeight = CeilDivide(GBufferHeight, 2);
         }

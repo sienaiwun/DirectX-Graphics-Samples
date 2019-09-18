@@ -107,6 +107,7 @@ AppSetup
     - move shader dependencies to components?
     // ToDO standarddize ddxy vs dxdy
     // make sure no shaders are writing to debug resources
+// ToDo remove obsolete filtering hlsl kernels
 // ToDo strip _tex from names
 
 - Sample generic

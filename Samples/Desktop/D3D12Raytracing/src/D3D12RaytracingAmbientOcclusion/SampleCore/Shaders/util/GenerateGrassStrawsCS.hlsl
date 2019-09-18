@@ -174,7 +174,6 @@ void GenerateGrassStraw(
 [numthreads(DefaultComputeShaderParams::ThreadGroup::Width, DefaultComputeShaderParams::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID)
 {
-    // ToDo double check bounds in all CS
     if (any(DTid >= cb.p.maxPatchDim))
     {
        return;
@@ -193,8 +192,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
         uint threadID = DTid.x + DTid.y * cb.p.maxPatchDim.x;
         uint baseVertexID = threadID * N_GRASS_VERTICES;
 
-        // ToDO fix overlapped triangels in double grass or remove
-        // uint grassType = dot(DTid & 1, 1);
         uint grassType = dot(DTid & 1, 1) == 1;
         GenerateGrassStraw(baseVertexID, rootUV, rootPos, surfaceNormal, base_u, base_v, GRASS_X[grassType], GRASS_Y[grassType]);
     }

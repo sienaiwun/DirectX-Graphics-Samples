@@ -10,11 +10,6 @@
 //*********************************************************
 
 // Desc: Calculate Variance via Separable kernel.
-// Pitfalls: // ToDo rename drawback 
-//  - it is not edge aware.
-// Performance: 
-// 0.126ms for 7x7 kernel at 1080p on TitanXP.
-// 0.368ms for 7x7 kernel at 4K on 2080Ti.
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -30,7 +25,6 @@ ConstantBuffer<CalculateMeanVarianceConstantBuffer> cb: register(b0);
 // Trade precision for speed and pack floats to 16bit.
 // 0.4ms -> 0.31ms for 7x7 kernel at 4K on TitanXp.
 #define PACK_OPTIMIZATION 1
-// ToDo pack mean and variance ouputs to 2x16bit
 
 #if PACK_OPTIMIZATION
 groupshared float VCache[256];

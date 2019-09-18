@@ -10,7 +10,6 @@
 //*********************************************************
 #pragma once
 
-// ToDo move to cpp
 #include "RaytracingSceneDefines.h"
 #include "DirectXRaytracingHelper.h"
 #include "RaytracingAccelerationStructure.h"
@@ -61,7 +60,6 @@ private:
     void BlurDisocclusions(Pathtracer& pathtracer);
 
     void CreateDeviceDependentResources();
-    void CreateConstantBuffers();
     void CreateAuxilaryDeviceResources();
     void CreateTextureResources();
     void ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& rtao, bool isFirstPass);

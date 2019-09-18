@@ -9,6 +9,7 @@
 //
 //*********************************************************
 
+
 // Desc: Calculate Variance via Bilateral kernel.
 // Uses normal and depth weights.
 // Pitfalls: 
@@ -29,7 +30,7 @@ RWTexture2D<float> g_outMean : register(u1);
 ConstantBuffer<CalculateVariance_BilateralFilterConstantBuffer> cb: register(b0);
 
 // ToDo add support for dxdy and perspective correct interpolation?
-void AddFilterContribution(inout float weightedValueSum, inout float weightedSquaredValueSum, inout float weightSum, inout UINT numWeights, in float value, in float depth, in float3 normal, float obliqueness, in uint kernelRadius, in uint row, in uint col, in uint2 DTid)
+void AddFilterContribution(inout float weightedValueSum, inout float weightedSquaredValueSum, inout float weightSum, inout UINT numWeights, in float value, in float depth, in float3 normal, in uint kernelRadius, in uint row, in uint col, in uint2 DTid)
 {
     int2 id = int2(DTid) + (int2(row - kernelRadius, col - kernelRadius) );
     if (IsWithinBounds(id, cb.textureDim))
@@ -40,7 +41,7 @@ void AddFilterContribution(inout float weightedValueSum, inout float weightedSqu
         float iDepth;
         DecodeNormalDepth(g_inNormalDepth[id], iNormal, iDepth);
 
-        float w_d = cb.useDepthWeights ? exp(-abs(depth - iDepth) * obliqueness / (cb.depthSigma)) : 1.f;
+        float w_d = cb.useDepthWeights ? exp(-abs(depth - iDepth) / (cb.depthSigma)) : 1.f;
         float w_n = cb.useNormalWeights ? pow(max(0, dot(normal, iNormal)), cb.normalSigma) : 1.f;
         float w = w_n * w_d;
         
@@ -63,10 +64,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
     float3 normal;
     float depth;
     DecodeNormalDepth(g_inNormalDepth[DTid], normal, depth);
-    // ToDo use ddxy
-    float obliqueness = 1;// ToDo max(0.0001f, pow(packedValue.w, 10));
 
-    float  value = g_inValues[DTid];
+    float value = g_inValues[DTid];
 
     UINT numWeights = 1;
     float weightedValueSum = value;
@@ -80,7 +79,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
        // [unroll]
         for (UINT c = 0; c < cb.kernelWidth; c++)
             if (r != kernelRadius || c != kernelRadius)
-                 AddFilterContribution(weightedValueSum, weightedSquaredValueSum, weightSum, numWeights, value, depth, normal, obliqueness, kernelRadius, r, c, DTid);
+                 AddFilterContribution(weightedValueSum, weightedSquaredValueSum, weightSum, numWeights, value, depth, normal, kernelRadius, r, c, DTid);
 
     float variance = 0;
     float mean = 0;

@@ -320,14 +320,12 @@ void RTAO::CreateRaytracingPipelineStateObject()
         // Hit groups
         CreateHitGroupSubobjects(&raytracingPipeline);
 
-        // ToDo try 2B float payload
-
         // Shader config
         // Defines the maximum sizes in bytes for the ray rayPayload and attribute structure.
         auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
         UINT payloadSize = static_cast<UINT>(sizeof(ShadowRayPayload));	
 
-        UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics  - ToDo ref the struct directly?
+        UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
         shaderConfig->Config(payloadSize, attributeSize);
 
         // Global root signature
@@ -355,10 +353,7 @@ void RTAO::CreateTextureResources()
     auto device = m_deviceResources->GetD3DDevice();
     auto backbufferFormat = m_deviceResources->GetBackBufferFormat();
 
-    // ToDo change this to non-PS resouce since we use CS?
     D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-
-    // ToDo remove obsolete resources, QuarterResAO event triggers this so we may not need all low/gbuffer width AO resources.
 
     {
         // Preallocate subsequent descriptor indices for both SRV and UAV groups.
@@ -370,13 +365,10 @@ void RTAO::CreateTextureResources()
             m_AOResources[i].srvDescriptorHeapIndex = m_AOResources[0].srvDescriptorHeapIndex + i;
         }
 
-        // ToDo pack some resources.
-
         // ToDo cleanup raytracing resolution - twice for coefficient.
         CreateRenderTargetResource(device,  ResourceFormat(ResourceType::AOCoefficient), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::Coefficient], initialResourceState, L"Render/AO Coefficient");
         CreateRenderTargetResource(device,  ResourceFormat(ResourceType::AOCoefficient), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::Smoothed], initialResourceState, L"Render/AO Denoised Coefficient");
         
-        // ToDo use lower bit float?
         CreateRenderTargetResource(device, ResourceFormat(ResourceType::RayHitDistance), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::RayHitDistance], initialResourceState, L"Render/AO Hit Distance");
     }
 
@@ -428,7 +420,6 @@ void RTAO::BuildShaderTables(Scene& scene)
 
         for (UINT i = 0; i < RTAORayGenShaderType::Count; i++)
         {
-            // ToDO combine raygens into single table or update the names accordingly
             ShaderTable rayGenShaderTable(device, numShaderRecords, shaderRecordSize, L"RTAO RayGenShaderTable");
             rayGenShaderTable.push_back(ShaderRecord(rayGenShaderIDs[i], shaderIDSize, nullptr, 0));
             rayGenShaderTable.DebugPrint(shaderIdToStringMap);
@@ -660,8 +651,6 @@ void RTAO::Run(
         commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::SampleBuffers, m_hemisphereSamplesGPUBuffer.GpuVirtualAddress(frameIndex));
         commandList->SetComputeRootConstantBufferView(GlobalRootSignature::Slot::ConstantBuffer, m_CB.GpuVirtualAddress(frameIndex));
         commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::AOSurfaceAlbedo, rayOriginSurfaceAlbedoResource);
-
-        // ToDo remove
         commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::AORayDirectionOriginDepthHitSRV, m_AORayDirectionOriginDepth.gpuDescriptorReadAccess);
         commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::AOSortedToSourceRayIndex, m_sortedToSourceRayIndexOffset.gpuDescriptorReadAccess);
 

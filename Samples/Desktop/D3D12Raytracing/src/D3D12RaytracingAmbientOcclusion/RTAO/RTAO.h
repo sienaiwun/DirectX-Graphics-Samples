@@ -10,7 +10,6 @@
 //*********************************************************
 #pragma once
 
-// ToDo move to cpp
 #include "RaytracingSceneDefines.h"
 #include "DirectXRaytracingHelper.h"
 #include "RaytracingAccelerationStructure.h"
@@ -22,7 +21,6 @@
 #include "Composition.h"
 #include "Scene.h"
 
-// ToDo move to cpp
 namespace RTAORayGenShaderType {
     enum Enum {
         AOFullRes = 0,
@@ -40,7 +38,6 @@ namespace RTAO_Args
     extern BoolVar Rpp_useGroundTruthRpp;
     extern BoolVar RTAOUseRaySorting;
 }
-
 
 class RTAO
 {
@@ -93,8 +90,6 @@ private:
     std::shared_ptr<DX::DescriptorHeap> m_cbvSrvUavHeap;
     std::mt19937 m_generatorURNG;
 
-    // ToDo fix artifacts at 4 spp. Looks like selfshadowing on some AOrays in SquidScene
-
     // Raytracing shaders.
     static const wchar_t* c_hitGroupName;
     static const wchar_t* c_rayGenShaderNames[RTAORayGenShaderType::Count];
@@ -106,7 +101,6 @@ private:
     GpuResource   m_AORayDirectionOriginDepth;
     GpuResource   m_sortedToSourceRayIndexOffset;   // Index of a ray in the source array given a sorted index.
     
-    // ToDo remove
     ConstantBuffer<RTAOConstantBuffer> m_CB;
     UINT c_NumSampleSets = 83;
     Samplers::MultiJittered m_randomSampler;
