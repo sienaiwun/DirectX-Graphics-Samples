@@ -200,7 +200,7 @@ namespace Sample
     void D3D12RaytracingAmbientOcclusion::OnKeyDown(UINT8 key)
     {
         float fValue;
-        // ToDo call componanet's handlers
+        // ToDoF call componanet's handlers
         switch (key)
         {
         case VK_ESCAPE:
@@ -211,13 +211,12 @@ namespace Sample
         case 'C':
             m_scene.ToggleAnimateCamera();
             break;
-            // ToDO
         case 'A':
             m_scene.ToggleAnimateScene();
             break;
 #if 0
         case 'V':
-            Args::TAO_LazyRender.Bang();// TODo remove
+            Args::TAO_LazyRender.Bang();
             break;
         case 'B':
             m_cameraChangedIndex = 2;
@@ -315,7 +314,7 @@ namespace Sample
 
     }
 
-    // ToDo extend or remove
+    // ToDoF extend or remove
     // Parse supplied command line args.
     void D3D12RaytracingAmbientOcclusion::ParseCommandLineArgs(WCHAR* argv[], int argc)
     {
@@ -368,7 +367,7 @@ namespace Sample
             EngineTuning::Display(&wLabel, m_isProfiling);
             labels.push_back(wLabel.str());
 
-            // ToDo retrieve GPU times even when EngineTuning is not diplaying times on screen.
+            // ToDoF remove/cleanup
             // Do GPUtimers/scopedtimers in this cpp and use those?
             if (m_isProfiling)
             {
@@ -508,14 +507,13 @@ namespace Sample
 
         EngineProfiling::BeginFrame(commandList);
         
-        // ToDo sample EngineProfiling for GPUtimes instead?
         for (UINT i = 0; i < Sample_GPUTime::Count; i++)
         {
             m_sampleGpuTimes[i].BeginFrame(commandList);
         }
 
         {
-            // ToDo fix - this dummy and make sure the children are properly enumerated as children in the UI output.
+            // ToDoF finalize UI tree
             ScopedTimer _prof(L"Dummy", commandList);
             {
 

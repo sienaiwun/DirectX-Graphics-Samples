@@ -30,6 +30,7 @@
 // - Scatter write the ray source index offsets based on their hash and the prefix sum for the hash key into SMem cache.
 // - Linearly spill sorted ray source index offsets from SMem cache into VRAM.
 
+// ToDo enumerate the memory layout used during stages
 
 #define HLSL
 #include "RaytracingHlslCompat.h"

@@ -18,7 +18,6 @@
 #include "D3D12RaytracingAmbientOcclusion.h"
 #include "CompiledShaders\Pathtracer.hlsl.h"
 
-// ToDo prune unused
 using namespace std;
 using namespace DX;
 using namespace DirectX;
@@ -64,7 +63,6 @@ namespace LocalRootSignature {
     }
     struct RootArguments {
         PrimitiveConstantBuffer cb;
-        // ToDo add align specifier
         // Bind each resource via a descriptor.
         // This design was picked for simplicity, but one could optimize for shader record size by:
         //    1) Binding multiple descriptors via a range descriptor instead.
@@ -79,12 +77,12 @@ namespace LocalRootSignature {
 
 // Shader entry points.
 // ToDO rename gbuffer?
-const wchar_t* Pathtracer::c_rayGenShaderNames[] = { L"MyRayGenShader_GBuffer" };
-const wchar_t* Pathtracer::c_closestHitShaderNames[] = { L"MyClosestHitShader_GBuffer", L"MyClosestHitShader_ShadowRay" };
-const wchar_t* Pathtracer::c_missShaderNames[] = { L"MyMissShader_GBuffer", L"MyMissShader_ShadowRay" };
+const wchar_t* Pathtracer::c_rayGenShaderNames[] = { L"MyRayGenShader_Pathtracer" };
+const wchar_t* Pathtracer::c_closestHitShaderNames[] = { L"MyClosestHitShader_Pathtracer", L"MyClosestHitShader_ShadowRay" };
+const wchar_t* Pathtracer::c_missShaderNames[] = { L"MyMissShader_Pathtracer", L"MyMissShader_ShadowRay" };
 
 // Hit groups.
-const wchar_t* Pathtracer::c_hitGroupNames[] = { L"MyHitGroup_Triangle_GBuffer", L"MyHitGroup_Triangle_ShadowRay" };
+const wchar_t* Pathtracer::c_hitGroupNames[] = { L"MyHitGroup_Triangle_Pathtracer", L"MyHitGroup_Triangle_ShadowRay" };
 
 // Singleton instance.
 Pathtracer* g_pPathracer = nullptr;
@@ -355,7 +353,7 @@ void Pathtracer::CreateRaytracingPipelineStateObject()
         // Shader config
         // Defines the maximum sizes in bytes for the ray rayPayload and attribute structure.
         auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-        UINT payloadSize = static_cast<UINT>(max(sizeof(ShadowRayPayload), sizeof(GBufferRayPayload)));		// ToDo revise
+        UINT payloadSize = static_cast<UINT>(max(sizeof(ShadowRayPayload), sizeof(PathtracerRayPayload)));		// ToDo revise
 
         UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
         shaderConfig->Config(payloadSize, attributeSize);

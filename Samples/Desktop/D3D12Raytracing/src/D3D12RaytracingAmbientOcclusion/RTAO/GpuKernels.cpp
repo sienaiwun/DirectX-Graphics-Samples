@@ -1688,8 +1688,7 @@ namespace GpuKernels
         const XMMATRIX& projectionToWorldWithCameraEyeAtOrigin,
         const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
         UINT maxFrameAge,
-        UINT numRaysToTraceSinceTemporalMovement,
-        bool testFlag)
+        UINT numRaysToTraceSinceTemporalMovement)
     {
         using namespace RootSignature::TemporalSupersampling_ReverseReproject;
         using namespace DefaultComputeShaderParams;
@@ -1711,7 +1710,6 @@ namespace GpuKernels
         m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
         m_CB->numRaysToTraceAfterTemporalAtMaxFrameAge = numRaysToTraceSinceTemporalMovement;
         m_CB->maxFrameAge = maxFrameAge;
-        m_CB->testFlag = testFlag;
         m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);

@@ -100,5 +100,6 @@ private:
         + 1; // Temporal Super-Sampling.
     GpuKernels::BilateralFilter m_bilateralFilterKernel;
 
+    // ToDo remove
     friend class Composition;
 };

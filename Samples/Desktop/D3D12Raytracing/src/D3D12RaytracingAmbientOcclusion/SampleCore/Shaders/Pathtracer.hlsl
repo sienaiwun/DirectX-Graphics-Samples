@@ -244,7 +244,7 @@ bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in float3 N, in UI
     return false;
 }
 
-bool TraceShadowRayAndReportIfHit(in float3 hitPosition, in float3 direction, in float3 N, in GBufferRayPayload rayPayload, in float TMax = 10000)
+bool TraceShadowRayAndReportIfHit(in float3 hitPosition, in float3 direction, in float3 N, in PathtracerRayPayload rayPayload, in float TMax = 10000)
 {
     float tOffset = 0.001f;
     Ray visibilityRay = { hitPosition + tOffset * N, direction };
@@ -253,9 +253,9 @@ bool TraceShadowRayAndReportIfHit(in float3 hitPosition, in float3 direction, in
 }
 
 // Trace a camera ray into the scene.
-GBufferRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
+PathtracerRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
 {
-    GBufferRayPayload rayPayload;
+    PathtracerRayPayload rayPayload;
     rayPayload.rayRecursionDepth = currentRayRecursionDepth + 1;
     rayPayload.radiance = 0;
     rayPayload.AOGBuffer.tHit = HitDistanceOnMiss;
@@ -286,9 +286,9 @@ GBufferRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDepth, 
 	TraceRay(g_scene,
         rayFlags,
 		TraceRayParameters::InstanceMask,
-		TraceRayParameters::HitGroup::Offset[RayType::GBuffer],
+		TraceRayParameters::HitGroup::Offset[RayType::Radiance],
 		TraceRayParameters::HitGroup::GeometryStride,
-		TraceRayParameters::MissShader::Offset[RayType::GBuffer],
+		TraceRayParameters::MissShader::Offset[RayType::Radiance],
 		rayDesc, rayPayload);
 
 	return rayPayload;
@@ -307,7 +307,7 @@ Ray ReflectedRay(in float3 hitPosition, in float3 incidentDirection, in float3 n
 
 // Returns radiance of the traced ray.
 // ToDo standardize variable names
-float3 TraceReflectedGBufferRay(in float3 hitPosition, in float3 wi, in float3 N, in float3 objectNormal, inout GBufferRayPayload rayPayload, in float TMax = 10000)
+float3 TraceReflectedGBufferRay(in float3 hitPosition, in float3 wi, in float3 N, in float3 objectNormal, inout PathtracerRayPayload rayPayload, in float TMax = 10000)
 {
     
     float tOffset = 0.001f;
@@ -345,7 +345,7 @@ float3 TraceReflectedGBufferRay(in float3 hitPosition, in float3 wi, in float3 N
 
 // Returns radiance of the traced ray.
 // ToDo standardize variable names
-float3 TraceRefractedGBufferRay(in float3 hitPosition, in float3 wt, in float3 N, in float3 objectNormal, inout GBufferRayPayload rayPayload, in float TMax = 10000)
+float3 TraceRefractedGBufferRay(in float3 hitPosition, in float3 wt, in float3 N, in float3 objectNormal, inout PathtracerRayPayload rayPayload, in float TMax = 10000)
 {
     float tOffset = 0.001f;
     float3 adjustedHitPosition = hitPosition + tOffset * wt;
@@ -379,7 +379,7 @@ float3 TraceRefractedGBufferRay(in float3 hitPosition, in float3 wt, in float3 N
 // Prioritize larger diffuse component hits as it is a direct scale of the AO contribution to the final color value.
 // This doesn't always result in the largest AO contribution as the final color contribution depends on the AO coefficient as well,
 // but this is the best estimate at this stage.
-void UpdateAOGBufferOnLargerDiffuseComponent(inout GBufferRayPayload rayPayload, in GBufferRayPayload _rayPayload, in float3 diffuseScale)
+void UpdateAOGBufferOnLargerDiffuseComponent(inout PathtracerRayPayload rayPayload, in PathtracerRayPayload _rayPayload, in float3 diffuseScale)
 {
     float3 diffuse = Byte3ToNormalizedFloat3(rayPayload.AOGBuffer.diffuseByte3);
 
@@ -395,7 +395,7 @@ void UpdateAOGBufferOnLargerDiffuseComponent(inout GBufferRayPayload rayPayload,
 
 
 float3 Shade(
-    inout GBufferRayPayload rayPayload,
+    inout PathtracerRayPayload rayPayload,
     in float3 N,
     in float3 objectNormal,
     in float3 hitPosition,
@@ -454,7 +454,7 @@ float3 Shade(
             && (BxDF::Specular::Reflection::IsTotalInternalReflection(V, N) 
                 || material.type == MaterialType::Mirror))
         {
-            GBufferRayPayload reflectedRayPayLoad = rayPayload;
+            PathtracerRayPayload reflectedRayPayLoad = rayPayload;
             float3 wi = reflect(-V, N);
                 
             L += Kr * TraceReflectedGBufferRay(hitPosition, wi, N, objectNormal, reflectedRayPayLoad);
@@ -469,7 +469,7 @@ float3 Shade(
                 float3 wi;
                 float3 Fr = Kr * BxDF::Specular::Reflection::Sample_Fr(V, wi, N, Fo);    // Calculates wi
                 
-                GBufferRayPayload reflectedRayPayLoad = rayPayload;
+                PathtracerRayPayload reflectedRayPayLoad = rayPayload;
                 // Ref: eq 24.4, [Ray-tracing from the Ground Up]
                 L += Fr * TraceReflectedGBufferRay(hitPosition, wi, N, objectNormal, reflectedRayPayLoad);
                 UpdateAOGBufferOnLargerDiffuseComponent(rayPayload, reflectedRayPayLoad, Fr);
@@ -481,7 +481,7 @@ float3 Shade(
                 float3 wt;
                 float3 Ft = Kt * BxDF::Specular::Transmission::Sample_Ft(V, wt, N, Fo);    // Calculates wt
 
-                GBufferRayPayload refractedRayPayLoad = rayPayload;
+                PathtracerRayPayload refractedRayPayLoad = rayPayload;
 
                 L += Ft * TraceRefractedGBufferRay(hitPosition, wt, N, objectNormal, refractedRayPayLoad);
                 UpdateAOGBufferOnLargerDiffuseComponent(rayPayload, refractedRayPayLoad, Ft);
@@ -493,7 +493,7 @@ float3 Shade(
 }
 
 [shader("raygeneration")]
-void MyRayGenShader_GBuffer()
+void MyRayGenShader_Pathtracer()
 {
     uint2 DTid = DispatchRaysIndex().xy;
 
@@ -502,7 +502,7 @@ void MyRayGenShader_GBuffer()
 
 	// Cast a ray into the scene and retrieve GBuffer information.
 	UINT currentRayRecursionDepth = 0;
-    GBufferRayPayload rayPayload = TraceGBufferRay(ray, currentRayRecursionDepth);
+    PathtracerRayPayload rayPayload = TraceGBufferRay(ray, currentRayRecursionDepth);
 
     // Invalidate perfect mirror reflections that missed. 
     // There is no We don't need to calculate AO for those.
@@ -576,7 +576,7 @@ float3 NormalMap(
 }
 
 [shader("closesthit")]
-void MyClosestHitShader_GBuffer(inout GBufferRayPayload rayPayload, in BuiltInTriangleIntersectionAttributes attr)
+void MyClosestHitShader_Pathtracer(inout PathtracerRayPayload rayPayload, in BuiltInTriangleIntersectionAttributes attr)
 {
     uint startIndex = PrimitiveIndex() * 3;
     const uint3 indices = { l_indices[startIndex], l_indices[startIndex + 1], l_indices[startIndex + 2] };
@@ -665,7 +665,7 @@ void MyClosestHitShader_ShadowRay(inout ShadowRayPayload rayPayload, in BuiltInT
 //***************************************************************************
 
 [shader("miss")]
-void MyMissShader_GBuffer(inout GBufferRayPayload rayPayload)
+void MyMissShader_Pathtracer(inout PathtracerRayPayload rayPayload)
 {
     rayPayload.radiance = g_texEnvironmentMap.SampleLevel(LinearWrapSampler, WorldRayDirection(), 0).xyz;
 }

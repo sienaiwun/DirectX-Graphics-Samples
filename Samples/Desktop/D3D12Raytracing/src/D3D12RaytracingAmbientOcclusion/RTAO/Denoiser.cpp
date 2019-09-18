@@ -27,8 +27,6 @@ using namespace SceneEnums;
 
 namespace Denoiser_Args
 {
-    // ToDo standardize capitalization
-
     // Temporal Cache.
     // ToDo rename cache to accumulation/supersampling?
     BoolVar UseTemporalSupersampling(L"Render/AO/RTAO/Temporal Cache/Enabled", true);
@@ -65,7 +63,6 @@ namespace Denoiser_Args
     NumVar TemporalSupersampling_ClampDifferenceToFrameAgeScale(L"Render/AO/RTAO/Temporal Cache/Clamping/Frame Age scale", 4.00f, 0, 10.f, 0.05f);
     NumVar TemporalSupersampling_ClampCachedValues_AbsoluteDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Absolute depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
     NumVar TemporalSupersampling_ClampCachedValues_DepthBasedDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Depth based depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
-    BoolVar TemporalSupersampling_TestFlag(L"Render/AO/RTAO/Temporal Cache/Test flag", false);
 
     // Todo revise comment
     // Setting it lower than 0.9 makes cache values to swim...
@@ -356,8 +353,7 @@ void Denoiser::TemporalReverseReproject(Scene& scene, Pathtracer& pathtracer)
         invViewProj,
         prevInvViewProj,
         maxFrameAge,
-        Denoiser_Args::Denoising_ExtraRaysToTraceSinceTemporalMovement,
-        Denoiser_Args::TemporalSupersampling_TestFlag);
+        Denoiser_Args::Denoising_ExtraRaysToTraceSinceTemporalMovement);
 
     // Transition output resources to SRV state.        
     // ToDo use it as UAV in RTAO?

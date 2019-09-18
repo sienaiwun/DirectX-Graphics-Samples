@@ -14,104 +14,53 @@
 
 /*
 //ToDo
-// ToDo switch to default column major in hlsl and do a transpose before passing matrices to HLSL.
-- todo finetune clamping/remove ghosting (test gliding spaceship)
+- cleanup filter shaders, remove obsolete
+
+- finetune clamping/remove ghosting (test gliding spaceship)
 - Adaptive kernel size - overblur under roof edge
 - Full res - adaptive kernel size visible horizontal lines
-- test impact of depth hash key in RaySort
-- fix adaptive kernel size
+- finetune adaptive kernel size
 - improve the multi-blur - skip higher iter blur on higher frame age.
-- Run ray gen only for active pixels on checkerboard. Run Ray sort only for active pixels and combine two groups? 128x128?
-- initialize resources
-- progressive samplin
 - depth aware variance calculation
-- lower temporal blur on motion
-- Add bounce ID as edge stopping function
-Optimization
-- Skip
-- Get RTAO perf close to 50% at 50% sampling.
-- combine resources, lower bit format (ray hit distance)
-- RaySorting - test if need inverted indices and strip them if not. Strip depth bounds calculation?
-
-- demo video
---- increase bounce
--- comparison 100spp AO, 1spp, 1/2 spp
--- PBR lighting AO ON / Off
--- reflections
-
-
-AppSetup
 - Cleanup UI paths
 - Total GPU time >> sum of component gpu times??
 
-
-- Multi-scale denoiser
-- consider alternating min/max pattern on downsampling
-- 3x3 vs 5x5 blur at lower resolutions
-- Atrous vs separable at lower resolutions
-- mirror weights
-- weigh samples with higher tspp more when up/down sampling
-- test energy conservation on ~4/16 spp at tspp up to 32
-- use split barriers vs UAV if there's a work in between? vs UAV barrier right before the read?
-
-
-- set max bounce to 2/3 - support windows in reflections.
-- match denoised  AO at fidelity closer to that of temporal variance sharpness image
-- improve matching on Temporal. Dragon surface hits lots of likely unnecessary disocclusions on camero movement/zoom.
+- Double check
+- Double check that passes either check whether a pixel value is valid from previous pass/frame or the value gets ignored.
 - fix the temporal variance shimmer on boundaries with skybox.
 - map local variance to only valid AO values
-- retain per window frame seed on static geometry
-
 - TAO fails on dragons surface on small rotaions
-- ToDo motion vector can be nan at some reflections and reprojected depth of bad value. [1638,647 x 1440p]
-- very large ddxy at 525 199
-- blur away disocclussions
-- add dynamic objects testing clamping
-- overblur on mouse camera movement
--  no modes, no AOon phong, denoised artifacts onb normalMaps
-- Fireflies
-- quad blur in Variance
-- AO raypayload of 2B.
-- split temporal pass to Reprojection and Clamping. 
-    -Use reprojection to drive AO spp. 
-    - Cache kernel weight sum, min hit distance, frame age, variance and reproject to drive ao sampling.
-- Temporal:
-   - Fine tune min std dev tolerance in clamping
-   - Try lower mip level on disocclusion.
- - option to disable variance smoothing
-- ToDo test AO perf w/o tHit - if meaningful look into heuristic limitting ray groups to that. Maybe those that don't get sorted.
-- Double check that passes either check whether a pixel value is valid from previous pass/frame or the value gets ignored.
-- Optimizations:
-    - Encode ray hit distance to 8bit.
-    - replace multiple loads with gathers.
-    - tighten texture format sizes
-
-- Glitches
     - clean up PIX /GPU validation warnings on Debug
     - Debug break on FS on 1080 display resolution.
-    - Tearing with VSync on at 4K full res.
     - White halo under tiers.
     - Upsampling artifacts on 1080(540p)
     - RTAO invisible wall inside kitchen on long rays
-    - use max tex LOD.
+    PIX shows empty rows (~as many as valid rows) in between entries in multi frame cb.
+
+    - Finetune
+   - Fine tune min std dev tolerance in clamping
+
 
 - Cleanup:
-    // ToDo double check all CS for out of bounds.
-    - ToDo remove .f specifier from floating numbers in hlsl
-    - ToDo clean up scoped timer names.
+    double check all CS for out of bounds.
+    clean up scoped timer names.
     - Add/revise comments. Incl file decs
     - Move global defines in RaytracingSceneDefines.h locally for RTAO and Denoiser.
-    - Add dtors/release . Wait on GPU?
     - Build with higher warning bar and cleanup
-    - purge obsolete gpukernels
     - move shader dependencies to components?
-    // ToDO standarddize ddxy vs dxdy
+    standarddize ddxy vs dxdy
     // make sure no shaders are writing to debug resources
-// ToDo remove obsolete filtering hlsl kernels
-// ToDo strip _tex from names
+    remove obsolete filtering hlsl kernels
+    cleanup CBs, remove obsolete entries
+    remove obsolete GPukernel vars
+    remove RTAO_ from names in RTAO component
+    remove obsolete composition modes
+    rename maxFrameAge to tspp
+
+    - cleanup this file
 
 - Sample generic
-    - Add device removal support
+    - Add device removal support or remove it being announced
 
     Readme:
     -   Open issues/that can be improved:
@@ -130,18 +79,13 @@ AppSetup
 
 
 
-// ToDO To retain
 #define FOVY 45.f
-///////////////////////////////////
-
-
-// ToDo remove
 #define NEAR_PLANE 0.001f
-#define FAR_PLANE 1000.0f   // ToDo pass form the app
+#define FAR_PLANE 1000.0f
 
 #define RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS 1      // ToDo cleanup
 
-#define RTAO_MARK_CACHED_VALUES_NEGATIVE 1
+#define RTAO_MARK_CACHED_VALUES_NEGATIVE  1   // ToDo cleanup
 #define RTAO_GAUSSIAN_BLUR_AFTER_Temporal 0
 #if RTAO_GAUSSIAN_BLUR_AFTER_Temporal && RTAO_MARK_CACHED_VALUES_NEGATIVE
 Incompatible macros
@@ -231,7 +175,7 @@ struct AmbientOcclusionGBuffer
 
 
 // ToDo rename To Pathtracer
-struct GBufferRayPayload
+struct PathtracerRayPayload
 {
     UINT rayRecursionDepth;
     XMFLOAT3 radiance;
@@ -245,8 +189,6 @@ struct ShadowRayPayload
 
 struct AtrousWaveletTransformFilterConstantBuffer
 {
-    // ToDo pad?
-    // ToDo remove obsolete
     XMUINT2 textureDim;
     UINT kernelStepShift;
     UINT kernelWidth;
@@ -282,7 +224,6 @@ struct AtrousWaveletTransformFilterConstantBuffer
     float weightByFrameAge;
 };
 
-// ToDo remove obsolete params in cbs
 struct CalculateVariance_BilateralFilterConstantBuffer
 {
     XMUINT2 textureDim;
@@ -348,7 +289,6 @@ namespace SortRays {
 #endif
 }
 
-// ToDo PIX shows empty rows (~as many as valid rows) in between entries in multi frame cb.
 struct PathtracerConstantBuffer
 {
     // ToDo rename to world to view matrix and drop (0,0,0) note.
@@ -360,19 +300,18 @@ struct PathtracerConstantBuffer
     XMFLOAT3 lightColor;
     float    defaultAmbientIntensity;
 
-    XMMATRIX prevViewProj;    // ToDo standardzie proj vs projection
+    XMMATRIX prevViewProj;
     XMMATRIX prevProjToWorldWithCameraEyeAtOrigin;	// projection to world matrix with Camera at (0,0,0).
     XMFLOAT3 prevCameraPosition;
     float    padding;
 
-	float Znear;     // ToDo rename to zNear | remove
+	float Znear;
 	float Zfar;
     UINT  maxRadianceRayRecursionDepth;
     UINT  maxShadowRayRecursionDepth;
 
 };
 
-// ToDo remove RTAO prefix
 struct RTAOConstantBuffer
 {
     UINT seed;
@@ -402,10 +341,9 @@ struct RTAOConstantBuffer
 };
 
  
-// ToDo use namespace?
 // Final render output composition modes.
 enum CompositionType {
-    PBRShading = 0,  // ToDo rename
+    PBRShading = 0,
     AmbientOcclusionOnly_Denoised,
     AmbientOcclusionOnly_TemporallySupersampled,
     AmbientOcclusionOnly_RawOneFrame,
@@ -487,25 +425,16 @@ namespace TextureResourceFormatRG
 #endif
 }
 
-// ToDo compress
-// ToDo explain padding
 struct ComposeRenderPassesConstantBuffer
 {
     CompositionType compositionType;
     UINT isAOEnabled;
-    float RTAO_MaxRayHitDistance;   // ToDo standardize ray hit time vs distance
+    float RTAO_MaxRayHitDistance;
     float defaultAmbientIntensity;
     
     BOOL variance_visualizeStdDeviation;
     float variance_scale;
-    float padding3[2];
-};
-
-// ToDo standardize Texture vs Tex, Dim ...
-struct DownsampleFilterConstantBuffer
-{
-	XMUINT2 inputTextureDimensions;
-	XMFLOAT2 invertedInputTextureDimensions;
+    float padding[2];
 };
 
 struct TextureDimConstantBuffer
@@ -514,8 +443,6 @@ struct TextureDimConstantBuffer
     XMFLOAT2 invTextureDim;
 };
 
-
-// ToDo capitalize cb members?
 struct FilterConstantBuffer
 {
     XMUINT2 textureDim;
@@ -540,12 +467,11 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
 {
     // ToDo pix missinterprets the format
     XMUINT2 textureDim;
-    XMFLOAT2 invTextureDim; // ToDo test what impact passing inv tex dim makes
+    XMFLOAT2 invTextureDim;
 
     XMMATRIX projectionToWorldWithCameraEyeAtOrigin;
     XMMATRIX prevProjectionToWorldWithCameraEyeAtOrigin;
 
-    // ToDo moving this 4Bs above XMFLOATs causes issues
     BOOL useDepthWeights;
     BOOL useNormalWeights;
     float depthSigma;
@@ -559,9 +485,7 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
     float floatEpsilonDepthTolerance;
     float depthDistanceBasedDepthTolerance;
     UINT numRaysToTraceAfterTemporalAtMaxFrameAge;
-    UINT maxFrameAge;       // ToDo rename maxFrameAge to tspp
-
-    BOOL testFlag;
+    UINT maxFrameAge;
 };
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
@@ -569,7 +493,7 @@ struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
     XMUINT2 textureDim;
     XMFLOAT2 invTextureDim;
 
-    BOOL  forceUseMinSmoothingFactor;  // ToDo remove?
+    BOOL forceUseMinSmoothingFactor;
     BOOL clampCachedValues;
     float minSmoothingFactor;
     float stdDevGamma;
@@ -587,7 +511,6 @@ struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
     BOOL doCheckerboardSampling;
     BOOL areEvenPixelsActive;
     float padding2[2];
-
 };
 
 struct CalculatePartialDerivativesConstantBuffer
@@ -678,9 +601,9 @@ struct PrimitiveMaterialBuffer
 // Attributes per primitive instance.
 struct PrimitiveInstanceConstantBuffer
 {
-    // ToDo should this be padded?
     UINT instanceIndex;  
     UINT primitiveType; // Procedural primitive type
+    float padding[2];
 };
 
 // Dynamic attributes per primitive instance.
@@ -728,7 +651,7 @@ struct VertexPositionNormalTextureTangent
 // Ray types traced in this sample.
 namespace RayType {
     enum Enum {
-        GBuffer = 0,	 // ToDo update	// ~ Primary camera ray generating GBuffer data.
+        Radiance = 0,	// ~ Radiance ray generating color and GBuffer data.
         Shadow,         // ~ Shadow/visibility rays, only testing for occlusion
         Count
     };
@@ -748,16 +671,15 @@ namespace TraceRayParameters
     namespace HitGroup {
         static const UINT Offset[RayType::Count] =
         {
-            0, // GBuffer ray
+            0, // Radiance ray
             1, // Shadow ray
         };
-		// ToDo For now all geometries reusing shader records
 		static const UINT GeometryStride = RayType::Count;
     }
     namespace MissShader {
         static const UINT Offset[RayType::Count] =
         {
-            0, // GBuffer ray
+            0, // Radiance ray
             1, // Shadow ray
         };
     }

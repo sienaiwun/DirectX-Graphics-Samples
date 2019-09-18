@@ -433,8 +433,7 @@ namespace GpuKernels
         const XMMATRIX& projectionToWorldWithCameraEyeAtOrigin,
         const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
         UINT maxFrameAge,
-        UINT numRaysToTraceSinceTemporalMovement,
-        bool testFlag);
+        UINT numRaysToTraceSinceTemporalMovement);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;

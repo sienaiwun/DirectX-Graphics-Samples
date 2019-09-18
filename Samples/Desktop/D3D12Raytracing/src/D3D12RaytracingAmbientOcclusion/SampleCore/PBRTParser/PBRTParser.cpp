@@ -14,14 +14,14 @@
 // https://github.com/wallisc/DuosRenderer/tree/DXRRenderer/PBRTParser
 //
 
-#include "..\..\stdafx.h"
+#include "stdafx.h"
 #include "PBRTParser.h"
 #include "PlyParser.h"
 
 using namespace SceneParser;
 using namespace std;
 
-#define DISABLE_CAMERA_TRANSFORMS // ToDo remove
+#define DISABLE_CAMERA_TRANSFORMS
 
 namespace PBRTParser
 {
