@@ -9,13 +9,10 @@
 //
 //*********************************************************
 
-// ToDo
 // Desc: Filters invalid values from neighborhood via gaussian filter.
 // Supports up to 9x9 kernels.
 // Requirements:
 // - wave lane size 16 or higher.
-// Performance: 
-// ToDo:
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -37,10 +34,9 @@ RWTexture2D<float4> g_outDebug2 : register(u4);
 ConstantBuffer<BilateralFilterConstantBuffer> cb: register(b0);
 
 // Group shared memory cache for the row aggregated results.
-// ToDo parameterize SMEM based on kernel dims.
-groupshared uint PackedValueDepthCache[16][8];         // 16bit float value, depth.
-groupshared uint PackedRowResultCache[16][8];            // 16bit float weightedValueSum, weightSum.
-groupshared uint PackedEncodedNormalCache[16][8];        // 16bit float encodedNormal X and Y.
+groupshared uint PackedValueDepthCache[16][8];          // 16bit float value, depth.
+groupshared uint PackedRowResultCache[16][8];           // 16bit float weightedValueSum, weightSum.
+groupshared uint PackedEncodedNormalCache[16][8];       // 16bit float encodedNormal X and Y.
 
 uint2 GetPixelIndex(in uint2 Gid, in uint2 GTid)
 {
@@ -75,13 +71,10 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
     // Process the thread group as row-major 16x4, where each sub group of 16 threads processes one row.
     // Each thread loads up to 4 values, with the sub groups loading rows interleaved.
     // Loads up to 16x4x4 == 256 input values.
-    // ToDo rename to 4x16
     uint2 GTid16x4_row0 = uint2(GI % 16, GI / 16);
     int2 GroupKernelBasePixel = GetPixelIndex(Gid, 0) - int(FilterKernel::Radius * cb.step);
     const uint NumRowsToLoadPerThread = 4;
     const uint Row_BaseWaveLaneIndex = (WaveGetLaneIndex() / 16) * 16;
-
-    // ToDo blend low frame age values too with a falloff?
 
     [unroll]
     for (uint i = 0; i < NumRowsToLoadPerThread; i++)

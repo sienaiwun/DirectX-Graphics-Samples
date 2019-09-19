@@ -59,7 +59,7 @@
 #include <dxgi1_6.h>
 #include <d3d12.h>
 #include <atlbase.h>
-#include "d3dx12.h"	// ToDo update with latest
+#include "d3dx12.h"	
 #include <pix3.h>
 
 #include <GeometricPrimitive.h>

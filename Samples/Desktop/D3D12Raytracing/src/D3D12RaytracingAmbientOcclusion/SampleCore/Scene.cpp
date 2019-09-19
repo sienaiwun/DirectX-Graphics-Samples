@@ -628,10 +628,10 @@ void Scene::InitializeAccelerationStructures()
         m_accelerationStructure->AddBottomLevelASInstance(bottomLevelASname);
     }
 
+#if !LOAD_ONLY_ONE_PBRT_MESH
     // Add one more instace of a Car BLAS for an animated car moving in circle.
     m_animatedCarInstanceIndex = m_accelerationStructure->AddBottomLevelASInstance(L"Car", UINT_MAX, XMMatrixIdentity());
 
-#if !LOAD_ONLY_ONE_PBRT_MESH
     // Set up a ring of quads around the house.
     float radius = 75;
     XMMATRIX mTranslationSceneCenter = XMMatrixTranslation(-7, 0, 7);

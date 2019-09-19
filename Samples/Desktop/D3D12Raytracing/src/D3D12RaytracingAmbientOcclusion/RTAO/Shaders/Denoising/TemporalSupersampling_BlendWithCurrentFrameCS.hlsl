@@ -14,7 +14,6 @@
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO\Shaders\RTAO.hlsli"
 
-// ToDo standardize in vs input, out vs output
 Texture2D<float> g_texInputCurrentFrameValue : register(t0);
 Texture2D<float2> g_texInputCurrentFrameLocalMeanVariance : register(t1);
 Texture2D<float> g_texInputCurrentFrameRayHitDistance : register(t2);

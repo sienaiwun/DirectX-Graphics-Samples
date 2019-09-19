@@ -152,7 +152,6 @@ void DeviceResources::CreateDeviceResources()
     ComPtr<ID3D12InfoQueue> d3dInfoQueue;
     if (SUCCEEDED(m_d3dDevice.As(&d3dInfoQueue)))
     {
-		// ToDo defined twice here and above
 #if ENABLE_BREAK_ON_DEBUG_LAYER_ERROR
 #ifdef _DEBUG
         d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -161,7 +160,6 @@ void DeviceResources::CreateDeviceResources()
 #endif
         D3D12_MESSAGE_ID hide[] =
         {
-			// ToDo remove
             D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
             D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE
         };
@@ -579,10 +577,8 @@ void DeviceResources::Present(D3D12_RESOURCE_STATES beforeState, UINT syncInterv
 }
 
 // Send the command list off to the GPU for processing.
-// ToDo remove force paramter
 void DeviceResources::ExecuteCommandList(bool force)
 {
-	// ToDo is openCommandList var necessary
 	if (m_openCommandList || force)
 	{
 		ThrowIfFailed(m_commandList->Close());

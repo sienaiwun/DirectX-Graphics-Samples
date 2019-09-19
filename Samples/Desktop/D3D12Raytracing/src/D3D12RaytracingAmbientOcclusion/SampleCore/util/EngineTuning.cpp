@@ -327,7 +327,6 @@ wstring BoolVar::ToString(void) const
     return m_Flag ? L"on" : L"off";
 } 
 
-// ToDo rename/remove
 void BoolVar::SetValue(FILE* file, const wstring& setting)
 {	
     wstring pattern = L"\n L" + setting + L": %s";
@@ -390,6 +389,7 @@ void NumVar::SetValue(FILE* file, const wstring& setting)
 void NumVar::SetValue(float value)
 {
     m_Value = Clamp(value);
+    OnChanged();
 }
 
 #if _MSC_VER < 1800
@@ -486,6 +486,7 @@ void IntVar::SetValue(FILE* file, const wstring& setting)
 void IntVar::SetValue(int value)
 {
     m_Value = Clamp(value);
+    OnChanged();
 }
 
 
@@ -543,7 +544,7 @@ void EnumVar::SetValue(FILE* file, const wstring& setting)
 void EnumVar::SetValue(int value)
 {
     m_Value = Clamp(value);
-    // ToDO call the callback
+    OnChanged();
 }
 
 CallbackTrigger::CallbackTrigger(const wstring& path, function<void (void*)> callback, void* args)
@@ -651,7 +652,6 @@ void StartSave(void*)
     }
 }
 function<void(void*)> StartSaveFunc = StartSave;
-//ToDo static CallbackTrigger Save(L"Save Settings", StartSaveFunc, nullptr); 
 
 void StartLoad(void*)
 {
@@ -664,7 +664,6 @@ void StartLoad(void*)
     }
 }
 function<void(void*)> StartLoadFunc = StartLoad;
-//ToDo static CallbackTrigger Load(L"Load Settings", StartLoadFunc, nullptr); 
 
 
 void EngineTuning::Display(wstringstream* renderText, bool expandAllNodes)

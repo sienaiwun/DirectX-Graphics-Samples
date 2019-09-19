@@ -15,7 +15,6 @@
 
 namespace DX
 {
-    // TODo dedupe with PerformanceTImers.
     class GpuTimeManager
     {
     public:

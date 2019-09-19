@@ -39,7 +39,7 @@ float3 GetRandomRayDirection(in uint2 srcRayIndex, in float3 surfaceNormal, in u
         // This breaks noise correlation on camera movement which otherwise results 
         // in noise pattern swimming across the screen on camera movement.
         uint2 pixelZeroId = sampleSetId * cb.numPixelsPerDimPerSet;
-        float3 pixelZeroHitPosition = g_texRayOriginPosition[pixelZeroId].xyz;      // ToDo remove?
+        float3 pixelZeroHitPosition = g_texRayOriginPosition[pixelZeroId].xyz; 
         uint sampleSetSeed = (sampleSetId.y * numSampleSetsInX + sampleSetId.x) * hash(pixelZeroHitPosition) + cb.seed;
         uint RNGState = RNG::SeedThread(sampleSetSeed);
 

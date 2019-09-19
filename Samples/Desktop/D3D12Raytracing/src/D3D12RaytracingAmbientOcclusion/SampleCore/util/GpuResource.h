@@ -10,7 +10,6 @@
 //*********************************************************
 #pragma once
 
-// ToDo turn into class and check rwFlags being properly set on access.
 class GpuResource
 {
 public:
@@ -22,7 +21,6 @@ public:
 
     UINT rwFlags = RWFlags::AllowRead | RWFlags::AllowWrite;
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-    // ToDo rename these to GetUAV,... like in MiniEngine
     D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptorReadAccess = { UINT64_MAX };
     D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptorWriteAccess = { UINT64_MAX };
     UINT srvDescriptorHeapIndex = UINT_MAX;

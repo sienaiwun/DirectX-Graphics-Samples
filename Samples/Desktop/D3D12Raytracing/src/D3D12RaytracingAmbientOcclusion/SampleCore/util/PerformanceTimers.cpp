@@ -255,14 +255,13 @@ void GPUTimer::RestoreDevice(_In_ ID3D12Device5* device, _In_ ID3D12CommandQueue
         // Suppress individual messages by their ID.
         D3D12_MESSAGE_ID denyIds[] =
         {
-            D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_GPU_WRITTEN_READBACK_RESOURCE_MAPPED,	// ToDo this still spews sometimes...
+            D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_GPU_WRITTEN_READBACK_RESOURCE_MAPPED,
         };
 
         D3D12_INFO_QUEUE_FILTER filter = {};
         filter.DenyList.NumIDs = _countof(denyIds);
         filter.DenyList.pIDList = denyIds;
         d3dInfoQueue->AddStorageFilterEntries(&filter);
-		// ToDo this spews 3 times. remove duplicate debug spews
         OutputDebugString(L"Warning: GPUTimer is disabling an unwanted D3D12 debug layer warning: D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_GPU_WRITTEN_READBACK_RESOURCE_MAPPED.\n");
     }
 

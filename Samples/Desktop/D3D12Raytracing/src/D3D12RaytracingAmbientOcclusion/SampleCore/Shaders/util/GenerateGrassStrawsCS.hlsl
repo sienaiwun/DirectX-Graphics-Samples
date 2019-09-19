@@ -42,11 +42,9 @@
 #include "RandomNumberGenerator.hlsli"
 
 Texture2D<float4> g_windMap : register(t0);
-// ToDo split the output?
 RWStructuredBuffer<VertexPositionNormalTextureTangent> g_outVertexBuffer : register(u0);
 
 ConstantBuffer<GenerateGrassStrawsConstantBuffer> cb : register(b0);
-
 SamplerState WrapLinearSampler : register(s0);
 
 #if N_GRASS_TRIANGLES != 5 || N_GRASS_VERTICES != 7
@@ -73,10 +71,8 @@ static const float GRASS_Y[GRASS_TYPES][N_GRASS_VERTICES] = {
     { 1.800000, 1.000000, 0.000000, 0.000000, 1.800000, 1.800000, 4.000000 }
 };
  
-
 static const uint3 TRIANGLE_INDICES[N_GRASS_TRIANGLES] = { {0, 2, 1}, {1, 2, 3}, {2, 4, 3}, {3, 4, 5}, {4, 6, 5} };
 
-// ToDo reuse/move?
 float rand(float2 co)
 {
     float a = 12.9898;
@@ -108,7 +104,6 @@ void GenerateGrassStraw(
     windNoise = 2 * windNoise - 1;                    // [0, 1] -> [-1, 1]
     float3 gradient = cb.p.windStrength * (0.5 * cb.p.windDirection + 2.5 * windNoise);
     
-    // ToDo simplify
     gradient -= up * dot(up, gradient);             // Project onto xz-plane.
     float3 nTangent = normalize(tangent);
     gradient -= (1 - cb.p.bendStrengthAlongTangent) * nTangent * dot(nTangent, gradient);   // Restrain bending along tangent.
@@ -165,7 +160,7 @@ void GenerateGrassStraw(
         vertex.position = vertexPos[v];
         vertex.normal = vertexNormal[v];
         vertex.textureCoordinate = texCoord;
-        vertex.tangent = 0; // ToDo
+        vertex.tangent = 0;
 
         g_outVertexBuffer[baseVertexID + v] = vertex;
     }

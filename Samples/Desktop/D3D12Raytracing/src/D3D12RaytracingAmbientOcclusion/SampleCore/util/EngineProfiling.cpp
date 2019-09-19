@@ -37,7 +37,6 @@ namespace
     }
 }
 
-// ToDo dedupe with the other GpuTimer
 class GpuTimer
 {
 public:
@@ -275,7 +274,6 @@ namespace EngineProfiling
     
     void BeginFrame(ID3D12GraphicsCommandList4* CommandList)
     {
-        // ToDo cleanup
         static bool isFirstFrame = true;
         if (!isFirstFrame)
         {

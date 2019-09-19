@@ -17,7 +17,6 @@ using namespace GameCore;
 
 CameraController::CameraController(Camera& camera) : m_camera(camera)
 {
-    // ToDo
     m_HorizontalLookSensitivity = 2.0f;
     m_VerticalLookSensitivity = 2.0f;
 	m_MoveSpeed = 5.0f;
@@ -63,7 +62,6 @@ bool CameraController::Update(float deltaTime)
     float speedScale = (m_FineMovement ? 0.1f : 1.0f) * timeScale;
     float panScale = (m_FineRotation ? 0.5f : 1.0f) * timeScale;
 
-    // ToDo normalize movement per second
     float yaw = GameInput::GetTimeCorrectedAnalogInput(GameInput::kAnalogRightStickX) * m_HorizontalLookSensitivity * panScale;
     float pitch = GameInput::GetTimeCorrectedAnalogInput(GameInput::kAnalogRightStickY) * m_VerticalLookSensitivity * panScale;
     float forward = m_MoveSpeed * speedScale * (
@@ -103,7 +101,7 @@ bool CameraController::Update(float deltaTime)
 		yaw += -1 * GameInput::GetAnalogInput(GameInput::kAnalogMouseX) * m_MouseSensitivityX;
     	pitch += -1 * GameInput::GetAnalogInput(GameInput::kAnalogMouseY) * m_MouseSensitivityY;
 	}
-	// ToDo camera moves too fast sometimes going foward/back (when moving mouse as well?)
+
 	m_camera.RotateAroundYAxis(yaw);
 	m_camera.RotatePitch(pitch);
 	m_camera.TranslateRightUpForward(strafe, ascent, forward);
@@ -127,7 +125,6 @@ bool CameraController::Update(float deltaTime)
 #endif
 	}
 
-    // ToDO remove?
     return memcmp(&prevCameraState, &m_camera, sizeof(m_camera)) != 0;
 }
 

@@ -52,10 +52,8 @@ namespace Composition_Args
     BoolVar UpsamplingUseNormalWeights(L"Render/AO/RTAO/Down/Upsampling/Normal weighted", true);
     BoolVar UpsamplingUseDynamicDepthThreshold(L"Render/AO/RTAO/Down/Upsampling/Dynamic depth threshold", true);        // ToDO rename to adaptive
 
-    // ToDo move under PBR options?
     BoolVar AOEnabled(L"Render/AO/Enabled", true);
 }
-
 
 void Composition::Setup(shared_ptr<DeviceResources> deviceResources, shared_ptr<DX::DescriptorHeap> descriptorHeap)
 {
@@ -65,7 +63,6 @@ void Composition::Setup(shared_ptr<DeviceResources> deviceResources, shared_ptr<
     CreateDeviceDependentResources();
 }
 
-
 // Create resources that depend on the device.
 void Composition::CreateDeviceDependentResources()
 {
@@ -73,8 +70,6 @@ void Composition::CreateDeviceDependentResources()
     CreateShaderResources();
 }
 
-
-// ToDo rename
 void Composition::CreateAuxilaryDeviceResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
@@ -87,7 +82,6 @@ void Composition::CreateResolutionDependentResources()
 {
     CreateTextureResources();
 }
-
 
 void Composition::SetResolution(UINT width, UINT height)
 {
@@ -162,7 +156,7 @@ void Composition::CreateShaderResources()
 
 
 
-// Upsample quarter resources
+// Upsample downsampled resources needed for the composition pass.
 void Composition::UpsampleResourcesForRenderComposePass(
     Pathtracer& pathtracer,
     RTAO& rtao,
@@ -241,9 +235,6 @@ void Composition::UpsampleResourcesForRenderComposePass(
     }
 }
 
-
-
-// ToDo standardize naming AO vs AmbientOcclusion
 void Composition::BilateralUpsample(
     UINT hiResWidth,
     UINT hiResHeight,
@@ -283,9 +274,7 @@ void Composition::BilateralUpsample(
     resourceStateTracker->TransitionResource(outputHiResValueResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-
-
-// Composite results from multiple passed into a final image.
+// Composite render pass results into a final image.
 void Composition::Render(
     GpuResource* outputResource,
     Scene& scene,
@@ -319,8 +308,6 @@ void Composition::Render(
         m_csComposeRenderPassesCB.CopyStagingToGpu(frameIndex);
     }
 
-    // ToDo cleanup
-
     // Set pipeline state.
     {
         using namespace ComputeShader::RootSignature::CompositionCS;
@@ -330,7 +317,6 @@ void Composition::Render(
         GpuResource* LocalMeanVarianceResource = &denoiser.m_localMeanVarianceResources[AOVarianceResource::Raw];
         GpuResource* AORayHitDistance = &denoiser.m_temporalCache[denoiser.m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance];
 
-        // ToDo
         GpuResource* AOResource = 
             Composition_Args::CompositionMode == CompositionType::AmbientOcclusionOnly_Denoised
             ? &denoiser.m_temporalAOCoefficient[denoiser.m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex]

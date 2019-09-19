@@ -25,21 +25,15 @@ static const float weights[3][3] =
     { 0.077847, 0.123317, 0.077847 },
 };
 
-// ToDo cleanup
-#define APPROXIMATE_GAUSSIAN_3X3_VIA_HW_FILTERING 1
-
-#if APPROXIMATE_GAUSSIAN_3X3_VIA_HW_FILTERING
 // Approximate 3x3 gaussian filter using HW bilinear filtering.
 // Ref: Moller2018, Real-Time Rendering (Fourth Edition), p517
 // Performance improvement over 3x3 2D version (4K on 2080 Ti): 0.18ms -> 0.11ms
-// Todo Test against w separable version
 [numthreads(DefaultComputeShaderParams::ThreadGroup::Width, DefaultComputeShaderParams::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID)
 {
     // Set weights based on availability of neighbor samples.
     float4 weights;
 
-    // ToDo test indexing into array instead.
     // Non-border pixels
     if (DTid.x > 0 && DTid.y > 0 && DTid.x < cb.textureDim.x - 1 && DTid.y < cb.textureDim.y - 1) 
     {
@@ -105,31 +99,3 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
     g_texOutput[DTid] = float2(dot(samplesR, weights), dot(samplesG, weights));
 }
-
-#else
-ToDo or remove
-void AddFilterContribution(inout float weightedValueSum, inout float weightSum, in int row, in int col, in int2 DTid)
-{
-    int2 id = DTid + int2(row - 1, col - 1);
-    if (id.x >= 0 && id.y >= 0 && id.x < cb.textureDim.x && id.y < cb.textureDim.y)
-    {
-        weightedValueSum += weights[col][row] * g_texInput[id];
-        weightSum += weights[col][row];
-    }
-}
-
-[numthreads(GaussianFilter::ThreadGroup::Width, GaussianFilter::ThreadGroup::Height, 1)]
-void main(uint2 DTid : SV_DispatchThreadID)
-{
-    float weightSum = 0;
-    float weightedValueSum = 0;
-
-    [unroll]
-    for (UINT r = 0; r < 3; r++)
-        [unroll]
-        for (UINT c = 0; c < 3; c++)
-            AddFilterContribution(weightedValueSum, weightSum, r, c, DTid);
-
-        g_texOutput[DTid] = weightedValueSum / weightSum;
-}
-#endif

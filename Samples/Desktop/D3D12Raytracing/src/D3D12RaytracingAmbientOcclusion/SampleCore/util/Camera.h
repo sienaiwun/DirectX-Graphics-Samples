@@ -11,13 +11,12 @@
 
 #pragma once
 
-// ToDo remove GameCore?
 namespace GameCore
 {
 	class Camera
 	{
 	public:
-		float ZMin = NEAR_PLANE;    // Todo rename to zNear and zFar
+		float ZMin = NEAR_PLANE;  
 		float ZMax = FAR_PLANE;
 		float fov = FOVY;
 

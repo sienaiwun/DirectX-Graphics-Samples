@@ -9,7 +9,6 @@
 //
 //*********************************************************
 
-// ToDo combine with ReduceSum?
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -17,11 +16,10 @@
 Texture2D<float> g_texInput : register(t0);
 RWTexture2D<float> g_texOutput : register(u0);
 
-groupshared uint gShared[ReduceSumCS::ThreadGroup::Size];
+groupshared float gShared[ReduceSumCS::ThreadGroup::Size];
 
 // Reduce sum kernel
-// ToDo profile parametrization for float version
-// - Sums values from a 2D input across a group and writes out the result once per group.
+// Sums values from a 2D input across a group and writes out the result once per group.
 [numthreads(ReduceSumCS::ThreadGroup::Width, ReduceSumCS::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID, uint GIndex: SV_GroupIndex, uint2 Gid : SV_GroupID)
 {
@@ -32,7 +30,6 @@ void main(uint2 DTid : SV_DispatchThreadID, uint GIndex: SV_GroupIndex, uint2 Gi
 	uint2 index = DTid + uint2(Gid.x * ((ReduceSumCS::ThreadGroup::NumElementsToLoadPerThread - 1) * ReduceSumCS::ThreadGroup::Width), 0);
 	for (UINT i = 0; i < ReduceSumCS::ThreadGroup::NumElementsToLoadPerThread; i++)
 	{
-        // ToDo use gather
 		sum += g_texInput[index];
 		index += uint2(ReduceSumCS::ThreadGroup::Width, 0);
 	}

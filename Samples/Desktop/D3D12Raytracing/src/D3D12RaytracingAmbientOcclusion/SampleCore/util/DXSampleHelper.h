@@ -8,10 +8,9 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
-//ToDo cleanup
+
 #pragma once
 
-// ToDo remove
 #include "GpuResource.h"
 #include "Utility.h"
 
@@ -441,8 +440,6 @@ inline float CalculateAnimationInterpolant(float elapsedTime, float cycleDuratio
 	return lerp(0.0f, 1.0f, curLinearCycleTime);
 }
 
-
-
 inline float NumMPixelsPerSecond(float timeMs, UINT width, UINT height)
 {
 	float resolution = static_cast<float>(width * height);
@@ -450,7 +447,6 @@ inline float NumMPixelsPerSecond(float timeMs, UINT width, UINT height)
 	return resolution / (raytracingTime * static_cast<float>(1e6));
 }
 
-// ToDo Combine with CreateRT?
 inline void CreateTextureSRV(
 	ID3D12Device5* device,
 	ID3D12Resource* resource,
@@ -599,8 +595,6 @@ inline void LoadTexture(
     }
 }
 
-// ToDo move this to GpuResource class?
-// ToDo rename to CreateUAVResource ?
 inline void CreateRenderTargetResource(
 	ID3D12Device5* device,
 	DXGI_FORMAT format,
@@ -694,7 +688,6 @@ inline void CreateBufferSRV(
         *heapIndex, descriptorHeap->DescriptorSize());
 };
 
-// ToDo: standardize create/alloc resource calls
 inline void AllocateUAVBuffer(
 	ID3D12Device5* device, 
 	UINT numElements,	// ToDo use template?
@@ -782,13 +775,11 @@ inline void SerializeAndCreateRootSignature(
 	ThrowIfFailed(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error), error ? static_cast<wchar_t*>(error->GetBufferPointer()) : nullptr);
 	ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&(*rootSignature))));
 
-	// ToDo is this check needed?
 	if (resourceName)
 	{
 		(*rootSignature)->SetName(resourceName);
 	}
 }
-
 
 struct GeometryDescriptor
 {
@@ -929,7 +920,6 @@ inline void AllocateBuffer(
     DX::DescriptorHeap* descriptorHeap,
     D3DBuffer* buffer,
     D3D12_RESOURCE_STATES initialResourceState,
-    // ToDo cleanup - to be same as CreateRT
     const wchar_t* resourceName = nullptr)
 {
     UINT vertexDataSize = numElements * elementByteSize;
@@ -1000,7 +990,6 @@ inline void UploadDataToBuffer(
 
 }
 
-// ToDo rename
 inline void CreateGeometry(
 	ID3D12Device5* device,
 	ID3D12GraphicsCommandList4* commandList,
@@ -1017,7 +1006,6 @@ inline void CreateGeometry(
     AllocateVertexBuffer(device, desc.vb.count, sizeof(VertexPositionNormalTextureTangent), descriptorHeap, &geometry->vb.buffer, D3D12_RESOURCE_STATE_COPY_DEST);
     UploadDataToBuffer(device, commandList, desc.vb.vertices, desc.vb.count, sizeof(VertexPositionNormalTextureTangent), geometry->vb.buffer.resource.Get(), &geometry->vb.upload, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 }
-
 
 inline void CopyResource(
     ID3D12GraphicsCommandList4* commandList,
@@ -1090,7 +1078,6 @@ inline void CopyTextureRegion(
     commandList->ResourceBarrier(ARRAYSIZE(postCopyBarriers), postCopyBarriers);
 }
 
-
 inline void CopyTextureRegion(
     ID3D12GraphicsCommandList4* commandList,
     ID3D12Resource* src,
@@ -1110,8 +1097,6 @@ inline void CopyTextureRegion(
         inDestResourceState);
 }
 
-
-// ToDo move?
 // Calculates a normalized tangent vector for a triangle given vertices' positions p* and their uv* coordinates.
 inline XMFLOAT3 CalculateTangent(const XMFLOAT3& p0, const XMFLOAT3& p1, const XMFLOAT3& p2, const XMFLOAT2& uv0, const XMFLOAT2& uv1, const XMFLOAT2& uv2)
 {

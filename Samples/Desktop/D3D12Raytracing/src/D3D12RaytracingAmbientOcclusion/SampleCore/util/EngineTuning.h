@@ -174,7 +174,7 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
-    virtual void SetValue(int value); // ToDo add to all
+    virtual void SetValue(int value); 
 
     void SetListLength(int listLength) { m_EnumLength = listLength; m_Value = Clamp(m_Value); }
 

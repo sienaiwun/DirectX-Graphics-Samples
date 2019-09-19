@@ -267,6 +267,7 @@
     <None Include="SampleCore\Shaders\HlslCompat.hlsli">
       <Filter>Shaders\SampleCore</Filter>
     </None>
+    <None Include="SampleCore\Shaders\util\AnalyticalTextures.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="RTAO\Shaders\RTAO.hlsl">
@@ -277,9 +278,6 @@
     </FxCompile>
     <FxCompile Include="RTAO\Shaders\Denoising\NormalDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
-    <FxCompile Include="SampleCore\Shaders\util\AnalyticalTextures.hlsli">
-      <Filter>Shaders\SampleCore\Util</Filter>
     </FxCompile>
     <FxCompile Include="RTAO\Shaders\AORayGenCS.hlsl">
       <Filter>Shaders\RTAO</Filter>
@@ -350,10 +348,10 @@
     <FxCompile Include="SampleCore\Shaders\util\ReduceSumUintCS.hlsl">
       <Filter>Shaders\SampleCore\Util</Filter>
     </FxCompile>
-    <FxCompile Include="SampleCore\Shaders\util\DownsampleNormalDepthHitPositionGeometryHitBilateralFilter2x2CS.hlsl">
+    <FxCompile Include="SampleCore\Shaders\util\CalculatePartialDerivativesViaCentralDifferencesCS.hlsl">
       <Filter>Shaders\SampleCore\Util</Filter>
     </FxCompile>
-    <FxCompile Include="SampleCore\Shaders\util\CalculatePartialDerivativesViaCentralDifferencesCS.hlsl">
+    <FxCompile Include="SampleCore\Shaders\util\DownsampleGBufferDataBilateralFilter2x2CS.hlsl">
       <Filter>Shaders\SampleCore\Util</Filter>
     </FxCompile>
   </ItemGroup>

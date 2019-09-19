@@ -12,7 +12,6 @@
 
 #include "GpuResource.h"
 
-// ToDo turn into class and check rwFlags being properly set on access.
 class GpuResourceStateTracker
 {
 public:

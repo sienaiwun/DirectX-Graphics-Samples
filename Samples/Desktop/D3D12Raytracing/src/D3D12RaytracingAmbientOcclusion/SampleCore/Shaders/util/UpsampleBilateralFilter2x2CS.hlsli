@@ -39,10 +39,10 @@ float4 BilateralUpsampleWeights(
 
     CrossBilateral::BilinearDepthNormal::Parameters params;
     params.Depth.Sigma = 1;
-    params.Depth.WeightCutoff = 0.98;// ToDo pass from cb cb.DepthWeightCutoff;
+    params.Depth.WeightCutoff = 0.98;
     params.Depth.NumMantissaBits = 10;
     params.Normal.Sigma = 1.1;      // Bump the sigma a bit to add tolerance for slight geometry misalignments and/or format precision limitations.
-    params.Normal.SigmaExponent = 32; // ToDo pass from cb
+    params.Normal.SigmaExponent = 32; 
 
     float4 bilinearDepthNormalWeights = CrossBilateral::BilinearDepthNormal::GetWeights(
         TargetDepth,
@@ -135,10 +135,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
         {
             float targetDepth = vHiResDepths[i];
             float3 targetNormal = hiResNormals[i];
-
             float4 nWeights = BilateralUpsampleWeights(targetDepth, targetNormal, targetOffsets[i], ddxy[i], vLowResDepths, lowResNormals);
 
-            // ToDo revise - take an average if none match?
 #if VALUE_NUM_COMPONENTS == 1
             float outValue = dot(nWeights, vLowResValues);
             g_outValue[topLeftHiResIndex + srcIndexOffsets[i]] = targetDepth < DISTANCE_ON_MISS ? outValue : vLowResValues[i];

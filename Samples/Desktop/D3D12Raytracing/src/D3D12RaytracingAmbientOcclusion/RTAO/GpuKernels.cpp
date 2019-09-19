@@ -16,7 +16,7 @@
 #include "D3D12RaytracingAmbientOcclusion.h"
 #include "CompiledShaders\ReduceSumUintCS.hlsl.h"
 #include "CompiledShaders\ReduceSumFloatCS.hlsl.h"
-#include "CompiledShaders\DownsampleNormalDepthHitPositionGeometryHitBilateralFilter2x2CS.hlsl.h"
+#include "CompiledShaders\DownsampleGBufferDataBilateralFilter2x2CS.hlsl.h"
 #include "CompiledShaders\UpsampleBilateralFilter2x2FloatCS.hlsl.h"
 #include "CompiledShaders\UpsampleBilateralFilter2x2Float2CS.hlsl.h"
 #include "CompiledShaders\GaussianFilter3x3CS.hlsl.h"
@@ -323,7 +323,7 @@ namespace GpuKernels
         {
             D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
             descComputePSO.pRootSignature = m_rootSignature.Get();
-            descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDownsampleNormalDepthHitPositionGeometryHitBilateralFilter2x2CS), ARRAYSIZE(g_pDownsampleNormalDepthHitPositionGeometryHitBilateralFilter2x2CS));
+            descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDownsampleGBufferDataBilateralFilter2x2CS), ARRAYSIZE(g_pDownsampleGBufferDataBilateralFilter2x2CS));
 
             ThrowIfFailed(device->CreateComputePipelineState(&descComputePSO, IID_PPV_ARGS(&m_pipelineStateObject)));
             m_pipelineStateObject->SetName(L"Pipeline state object: DownsampleGBufferDataBilateralFilter");

@@ -653,7 +653,7 @@
     <None Include="SampleCore\Shaders\BxDF.hlsli" />
     <None Include="RTAO\Shaders\RayGen.hlsli" />
     <None Include="RTAO\Shaders\Denoising\CrossBilateralWeights.hlsli" />
-    <FxCompile Include="SampleCore\Shaders\util\DownsampleNormalDepthHitPositionGeometryHitBilateralFilter2x2CS.hlsl">
+    <FxCompile Include="SampleCore\Shaders\util\DownsampleGBufferDataBilateralFilter2x2CS.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.3</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">6.3</ShaderModel>

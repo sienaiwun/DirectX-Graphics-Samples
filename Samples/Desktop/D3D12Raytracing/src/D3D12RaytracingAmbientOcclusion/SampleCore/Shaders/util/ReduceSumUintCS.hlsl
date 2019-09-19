@@ -16,8 +16,6 @@ Texture2D<uint> g_texInput : register(t0);
 RWTexture2D<uint> g_texOutput : register(u0);
 
 
-// ToDo - dxc fails on
-//groupshared uint gShared[ReduceSumCS::ThreadGroup::Width*ReduceSumCS::ThreadGroup::Height];
 groupshared uint gShared[ReduceSumCS::ThreadGroup::Size];
 
 // Reduce sum kernel

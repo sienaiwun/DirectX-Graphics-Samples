@@ -537,6 +537,10 @@ struct DownAndUpsampleFilterConstantBuffer
     BOOL useDynamicDepthThreshold;
 };
 
+// Grass Geometry
+#define N_GRASS_TRIANGLES 5
+#define N_GRASS_VERTICES 7
+#define MAX_GRASS_STRAWS_1D 100
 struct GenerateGrassStrawsConstantBuffer_AppParams
 {
     XMUINT2 activePatchDim; // Dimensions of active grass straws.
@@ -557,10 +561,6 @@ struct GenerateGrassStrawsConstantBuffer_AppParams
     float padding[2];
 };
 
-// ToDo move?
-#define N_GRASS_TRIANGLES 5
-#define N_GRASS_VERTICES 7
-#define MAX_GRASS_STRAWS_1D 100
 struct GenerateGrassStrawsConstantBuffer
 {
     XMFLOAT2 invActivePatchDim;

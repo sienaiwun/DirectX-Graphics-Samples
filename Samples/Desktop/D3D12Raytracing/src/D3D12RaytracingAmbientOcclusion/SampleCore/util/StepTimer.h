@@ -10,7 +10,6 @@
 //*********************************************************
 
 #pragma once
-//ToDo remove
 
 // Helper class for animation and simulation timing.
 class StepTimer
@@ -90,8 +89,8 @@ public:
         m_qpcLastTime = currentTime;
         m_qpcSecondCounter += timeDelta;
 
+#if 0 
         // Clamp excessively large time deltas (e.g. after paused in the debugger).
-#if 0 // ToDo
         if (timeDelta > m_qpcMaxDelta)
         {
             timeDelta = m_qpcMaxDelta;
