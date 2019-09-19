@@ -71,7 +71,6 @@ inline HRESULT ReadDataFromFile(LPCWSTR filename, byte** data, UINT* size, bool 
         throw std::exception();
     }
 
-	// ToDo replace malloc
     *data = reinterpret_cast<byte*>(malloc(fileInfo.EndOfFile.LowPart));
     *size = fileInfo.EndOfFile.LowPart;
 
@@ -169,7 +168,6 @@ void ResetComPtrArray(T* comPtrArray)
     }
 }
 
-
 // Resets all elements in a unique_ptr array.
 template<class T>
 void ResetUniquePtrArray(T* uniquePtrArray)
@@ -180,7 +178,6 @@ void ResetUniquePtrArray(T* uniquePtrArray)
     }
 }
 
-
 struct D3DBuffer
 {
     ComPtr<ID3D12Resource> resource;
@@ -189,13 +186,12 @@ struct D3DBuffer
     UINT heapIndex = UINT_MAX;
 };
 
-// ToDo rename 
 struct D3DGeometry
 {
     struct Buffer
     {
         D3DBuffer buffer;
-        ComPtr<ID3D12Resource> upload;	// ToDo delete these after initialization? Should there be a common upload?
+        ComPtr<ID3D12Resource> upload;	// ToDo realease after initialization
     };
 
     Buffer vb;
@@ -205,7 +201,7 @@ struct D3DGeometry
 struct D3DTexture
 {
     ComPtr<ID3D12Resource> resource;
-    ComPtr<ID3D12Resource> upload; // ToDo delete these after initialization? Should there be a common upload?
+    ComPtr<ID3D12Resource> upload;      // ToDo realease after initialization
     D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptorHandle;
     D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptorHandle;
     UINT heapIndex = UINT_MAX;
@@ -215,7 +211,6 @@ struct D3DTexture
 class GpuUploadBuffer
 {
 public:
-	// ToDo return resource instead of ComPtr?
     ComPtr<ID3D12Resource> GetResource() { return m_resource; }
     virtual void Release() { m_resource.Reset(); }
 	UINT64 Size() { return m_resource.Get() ? m_resource->GetDesc().Width : 0; }
@@ -355,7 +350,6 @@ public:
     }
 };
 
-// ToDo replace with DirectX::DescriptorHeap?
 namespace DX
 {
     class DescriptorHeap
@@ -370,12 +364,6 @@ namespace DX
             m_descriptorsAllocated = 0;
 
             D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-            // Allocate a heap for descriptors:
-            // 2 per geometry - vertex and index  buffer SRVs
-            // 1 - raytracing output texture SRV
-            // 2 per BLAS - one for the acceleration structure and one for its instance desc 
-            // 1 - top level acceleration structure
-            //ToDo
             descriptorHeapDesc.NumDescriptors = numDescriptors;
             descriptorHeapDesc.Type = type;
             descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -629,7 +617,6 @@ inline void CreateRenderTargetResource(
 
 	if (dest->rwFlags & GpuResource::RWFlags::AllowRead)
 	{
-		// ToDo cleanup and combine
 		D3D12_CPU_DESCRIPTOR_HANDLE dummyHandle;
 		CreateTextureSRV(device, dest->resource.Get(), descriptorHeap, &dest->srvDescriptorHeapIndex, &dummyHandle, &dest->gpuDescriptorReadAccess);
 	}
@@ -690,7 +677,7 @@ inline void CreateBufferSRV(
 
 inline void AllocateUAVBuffer(
 	ID3D12Device5* device, 
-	UINT numElements,	// ToDo use template?
+	UINT numElements,
 	UINT elementSize,
 	GpuResource* dest,
 	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN,
@@ -703,7 +690,7 @@ inline void AllocateUAVBuffer(
 
 	if (dest->rwFlags & GpuResource::RWFlags::AllowWrite)
 	{
-		assert(descriptorHeap); // ToDo
+		ThrowIfFalse(descriptorHeap);
 		D3D12_CPU_DESCRIPTOR_HANDLE uavDescriptorHandle;
 		dest->uavDescriptorHeapIndex = descriptorHeap->AllocateDescriptor(&uavDescriptorHandle, dest->uavDescriptorHeapIndex);
 

@@ -92,3 +92,12 @@ Temporal reprojection needs to be able to find vertices of a triangle that was h
                 //      Transition from lower LOD in previous frame
                 //      Same LOD as previous frame
                 //      Transition from higher LOD in previous frame
+
+				
+### What's next
+THere are multiple opportunities to improve the denoiser further both quality and performance wise
+Quality:
+* Denoiser
+** Use a better sampler that suffers less from sample clunking that's visible at raw visualition. For example [Correlated Multi-Jittered Sampling](http://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf)
+*** There's a potential to detect undersampled parts of the hemisphere in accumulated samples over time, and use a progressive sampling technique.
+* Upsampling could be improved to find better candidates from low res inputs. Either by increasing the 2x2 sampling quad and/or improving the depth test to test against expected depth at the source low-res sample offset rather than using a blanket target depth +/- threshold.

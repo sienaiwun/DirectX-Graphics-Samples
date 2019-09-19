@@ -11,7 +11,6 @@
 
 #include "EngineTuning.h"
 
-// ToDo rename to UIParameters?
 namespace SceneParameters
 {
     class GrassGeometryCommon
@@ -102,4 +101,4 @@ public:
     }
 };
 
-extern UIParameters g_UIparameters;   // ToDo rename?
+extern UIParameters g_UIparameters;

@@ -41,7 +41,6 @@ public:
     const std::unique_ptr<RaytracingAccelerationStructureManager>& AccelerationStructure() { return m_accelerationStructure; }
  
     // Getters & setters.
-    // ToDO direct access instead?
     GpuResource(&GrassPatchVB())[UIParameters::NumGrassGeometryLODs][2] { return m_grassPatchVB; }
     D3DTexture& EnvironmentMap() { return m_environmentMap; }
     StructuredBuffer<PrimitiveMaterialBuffer>& MaterialBuffer() { return m_materialBuffer; }
@@ -49,7 +48,6 @@ public:
     
     void ToggleAnimateLight() { m_animateLight = !m_animateLight; }
     void ToggleAnimateCamera() { m_animateCamera = !m_animateCamera; }
-    // ToDo track animation time and resume continuosly.
     void ToggleAnimateScene() { m_animateScene = !m_animateScene; }
 private:
     void CreateDeviceDependentResources();
@@ -86,7 +84,7 @@ private:
     // Grass geometry.
     static const UINT NumGrassPatchesX = 30;
     static const UINT NumGrassPatchesZ = 30;
-    static const UINT MaxBLAS = 10 + NumGrassPatchesX * NumGrassPatchesZ;   // ToDo enumerate all instances in the comment
+    static const UINT MaxBLAS = 10 + NumGrassPatchesX * NumGrassPatchesZ;
 
     GpuKernels::GenerateGrassPatch      m_grassGeometryGenerator;
     UINT                                m_animatedCarInstanceIndex;

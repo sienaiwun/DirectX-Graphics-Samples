@@ -687,7 +687,6 @@ void Pathtracer::Run(Scene& scene)
 
     // Copy dynamic buffers to GPU.
     {
-        // ToDo copy on change
         m_CB.CopyStagingToGpu(frameIndex);
     }
 

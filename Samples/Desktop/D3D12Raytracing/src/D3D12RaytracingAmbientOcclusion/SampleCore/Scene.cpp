@@ -246,10 +246,9 @@ void Scene::LoadPBRTScene()
         auto& bottomLevelASGeometry = m_bottomLevelASGeometries[pbrtSceneDefinition.name];
         bottomLevelASGeometry.SetName(pbrtSceneDefinition.name);
 
-        // ToDo switch to a common namespace rather than 't reference SquidRoomAssets?
-        bottomLevelASGeometry.m_indexFormat = StandardIndexFormat;     // ToDo use a common IB Format
+        bottomLevelASGeometry.m_indexFormat = StandardIndexFormat;
         bottomLevelASGeometry.m_ibStrideInBytes = StandardIndexStride;
-        bottomLevelASGeometry.m_vertexFormat = DXGI_FORMAT_R32G32B32_FLOAT; // ToDo use common or add support to shaders 
+        bottomLevelASGeometry.m_vertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
         bottomLevelASGeometry.m_vbStrideInBytes = StandardVertexStride;
 
         UINT numGeometries = static_cast<UINT>(pbrtScene.m_Meshes.size());

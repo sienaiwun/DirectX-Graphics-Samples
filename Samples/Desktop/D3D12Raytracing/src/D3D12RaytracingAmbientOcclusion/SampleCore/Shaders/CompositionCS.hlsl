@@ -148,7 +148,7 @@ float4 RenderNormalOrDepth(in uint2 DTid)
         if (cb.compositionType == CompositionType::NormalsOnly)
             color = float4(surfaceNormal, 1);
         else 
-            color = depth / 80; // ToDo
+            color = depth / 80;
     }
 
     return color;
@@ -182,7 +182,6 @@ float4 RenderDisocclusionMap(in uint2 DTid)
     return color;
 }
 
-// ToDo Cleanup SRGB here and elsewhere dfealing with in/out colors
 [numthreads(DefaultComputeShaderParams::ThreadGroup::Width, DefaultComputeShaderParams::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID )
 {

@@ -10,7 +10,6 @@
 //*********************************************************
 #pragma once
 
-// ToDo move to cpp
 #include "RaytracingSceneDefines.h"
 #include "DirectXRaytracingHelper.h"
 #include "RaytracingAccelerationStructure.h"
@@ -20,8 +19,6 @@
 #include "GpuKernels.h"
 #include "EngineTuning.h"
 #include "Scene.h"
-
-
 
 namespace Pathtracer_Args
 {
@@ -40,7 +37,6 @@ public:
     void SetResolution(UINT GBufferWidth, UINT GBufferHeight, UINT RTAOWidth, UINT RTAOHeight);
 
     // Getters & setters.
-    // ToDo remove
     void SetCamera(const GameCore::Camera& camera);
     GpuResource(&GBufferResources(bool getQuarterResResources = false))[GBufferResource::Count];
     UINT Width() { return m_width; }
