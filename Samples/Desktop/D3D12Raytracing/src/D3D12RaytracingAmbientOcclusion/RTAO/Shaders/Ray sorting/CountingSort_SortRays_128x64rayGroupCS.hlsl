@@ -21,7 +21,7 @@
 // Ref: Ray Reordering Techniques for GPU Ray-Cast Ambient Occlusion
 
 // Algorithm: Counting Sort
-// - Load ray origin depths and directions into SMem.
+// - Load ray origin depths and ray direction hashes into SMem.
 // - Calculate min max origin depth per ray group.
 // - Generate hash keys from ray directions and origin depths.
 // - Calculates histograms for the key hashes.
@@ -29,7 +29,53 @@
 // - Scatter write the ray source index offsets based on their hash and the prefix sum for the hash key into SMem cache.
 // - Linearly spill sorted ray source index offsets from SMem cache into VRAM.
 
-// ToDo enumerate the memory layout used during stages
+// Shared Memory layout
+// 1 - [8K 8b] - Ray Direction Hash
+// 2 - [8K 16b] - Ray origin depth
+// 3 - [4 x 512 x 16b] - Min/Max depth // In the final algorithm only small part is used of this range
+// 4 - [8K 16b] - Ray hash key
+// 5 - [4K 16b] - histrogram
+// 6 - [8K 16b] - SrcRay index
+//
+// Memory diagram:
+// - each lane represent 8 bits of a 32 bit element going from least to most significant bits top to bottom
+// - each column represents 2K elements
+// - each memory diagram represents the end state after an algorithm step.
+// - cells that changed are represent by an x in the second diagram on the right
+// - X-Y region is aliased with cells representing X or Y
+// - "-" zeroed out region
+//
+// Algorithm steps:
+// - Load ray origin depths and ray direction hashes into SMem.
+//  | - - 1 1 |  Least significant bits
+//  | - - 1 1 |
+//  | 2 2 2 2 |
+//  | 2 2 2 2 |  Most significant bits
+//
+// - Calculate min max origin depth per ray group.
+//  | 3 3 1 1 |     | x x - - | 
+//  | 3 3 1 1 |     | x x - - | 
+//  | 2 2 2 2 |     | - - - - | 
+//  | 2 2 2 2 |     | - - - - | 
+//
+// - Generate hash keys from ray directions and origin depths.
+//  | 5 5 - - |     | x x x x | 
+//  | 5 5 - - |     | x x x x | 
+//  | 4 4 4 4 |     | x x x x | 
+//  | 4 4 4 4 |     | x x x x | 
+//
+// - Calculates a prefix sum of the histograms.
+//  | 5 5 - - |     | x x - - | 
+//  | 5 5 - - |     | x x - - | 
+//  | 4 4 4 4 |     | - - - - | 
+//  | 4 4 4 4 |     | - - - - | 
+//
+// - Scatter write the ray source index offsets based on their hash and the prefix sum for the hash key into SMem cache.
+//  | 5 5 6 6 |     | - - x x | 
+//  | 5 5 6 6 |     | - - x x | 
+//  | 4-6 4 4 |     | x x - - | 
+//  | 4-6 4 4 |     | x x - - | 
+
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -42,7 +88,6 @@ Texture2D<NormalDepthTexFormat> g_inRayDirectionOriginDepth : register(t0);    /
 // This is essentially a sorted source ray index offsets buffer within a ray group.
 // Inactive rays have a valid index but have INACTIVE_RAY_INDEX_BIT_Y bit set in the y coordinate to 1.
 RWTexture2D<uint2> g_outSortedToSourceRayIndexOffset : register(u0);   
-
 RWTexture2D<float4> g_outDebug : register(u2);  // Thread group per-pixel index offsets within each 128x64 pixel group.
 
 ConstantBuffer<SortRaysConstantBuffer> cb: register(b0);
@@ -63,27 +108,21 @@ namespace SMem
     namespace Size
     {
         enum {
-            Histogram = NUM_KEYS,
-            Key8b = 4096,
-            Key16b = 8192,
-            RayIndex = 8192,
-            SortedRayIndexFirstSegment = Histogram
+            Histogram = NUM_KEYS,               // <= 4096
         };
     }
-    namespace Offset
+
+    // 32bit element offset
+    namespace Offset 
     {
         enum {
             Histogram = 0,
-            HistogramTemp = Size::Histogram,    // <= 4096
             Key8b = Size::Histogram,
             Key16b = 8192,
             Depth16b = 8192,
             WaveDepthMin = 0,
             WaveDepthMax = MAX_WAVES,           // <= 512
             RayIndex = Size::Histogram,
-            InvertedRayIndex = RayIndex + Size::RayIndex,
-            SortedRayIndexFirstSegment = 0,
-            SortedRayIndexSecondSegment = RayIndex + Size::RayIndex
         };
     }
 }
@@ -380,7 +419,7 @@ uint CreateRayHashKey(in uint2 rayIndex, in uint rayDirectionHashKey, in float r
             + (rayDirectionHashKey << (INDEX_HASH_KEY_BITS))
             + rayIndexHashKey;
 
-    // Prevent aliasi with the inactive ray key value.
+    // Prevent aliasing with the inactive ray key value.
     hashKey = min(hashKey, INACTIVE_RAY_KEY - 1);
 
     return hashKey;
@@ -539,7 +578,6 @@ void GenerateHashKeysAndKeyHistogram(in uint2 Gid, in uint GI, out float2 rayGro
     rayGroupMinMaxDepth = CalculateRayGroupMinMaxDepth(GI, Gid);
     FinalizeHashKeyAndCalculateKeyHistogram(GI, Gid, rayGroupMinMaxDepth);
 }
-
 
 // Prefix sum 
 // Assumes power of 2 input size.
