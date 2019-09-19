@@ -276,7 +276,6 @@ namespace GpuKernels
         UINT                                m_maxFilterPasses = 0;
     };
 
-    // ToDo use template / inheritance
     class CalculatePartialDerivatives
     {
     public:
@@ -354,7 +353,7 @@ namespace GpuKernels
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
         ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
-        ConstantBuffer<CalculateMeanVarianceConstantBuffer> m_CB;    // ToDo use a cb specific to CalculateVariance?
+        ConstantBuffer<CalculateMeanVarianceConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
     };
 
@@ -385,7 +384,7 @@ namespace GpuKernels
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
         ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
-        ConstantBuffer<CalculateMeanVarianceConstantBuffer> m_CB;    // ToDo use a cb specific to CalculateVariance?
+        ConstantBuffer<CalculateMeanVarianceConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
     };
 

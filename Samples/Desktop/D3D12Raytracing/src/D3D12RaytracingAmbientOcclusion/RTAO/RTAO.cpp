@@ -18,15 +18,11 @@
 #include "D3D12RaytracingAmbientOcclusion.h"
 #include "CompiledShaders\RTAO.hlsl.h"
 
-
-// ToDo prune unused
 using namespace std;
 using namespace DX;
 using namespace DirectX;
 using namespace SceneEnums;
 
-
-// ToDo move to RTAO specific defines
 namespace GlobalRootSignature {
     namespace Slot {
         enum Enum {
@@ -121,7 +117,6 @@ namespace RTAO_Args
     BoolVar RTAORaySortingUseOctahedralRayDirectionQuantization(L"Render/AO/RTAO/Ray Sorting/Octahedral ray direction quantization", true);
 
 
-    // ToDO remove obsolete
     IntVar Rpp(L"Render/AO/RTAO/Rpp/Rays per pixel", 1, 1, 1024, 1, OnRppSampleSetChange);
     IntVar Rpp_AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, 1, 8, 1, OnRppSampleSetChange);
     BoolVar Rpp_doCheckerboard(L"Render/AO/RTAO/Rpp/Overrides/Do checkerboard 0.5 rpp", false, OnToggleRppCheckerboard);
@@ -160,11 +155,11 @@ float RTAO::MaxRayHitTime()
 {
     return RTAO_Args::RTAOMaxRayHitTime;
 }
+
 void RTAO::SetMaxRayHitTime(float maxRayHitTime)
 {
     return RTAO_Args::RTAOMaxRayHitTime.SetValue(maxRayHitTime);
 }
-
 
 RTAO::RTAO()
 {
@@ -173,11 +168,6 @@ RTAO::RTAO()
         rayGenShaderTableRecordSizeInBytes = UINT_MAX;
     }
     m_generatorURNG.seed(1729);
-}
-
-// ToDo
-RTAO::~RTAO()
-{
 }
 
 void RTAO::Setup(shared_ptr<DeviceResources> deviceResources, shared_ptr<DX::DescriptorHeap> descriptorHeap, Scene& scene)
@@ -465,8 +455,6 @@ void RTAO::BuildShaderTables(Scene& scene)
     }
 }
 
-
-// ToDo rename
 void RTAO::CreateSamplesRNG()
 {
     UINT pixelsInSampleSet1D = RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels;
@@ -534,7 +522,6 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
     m_CB->raytracingDim = XMUINT2(CeilDivide(m_raytracingWidth, pixelStepX), m_raytracingHeight);
     m_CB->rpp = RTAO_Args::Rpp;
 
-    // ToDo standardize RTAO RTAO_ prefix, or remove it since this is RTAO class
     m_CB->approximateInterreflections = RTAO_Args::RTAOApproximateInterreflections;
     m_CB->diffuseReflectanceScale = RTAO_Args::RTAODiffuseReflectanceScale;
     m_CB->minimumAmbientIllumination = RTAO_Args::minimumAmbientIllumination;
@@ -544,7 +531,7 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
     // Calculate a theoretical max ray distance to be used in occlusion factor computation.
     // Occlusion factor of a ray hit is computed based of its ray hit time, falloff exponent and a max ray hit time.
     // By specifying a min occlusion factor of a ray, we can skip tracing rays that would have an occlusion 
-    // factor less than the cutoff to save a bit of performance (generally 1-10% perf win without visible AO result impact). // ToDo retest
+    // factor less than the cutoff to save a bit of performance (generally 1-10% perf win without visible AO result impact).
     // Therefore the sample discerns between true maxRayHitTime, used in TraceRay, 
     // and a theoretical one used in calculating the occlusion factor on a hit.
     {

@@ -10,7 +10,6 @@
 //*********************************************************
 
 // ToDo cleanup, review comments.
-// ToDo test impact of input normal,depth and encode N24D8.
 
 // Desc: Counting Sort of rays based on their origin depth and direction.
 // Supports:
@@ -48,7 +47,6 @@ RWTexture2D<float4> g_outDebug : register(u2);  // Thread group per-pixel index 
 
 ConstantBuffer<SortRaysConstantBuffer> cb: register(b0);
 
-// ToDo remove or replace defines
 namespace HashKey {
     enum { 
         RayDirectionKeyBits1D = 4, 
@@ -59,9 +57,6 @@ namespace HashKey {
 
 #define MIN_WAVE_LANE_COUNT 16
 #define MAX_WAVES ((MAX_RAYS + MIN_WAVE_LANE_COUNT - 1) / MIN_WAVE_LANE_COUNT)
-
-// Estimate Ray Group's Ray Origin Depth Min Max range with a few samples across the ray group
-#define SAMPLED_RAY_GROUP_RAY_ORIGIN_DEPTH_MIN_MAX_ESTIMATE 1
 
 namespace SMem
 {
@@ -350,7 +345,6 @@ uint CreateRayDirectionHashKey(in float2 encodedRayDirection)
 // Create a hash key from a ray origin depth. 
 uint CreateDepthHashKey(in float rayOriginDepth, in float2 rayGroupMinMaxDepth)
 {
-    // ToDo test log depth quantization
     float relativeDepth = rayOriginDepth - rayGroupMinMaxDepth.x;
     float rayGroupDepthRange = rayGroupMinMaxDepth.y - rayGroupMinMaxDepth.x;
     const uint DepthHashKeyBins = 1 << DEPTH_HASH_KEY_BITS;
@@ -386,8 +380,7 @@ uint CreateRayHashKey(in uint2 rayIndex, in uint rayDirectionHashKey, in float r
             + (rayDirectionHashKey << (INDEX_HASH_KEY_BITS))
             + rayIndexHashKey;
 
-    // Avoid aliasing with inactive ray.
-    // ToDo can we fit it after the last valid index. Double check SMEM layout.
+    // Prevent aliasi with the inactive ray key value.
     hashKey = min(hashKey, INACTIVE_RAY_KEY - 1);
 
     return hashKey;
@@ -403,8 +396,7 @@ uint CreateRayHashKey(in uint2 rayIndex, in float2 encodedRayDirection, in float
         + (rayDirectionHashKey << (INDEX_HASH_KEY_BITS))
         + rayIndexHashKey;
 
-    // Avoid aliasing with inactive ray.
-    // ToDo can we fit it after the last valid index. Double check SMEM layout.
+    // Prevent aliasi with the inactive ray key value.
     hashKey = min(hashKey, INACTIVE_RAY_KEY - 1);
 
     return hashKey;
@@ -414,7 +406,6 @@ uint CreateRayHashKey(in uint2 rayIndex, in float2 encodedRayDirection, in float
 // Calculate ray direction hash keys and cache depths.
 void CalculatePartialRayDirectionHashKeyAndCacheDepth(in uint2 Gid, in uint GI)
 {
-    // ToDo pass RayGroup and Num Rays ?
     uint2 RayGroupDim = uint2(SortRays::RayGroup::Width, SortRays::RayGroup::Height);
     uint2 GroupStart = Gid * RayGroupDim;
     uint2 NextGroupStart = GroupStart + RayGroupDim;
@@ -434,14 +425,14 @@ void CalculatePartialRayDirectionHashKeyAndCacheDepth(in uint2 Gid, in uint GI)
         bool isRayValid = rayOriginDepth != INVALID_RAY_ORIGIN_DEPTH; 
 
         // The ray direction hash key doesn't need to store if the ray value is valid for now, 
-        // as there's no space when storing it as 8bit. The reason the hash from the
+        // and there's no space when storing it as 8bit. The reason the hash from the
         // ray direction needs to be stored as 8bit is to leave room in Shared Memory 
         // for Ray Origin Depth Min Max reduction values. Once that is computed, 
         // ray origin depth hash can be computed and the final 16bit hash key will reserve 
         // bits for invalid rays. Until then the ray origin depth is used to identify
         // invalid rays.        
         uint rayDirectionHashKey = 0;
-        if (isRayValid)     // ToDo test remove perf
+        if (isRayValid)
         {
             rayDirectionHashKey = CreateRayDirectionHashKey(encodedRayDirection);
         }
@@ -449,31 +440,13 @@ void CalculatePartialRayDirectionHashKeyAndCacheDepth(in uint2 Gid, in uint GI)
         // Cache the depth.
         Store16bitFloatInSMem(ray, rayOriginDepth, SMem::Offset::Depth16b);
 
-#if !SAMPLED_RAY_GROUP_RAY_ORIGIN_DEPTH_MIN_MAX_ESTIMATE
-        float waveDepthMin = WaveActiveMin(isRayValid ? rayOriginDepth : FLT_MAX);
-        float waveDepthMax = WaveActiveMax(rayOriginDepth);
-
-        // Store the per-wave result once per wave.
-        if (WaveGetLaneIndex() == 0)    // ToDo remove?
-        {
-            uint waveIndex = ray / WaveGetLaneCount();
-#if 1            
-            Store16bitFloatInLow16bitSMem(waveIndex, waveDepthMin, SMem::Offset::WaveDepthMin);
-            Store16bitFloatInLow16bitSMem(waveIndex, waveDepthMax, SMem::Offset::WaveDepthMax);
-#else
-            Store16bitFloatInSMem(waveIndex, waveDepthMin, SMem::Offset::WaveDepthMin);
-            Store16bitFloatInSMem(waveIndex, waveDepthMax, SMem::Offset::WaveDepthMax);
-#endif
-        }
-#endif
-
         // Cache the key.
         Store8bitUintInLow16bitSMem(ray, rayDirectionHashKey, SMem::Offset::Key8b);
     }
     GroupMemoryBarrierWithGroupSync();
 }
 
-// Calculate depth min max range of all rays within the ray group.
+// Calculate an estimate of depth min max range of all rays within the ray group.
 float2 CalculateRayGroupMinMaxDepth(in uint GI, uint2 Gid)
 {
     uint2 RayGroupDim = uint2(SortRays::RayGroup::Width, SortRays::RayGroup::Height);
@@ -484,7 +457,9 @@ float2 CalculateRayGroupMinMaxDepth(in uint GI, uint2 Gid)
     RayGroupDim = min(NextGroupStart, cb.dim) - GroupStart;
     uint NumRays = RayGroupDim.y * RayGroupDim.x;
 
-#if SAMPLED_RAY_GROUP_RAY_ORIGIN_DEPTH_MIN_MAX_ESTIMATE
+    // Optimization
+    // Rather than retrieving true Min/Max of the set, estimate the Min/Max
+    // via a single wave with sparse taps.
     if (GI < WaveGetLaneCount())
     {
         uint sampleDistance = NumRays / WaveGetLaneCount();
@@ -501,18 +476,13 @@ float2 CalculateRayGroupMinMaxDepth(in uint GI, uint2 Gid)
         float rayOriginDepth = Load16bitFloatFromHi16bitSMem(index, SMem::Offset::Depth16b);
         bool isRayValid = rayOriginDepth != INVALID_RAY_ORIGIN_DEPTH;
         float MaxRayOriginDepthValue = FLT_10BIT_MAX;
-        float waveDepthMin = WaveActiveMin(isRayValid ? rayOriginDepth : MaxRayOriginDepthValue);   // ToDo is use of ternary operator within an intrinsic valid?
+        float waveDepthMin = WaveActiveMin(isRayValid ? rayOriginDepth : MaxRayOriginDepthValue);
         float waveDepthMax = WaveActiveMax(rayOriginDepth);
 
-        if (WaveGetLaneIndex() == 0)    // ToDo remove?
+        if (WaveGetLaneIndex() == 0)
         {
-#if 1
             Store16bitFloatInLow16bitSMem(0, waveDepthMin, SMem::Offset::WaveDepthMin);
             Store16bitFloatInLow16bitSMem(0, waveDepthMax, SMem::Offset::WaveDepthMax);
-#else
-            Store16bitFloatInSMem(0, waveDepthMin, SMem::Offset::WaveDepthMin);
-            Store16bitFloatInSMem(0, waveDepthMax, SMem::Offset::WaveDepthMax);
-#endif
         }
     }
     GroupMemoryBarrierWithGroupSync();
@@ -521,77 +491,6 @@ float2 CalculateRayGroupMinMaxDepth(in uint GI, uint2 Gid)
     float depthMax = Load16bitFloatFromLow16bitSMem(0, SMem::Offset::WaveDepthMax);
 
     return float2(depthMin, depthMax);
-#else
-    // Reduce all ray values to per wave values.
-    for (uint ray = GI; ray < NumRays; ray += NUM_THREADS)
-    {
-        float rayOriginDepth = Load16bitFloatFromHi16bitSMem(ray, SMem::Offset::Depth16b);
-        bool isRayValid = rayOriginDepth != INVALID_RAY_ORIGIN_DEPTH;
-        float waveDepthMin = WaveActiveMin(isRayValid ? rayOriginDepth : FLT_MAX);
-        float waveDepthMax = WaveActiveMax(rayOriginDepth);
-
-        // Store the per-wave result once per wave.
-        if (WaveGetLaneIndex() == 0)    // ToDo remove?
-        {
-            uint waveIndex = ray / WaveGetLaneCount();
-#if 1            
-            Store16bitFloatInLow16bitSMem(waveIndex, waveDepthMin, SMem::Offset::WaveDepthMin);
-            Store16bitFloatInLow16bitSMem(waveIndex, waveDepthMax, SMem::Offset::WaveDepthMax);
-#else
-            Store16bitFloatInSMem(waveIndex, waveDepthMin, SMem::Offset::WaveDepthMin);
-            Store16bitFloatInSMem(waveIndex, waveDepthMax, SMem::Offset::WaveDepthMax);
-#endif
-        }
-    }
-    GroupMemoryBarrierWithGroupSync();
-
-    // Reduce all per-wave values into a single value.
-    uint NumValuesToReduce = (NumRays + WaveGetLaneCount() - 1) / WaveGetLaneCount();
-
-    for (uint s = 1; s < NumValuesToReduce; s *= WaveGetLaneCount())
-    {
-        uint numLanesToProcess = (NumValuesToReduce + s - 1) / s;
-        
-        if (GI < numLanesToProcess)
-        {
-            // Load the per-wave results from the previous iteration.
-            uint index = GI * s;
-#if 1
-            float depthMin = Load16bitFloatFromLow16bitSMem(index, SMem::Offset::WaveDepthMin);
-            float depthMax = Load16bitFloatFromLow16bitSMem(index, SMem::Offset::WaveDepthMax);
-#else
-            float depthMin = Load16bitFloatFromSMem(index, SMem::Offset::WaveDepthMin);
-            float depthMax = Load16bitFloatFromSMem(index, SMem::Offset::WaveDepthMax);
-#endif
-
-            float waveDepthMin = WaveActiveMin(depthMin);
-            float waveDepthMax = WaveActiveMax(depthMax);
-
-            if (WaveGetLaneIndex() == 0) // ToDo remove?
-            {
-#if 1
-                Store16bitFloatInLow16bitSMem(GI, waveDepthMin, SMem::Offset::WaveDepthMin);
-                Store16bitFloatInLow16bitSMem(GI, waveDepthMax, SMem::Offset::WaveDepthMax);
-#else
-                Store16bitFloatInSMem(GI, waveDepthMin, SMem::Offset::WaveDepthMin);
-                Store16bitFloatInSMem(GI, waveDepthMax, SMem::Offset::WaveDepthMax);
-#endif
-            }
-        }
-        GroupMemoryBarrierWithGroupSync();
-    }
-    // ToDo calc the result here and then broadcast?
-
-    // ToDo test perf if only first thread computes the value and stores it and waits
-#if 1
-    float depthMin = Load16bitFloatFromLow16bitSMem(0, SMem::Offset::WaveDepthMin);
-    float depthMax = Load16bitFloatFromLow16bitSMem(0, SMem::Offset::WaveDepthMax);
-#else
-    float depthMin = Load16bitFloatFromSMem(0, SMem::Offset::WaveDepthMin);
-    float depthMax = Load16bitFloatFromSMem(0, SMem::Offset::WaveDepthMax);
-#endif
-    return float2(depthMin, depthMax);
-#endif
 }
 
 // Combine the depth hash key with the ray direction hash keys and update the key histograms.
@@ -787,7 +686,6 @@ void SpillCachedIndicesToVRAMAndCacheInvertedSortedIndices(in uint2 Gid, in uint
     // Cache sorted indices for each source index in the Shared Memory.
     for (uint index = GI; index < NumRays; index += NUM_THREADS)
     {
-        // ToDo rename packed to encoded
         uint packedSrcIndex = Load16bitUintFromSMem(index, SMem::Offset::RayIndex);
         bool isActiveRay = !(packedSrcIndex & INACTIVE_RAY_INDEX_BIT);
 

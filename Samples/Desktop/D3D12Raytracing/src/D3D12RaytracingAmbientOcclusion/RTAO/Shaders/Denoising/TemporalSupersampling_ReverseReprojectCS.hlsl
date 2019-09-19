@@ -304,10 +304,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
         frameAge = 0;
     }
 
-
     uint packedFrameAgeRaysToGenerate = Pack_R8G8_to_R16_UINT(frameAge, numRaysToGenerate);
 
-    // ToDo use a helper
     g_texOutputCachedFrameAge[DTid] = uint2(frameAge, numRaysToGenerate);
     g_texOutputReprojectedCachedValues[DTid] = uint4(packedFrameAgeRaysToGenerate, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
 }

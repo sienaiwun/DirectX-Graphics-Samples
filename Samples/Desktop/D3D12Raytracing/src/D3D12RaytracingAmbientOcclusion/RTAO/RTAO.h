@@ -49,7 +49,6 @@ public:
 
     // Ctors.
     RTAO();
-    ~RTAO();
 
     // Public methods.
     void Setup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DX::DescriptorHeap> descriptorHeap, Scene& scene);

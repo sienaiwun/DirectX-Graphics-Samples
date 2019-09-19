@@ -1123,7 +1123,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo add option to allow input, output being the same
     // Expects, and returns, outputResource in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state.
     void CalculatePartialDerivatives::Run(
         ID3D12GraphicsCommandList4* commandList,
@@ -1136,7 +1135,6 @@ namespace GpuKernels
         using namespace RootSignature::CalculatePartialDerivatives;
         using namespace DefaultComputeShaderParams;
 
-        // ToDo move out or rename - there are scoped timers in the caller.
         ScopedTimer _prof(L"CalculatePartialDerivatives", commandList);
 
         // Set pipeline state.
@@ -1180,7 +1178,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo move type to execute
     void CalculateVariance::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
@@ -1265,11 +1262,8 @@ namespace GpuKernels
         using namespace RootSignature::CalculateVariance;
         using namespace DefaultComputeShaderParams;
 
-        // ToDo replace asserts with runtime fails?
-        assert((kernelWidth & 1) == 1 && L"KernelWidth must be an odd number so that width == radius + 1 + radius");
+        ThrowIfFalse((kernelWidth & 1) == 1, L"KernelWidth must be an odd number so that width == radius + 1 + radius");
 
-        // ToDo move out or rename
-        // ToDo add spaces to names?
         ScopedTimer _prof(L"CalculateVariance_Bilateral", commandList); // ToDo update name
 
         // Set pipeline state.
@@ -1323,7 +1317,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo move type to execute
     void CalculateMeanVariance::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
@@ -1377,7 +1370,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo add option to allow input, output being the same
     // Expects, and returns, outputResource in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state.
     void CalculateMeanVariance::Run(
         ID3D12GraphicsCommandList4* commandList,
@@ -1394,13 +1386,9 @@ namespace GpuKernels
         using namespace RootSignature::CalculateMeanVariance;
         using namespace DefaultComputeShaderParams;
 
-        // ToDo replace asserts with runtime fails?
-        // ToDo pass kernel radius instead
-        assert((kernelWidth & 1) == 1 && L"KernelWidth must be an odd number so that width == radius + 1 + radius");
+        ThrowIfFalse((kernelWidth & 1) == 1, L"KernelWidth must be an odd number so that width == radius + 1 + radius");
 
-        // ToDo move out or rename
-        // ToDo add spaces to names?
-        ScopedTimer _prof(L"CalculateMeanVariance", commandList); // ToDo update name
+        ScopedTimer _prof(L"CalculateMeanVariance", commandList); 
 
         // Set pipeline state.
         {
@@ -1422,7 +1410,6 @@ namespace GpuKernels
         m_CB->doCheckerboardSampling = doCheckerboardSampling;
         m_CB->pixelStepY = doCheckerboardSampling ? 2 : 1;
         m_CB->areEvenPixelsActive = checkerboardLoadEvenPixels;
-        //ToDo move instance id tracking to the cb class.
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);
         commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
@@ -1450,7 +1437,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo move type to execute
     void FillInCheckerboard::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
@@ -1490,13 +1476,13 @@ namespace GpuKernels
                 m_pipelineStateObjects[i]->SetName(L"Pipeline state object: FillInCheckerboard");
             }
         }
+
         // Create shader resources.
         {
             m_CB.Create(device, frameCount * numCallsPerFrame, L"Constant Buffer: FillInCheckerboard");
         }
     }
 
-    // ToDo add option to allow input, output being the same
     // Expects, and returns, outputResource in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state.
     void FillInCheckerboard::Run(
         ID3D12GraphicsCommandList4* commandList,
@@ -1511,9 +1497,7 @@ namespace GpuKernels
         using namespace RootSignature::FillInCheckerboard;
         using namespace DefaultComputeShaderParams;
 
-        // ToDo move out or rename
-        // ToDo add spaces to names?
-        ScopedTimer _prof(L"FillInCheckerboard", commandList); // ToDo update name
+        ScopedTimer _prof(L"FillInCheckerboard", commandList);
 
         // Set pipeline state.
         {
@@ -1530,21 +1514,15 @@ namespace GpuKernels
 
         // Update the Constant Buffer.
         m_CB->textureDim = XMUINT2(width, height);
-        // ToDo use custom cb
         m_CB->areEvenPixelsActive = !fillEvenPixels;
-        //ToDo move instance id tracking to the cb class.
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);
         commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
 
-
         // Dispatch.
-        {
-            XMUINT2 groupSize(CeilDivide(width, ThreadGroup::Width), CeilDivide(height, ThreadGroup::Height * 2));
-            commandList->Dispatch(groupSize.x, groupSize.y, 1);
-        }
+        XMUINT2 groupSize(CeilDivide(width, ThreadGroup::Width), CeilDivide(height, ThreadGroup::Height * 2));
+        commandList->Dispatch(groupSize.x, groupSize.y, 1);
     }
-
 
 
     namespace RootSignature {
@@ -1634,7 +1612,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo desc
     void TemporalSupersampling_ReverseReproject::Run(
         ID3D12GraphicsCommandList4* commandList,
         UINT width,
@@ -1747,7 +1724,6 @@ namespace GpuKernels
         {
             using namespace RootSignature::TemporalSupersampling_BlendWithCurrentFrame;
 
-            // ToDo remove comments from here and move descriptions to enum definition.
             CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
             ranges[Slot::InputCurrentFrameValue].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
             ranges[Slot::InputCurrentFrameLocalMeanVariance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
@@ -1798,7 +1774,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo desc
     void TemporalSupersampling_BlendWithCurrentFrame::Run(
         ID3D12GraphicsCommandList4* commandList,
         UINT width,
@@ -1870,8 +1845,6 @@ namespace GpuKernels
             commandList->SetPipelineState(m_pipelineStateObject.Get());
         }
 
-        // ToDo - streak artifacts on dragons nose on reprojection
-
         // Dispatch.
         XMUINT2 groupSize(CeilDivide(width, ThreadGroup::Width), CeilDivide(height, ThreadGroup::Height));
         commandList->Dispatch(groupSize.x, groupSize.y, 1);
@@ -1891,7 +1864,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo move resource upload to a separate call?
     void GenerateGrassPatch::Initialize(
         ID3D12Device5* device, 
         const wchar_t* windTexturePath,
@@ -1941,7 +1913,6 @@ namespace GpuKernels
 
     }
 
-    // ToDo add option to allow input, output being the same
     // Expects, and returns, outputResource in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state.
     void GenerateGrassPatch::Run(
         ID3D12GraphicsCommandList4* commandList,
@@ -1971,13 +1942,10 @@ namespace GpuKernels
         m_CB.CopyStagingToGpu(m_CBinstanceID);
         commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
 
-
         // Dispatch.
-        {
-            XMUINT2 dim = appParams.maxPatchDim;
-            XMUINT2 groupSize(CeilDivide(dim.x, ThreadGroup::Width), CeilDivide(dim.y, ThreadGroup::Height));
-            commandList->Dispatch(groupSize.x, groupSize.y, 1);
-        }
+        XMUINT2 dim = appParams.maxPatchDim;
+        XMUINT2 groupSize(CeilDivide(dim.x, ThreadGroup::Width), CeilDivide(dim.y, ThreadGroup::Height));
+        commandList->Dispatch(groupSize.x, groupSize.y, 1);
     }
 
 

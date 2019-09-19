@@ -57,8 +57,12 @@
     remove obsolete composition modes
     rename maxFrameAge to tspp
     GpuKernels use helper structs to pass the data in
-    remove compaction
+    split gpu kernel file
 
+Documentation
+    readme
+    Add descs to GPU kernels
+    Add descs to GPU kernel resources next to enums
     - cleanup this file
 
 - Sample generic

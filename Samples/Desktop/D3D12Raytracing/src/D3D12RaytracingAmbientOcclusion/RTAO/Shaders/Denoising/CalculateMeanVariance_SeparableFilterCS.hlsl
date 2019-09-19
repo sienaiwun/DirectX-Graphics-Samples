@@ -76,7 +76,6 @@ void BlurHorizontally(uint leftMostIndex)
 }
 
 // ToDo handle OOB and inactive pixels
-
 void BlurVertically(uint2 DTid, uint topMostIndex)
 {
     // Load the reference values for the current pixel.
