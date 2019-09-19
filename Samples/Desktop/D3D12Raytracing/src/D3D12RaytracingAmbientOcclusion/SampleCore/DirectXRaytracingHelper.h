@@ -10,8 +10,7 @@
 //*********************************************************
 
 #pragma once
-// ToDo move code definitions to cpp
-// ToDo Remove
+
 #include "RayTracingHlslCompat.h"
 #include "RaytracingSceneDefines.h"
 

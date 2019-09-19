@@ -164,7 +164,6 @@ void MultiJittered::GenerateSamples2D()
 
         #define SAMPLE(i) m_samples[sampleSetStartID + i]
 
-        // ToDo support X x Y dimensions
         // Generate random samples
         for (UINT col = 0, i = 0; col < N; col++)
             for (UINT row = 0; row < N; row++, i++)

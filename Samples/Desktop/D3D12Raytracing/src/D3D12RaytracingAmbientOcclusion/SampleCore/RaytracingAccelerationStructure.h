@@ -14,8 +14,6 @@
 #include "RayTracingHlslCompat.h"
 #include "RaytracingSceneDefines.h"
 
-#define SizeOfInUint32(obj) ((sizeof(obj) - 1) / sizeof(UINT32) + 1)
-
 struct AccelerationStructureBuffers
 {
     ComPtr<ID3D12Resource> scratch;
@@ -24,18 +22,12 @@ struct AccelerationStructureBuffers
     UINT64                 ResultDataMaxSizeInBytes;
 };
 
-// ToDO remove?
-struct alignas(16) AlignedGeometryTransform3x4
-{
-	float transform3x4[12];
-};
-
 // AccelerationStructure
 // A base class for bottom-level and top-level AS.
 class AccelerationStructure
 {
 public:
-	AccelerationStructure();
+    AccelerationStructure() {}
 	virtual ~AccelerationStructure() {}
 	void ReleaseD3DResources();
 	UINT64 RequiredScratchSize() { return std::max(m_prebuildInfo.ScratchDataSizeInBytes, m_prebuildInfo.UpdateScratchDataSizeInBytes); }
@@ -44,25 +36,20 @@ public:
 	const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO& PrebuildInfo() { return m_prebuildInfo; }
     const std::wstring& GetName() { return m_name; }
 
-    
     void SetDirty(bool isDirty) { m_isDirty = isDirty; }
     bool IsDirty() { return m_isDirty; }
     UINT64 ResourceSize() { return GetResource()->GetDesc().Width; }
 
 protected:
     ComPtr<ID3D12Resource> m_accelerationStructure;
-    ComPtr<ID3D12Resource> m_compactedAccelerationStructure;
-    ComPtr<ID3D12Resource> m_compactionQueryDesc;
-    ComPtr<ID3D12Resource> m_compactionQueryReadBack;
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS m_buildFlags;
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO m_prebuildInfo;
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS m_buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO m_prebuildInfo = {};
     std::wstring m_name;
 
     bool m_isBuilt = false; // whether the AS has been built at least once.
-    bool m_isDirty;		    // whether the AS has been modified and needs to be rebuilt.
+    bool m_isDirty = true; // whether the AS has been modified and needs to be rebuilt.
     bool m_updateOnBuild = false;
     bool m_allowUpdate = false;
-    bool m_compact = false;
 
 	void AllocateResource(ID3D12Device5* device);
 };
@@ -91,16 +78,11 @@ public:
 class BottomLevelAccelerationStructure : public AccelerationStructure
 {
 public:
-	BottomLevelAccelerationStructure();
+    BottomLevelAccelerationStructure() {};
 	~BottomLevelAccelerationStructure() {}
-	
-	// ToDo:
-	// UpdateGeometry()
 
-    void Initialize(ID3D12Device5* device, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags, BottomLevelAccelerationStructureGeometry& bottomLevelASGeometry, bool allowUpdate = false, bool bUpdateOnBuild = false, bool performCompaction = false);
+    void Initialize(ID3D12Device5* device, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags, BottomLevelAccelerationStructureGeometry& bottomLevelASGeometry, bool allowUpdate = false, bool bUpdateOnBuild = false);
     void Build(ID3D12GraphicsCommandList4* commandList, ID3D12Resource* scratch, ID3D12DescriptorHeap* descriptorHeap, D3D12_GPU_VIRTUAL_ADDRESS baseGeometryTransformGPUAddress = 0);
-    void PostBuild(ID3D12GraphicsCommandList4* commandList);
-    void ReadbackCompactedSize();
 
     void UpdateGeometryDescsTransform(D3D12_GPU_VIRTUAL_ADDRESS baseGeometryTransformGPUAddress);
     
@@ -112,16 +94,10 @@ public:
 
 private:
     std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> m_geometryDescs;
-    
-    // ToDo remove
     UINT currentID = 0; 
     std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> m_cacheGeometryDescs[3];
-
     DirectX::XMMATRIX m_transform;
-
-    // Runtime state
-    UINT m_instanceContributionToHitGroupIndex;
-
+    UINT m_instanceContributionToHitGroupIndex = 0;
 
 	void BuildGeometryDescs(BottomLevelAccelerationStructureGeometry& bottomLevelASGeometry);
 	void ComputePrebuildInfo(ID3D12Device5* device);
@@ -131,13 +107,12 @@ class TopLevelAccelerationStructure : public AccelerationStructure
 {
 public:
 	TopLevelAccelerationStructure() {}
-    ~TopLevelAccelerationStructure() {};
+    ~TopLevelAccelerationStructure() {}
 
 	void Initialize(ID3D12Device5* device, UINT numBottomLevelASInstanceDescs, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags, bool allowUpdate = false, bool bUpdateOnBuild = false, const wchar_t* resourceName = nullptr);
 	void Build(ID3D12GraphicsCommandList4* commandList, UINT numInstanceDescs, D3D12_GPU_VIRTUAL_ADDRESS InstanceDescs, ID3D12Resource* scratch, ID3D12DescriptorHeap* descriptorHeap, bool bUpdate = false);
 
 private:
-
 	void ComputePrebuildInfo(ID3D12Device5* device, UINT numBottomLevelASInstanceDescs);
 };
 
@@ -156,16 +131,14 @@ public:
     RaytracingAccelerationStructureManager(ID3D12Device5* device, UINT numBottomLevelInstances, UINT frameCount);
     ~RaytracingAccelerationStructureManager() {}
 
-    void AddBottomLevelAS(ID3D12Device5* device, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags, BottomLevelAccelerationStructureGeometry& bottomLevelASGeometry, bool allowUpdate = false, bool performUpdateOnBuild = false, bool performCompaction = false);
+    void AddBottomLevelAS(ID3D12Device5* device, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags, BottomLevelAccelerationStructureGeometry& bottomLevelASGeometry, bool allowUpdate = false, bool performUpdateOnBuild = false);
     UINT AddBottomLevelASInstance(const std::wstring& bottomLevelASname, UINT instanceContributionToHitGroupIndex = UINT_MAX, XMMATRIX transform = XMMatrixIdentity(), BYTE InstanceMask = 1);
     void InitializeTopLevelAS(ID3D12Device5* device, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags, bool allowUpdate = false, bool performUpdateOnBuild = false, const wchar_t* resourceName = nullptr);
     void Build(ID3D12GraphicsCommandList4* commandList, ID3D12DescriptorHeap* descriptorHeap, UINT frameIndex, bool bForceBuild = false);
     BottomLevelAccelerationStructureInstanceDesc& GetBottomLevelASInstance(UINT bottomLevelASinstanceIndex) { return m_bottomLevelASInstanceDescs[bottomLevelASinstanceIndex]; }
     const StructuredBuffer<BottomLevelAccelerationStructureInstanceDesc>& GetBottomLevelASInstancesBuffer() { return m_bottomLevelASInstanceDescs; }
 
-
     BottomLevelAccelerationStructure& GetBottomLevelAS(const std::wstring& name) { return m_vBottomLevelAS[name]; }
-
     ID3D12Resource* GetTopLevelASResource() { return m_topLevelAS.GetResource(); }
     UINT64 GetASMemoryFootprint() { return m_ASmemoryFootprint; }
     UINT GetNumberOfBottomLevelASInstances() { return static_cast<UINT>(m_bottomLevelASInstanceDescs.NumElements()); }
@@ -176,9 +149,7 @@ private:
     std::map<std::wstring, BottomLevelAccelerationStructure> m_vBottomLevelAS;
     StructuredBuffer<BottomLevelAccelerationStructureInstanceDesc> m_bottomLevelASInstanceDescs;
     UINT m_numBottomLevelASInstances = 0;
-
     ComPtr<ID3D12Resource>	m_accelerationStructureScratch;
     UINT64 m_scratchResourceSize = 0;
-
     UINT64 m_ASmemoryFootprint = 0;
 };

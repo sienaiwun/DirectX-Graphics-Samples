@@ -42,7 +42,6 @@ void LoadToSharedMemory(UINT smemIndex, int2 pixel)
 
 void PrefetchData(uint index, int2 ST)
 {
-    // ToDo use gather for values
     LoadToSharedMemory(index, ST + int2(-1, -1));
     LoadToSharedMemory(index + 1, ST + int2(0, -1));
     LoadToSharedMemory(index + 16, ST + int2(-1, 0));

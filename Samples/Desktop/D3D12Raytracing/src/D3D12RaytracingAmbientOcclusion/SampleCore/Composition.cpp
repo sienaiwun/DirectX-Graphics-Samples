@@ -248,10 +248,10 @@ void Composition::BilateralUpsample(
     UINT hiResWidth,
     UINT hiResHeight,
     GpuKernels::UpsampleBilateralFilter::FilterType filterType,
-    const D3D12_GPU_DESCRIPTOR_HANDLE& inputLowResValueResourceHandle,
-    const D3D12_GPU_DESCRIPTOR_HANDLE& inputLowResNormalDepthResourceHandle,
-    const D3D12_GPU_DESCRIPTOR_HANDLE& inputHiResNormalDepthResourceHandle,
-    const D3D12_GPU_DESCRIPTOR_HANDLE& inputHiResPartialDepthDerivativesResourceHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE inputLowResValueResourceHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE inputLowResNormalDepthResourceHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE inputHiResNormalDepthResourceHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE inputHiResPartialDepthDerivativesResourceHandle,
     GpuResource* outputHiResValueResource,
     LPCWCHAR passName)
 {

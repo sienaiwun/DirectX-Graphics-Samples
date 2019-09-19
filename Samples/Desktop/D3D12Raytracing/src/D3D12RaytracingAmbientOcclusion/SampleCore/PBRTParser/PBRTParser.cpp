@@ -188,8 +188,6 @@ namespace PBRTParser
 		}
 	}
 
-
-    // ToDo is this needed?
 	void PBRTParser::SetWindingOrder(bool bSetClockwiseOrder, SceneParser::Scene &scene)
 	{
 		// Ensure LH clockwise triangle vertices order 

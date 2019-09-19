@@ -117,8 +117,6 @@ namespace Denoiser_Args
     // ToDo remove
     IntVar Denoising_ExtraRaysToTraceSinceTemporalMovement(L"Render/AO/RTAO/Denoising_/Heuristics/Num rays to cast since Temporal movement", 32, 0, 64);
     IntVar Denoising_numFramesToDenoiseAfterLastTracedRay(L"Render/AO/RTAO/Denoising_/Heuristics/Num frames to denoise after last traced ray", 32, 0, 64);
-
-    BoolVar ReverseFilterOrder(L"Render/AO/RTAO/Denoising_/Reverse filter order", false);
     NumVar Denoising_WeightScale(L"Render/AO/RTAO/Denoising_/Weight Scale", 1, 0.0f, 5.0f, 0.01f);
 
     // ToDo why large depth sigma is needed?
@@ -791,7 +789,6 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             static_cast<UINT>(Denoiser_Args::TemporalSupersampling_CacheDenoisedOutputPassNumber),
             numFilterPasses,
             GpuKernels::AtrousWaveletTransformCrossBilateralFilter::Mode::OutputFilteredValue,
-            Denoiser_Args::ReverseFilterOrder,
             Denoiser_Args::UseSpatialVariance,
             Denoiser_Args::Denoising_PerspectiveCorrectDepthInterpolation,
             Denoiser_Args::Denoising_UseAdaptiveKernelSize,

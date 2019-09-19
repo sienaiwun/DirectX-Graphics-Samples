@@ -9,9 +9,7 @@
 //
 //*********************************************************
 
-// ToDo standardize naming
-// ToDo move resource descs to rootsigs
-#include "../stdafx.h"
+#include "stdafx.h"
 #include "EngineProfiling.h"
 #include "GpuKernels.h"
 #include "DirectXRaytracingHelper.h"
@@ -152,7 +150,7 @@ namespace GpuKernels
 		ID3D12GraphicsCommandList4* commandList,
 		ID3D12DescriptorHeap* descriptorHeap, 
 		UINT frameIndex,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
 		void* resultSum,
         UINT invocationIndex)   // per frame invocation index)
 	{
@@ -237,9 +235,9 @@ namespace GpuKernels
 		m_readbackResources[invocationIndex]->Unmap(0, &CD3DX12_RANGE(0, 0));
 	}
 
-    // ToDo dedupe
+
     namespace RootSignature {
-        namespace DownsampleNormalDepthHitPositionGeometryHitBilateralFilter {
+        namespace DownsampleGBufferDataBilateralFilter {
             namespace Slot {
                 enum Enum {
                     Output = 0,
@@ -267,11 +265,11 @@ namespace GpuKernels
         }
     }
 
-    void DownsampleNormalDepthHitPositionGeometryHitBilateralFilter::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
+    void DownsampleGBufferDataBilateralFilter::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
         {
-            using namespace RootSignature::DownsampleNormalDepthHitPositionGeometryHitBilateralFilter;
+            using namespace RootSignature::DownsampleGBufferDataBilateralFilter;
 
             CD3DX12_DESCRIPTOR_RANGE ranges[18]; 
             ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
@@ -318,7 +316,7 @@ namespace GpuKernels
                 CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP) };
 
             CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters, ARRAYSIZE(staticSamplers), staticSamplers);
-            SerializeAndCreateRootSignature(device, rootSignatureDesc, &m_rootSignature, L"Compute root signature: DownsampleNormalDepthHitPositionGeometryHitBilateralFilter");
+            SerializeAndCreateRootSignature(device, rootSignatureDesc, &m_rootSignature, L"Compute root signature: DownsampleGBufferDataBilateralFilter");
         }
 
         // Create compute pipeline state.
@@ -328,43 +326,43 @@ namespace GpuKernels
             descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDownsampleNormalDepthHitPositionGeometryHitBilateralFilter2x2CS), ARRAYSIZE(g_pDownsampleNormalDepthHitPositionGeometryHitBilateralFilter2x2CS));
 
             ThrowIfFailed(device->CreateComputePipelineState(&descComputePSO, IID_PPV_ARGS(&m_pipelineStateObject)));
-            m_pipelineStateObject->SetName(L"Pipeline state object: DownsampleNormalDepthHitPositionGeometryHitBilateralFilter");
+            m_pipelineStateObject->SetName(L"Pipeline state object: DownsampleGBufferDataBilateralFilter");
         }
 
         // Create shader resources
         {
-            m_CB.Create(device, frameCount * numCallsPerFrame, L"Constant Buffer: DownsampleNormalDepthHitPositionGeometryHitBilateralFilter");
+            m_CB.Create(device, frameCount * numCallsPerFrame, L"Constant Buffer: DownsampleGBufferDataBilateralFilter");
         }
     }
 
     // Downsamples input resource.
     // width, height - dimensions of the input resource.
-    void DownsampleNormalDepthHitPositionGeometryHitBilateralFilter::Run(
+    void DownsampleGBufferDataBilateralFilter::Run(
         ID3D12GraphicsCommandList4* commandList,
         UINT width,
         UINT height,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputNormalResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputPositionResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputGeometryHitResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputPartialDistanceDerivativesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputMotionVectorResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputPrevFrameHitPositionResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputSurfaceAlbedoResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputNormalResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputPositionResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputGeometryHitResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputPartialDistanceDerivativesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputMotionVectorResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputPrevFrameHitPositionResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputSurfaceAlbedoResourceHandle)
+        D3D12_GPU_DESCRIPTOR_HANDLE inputNormalResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputPositionResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputGeometryHitResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputMotionVectorResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputPrevFrameHitPositionResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputSurfaceAlbedoResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputNormalResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputPositionResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputGeometryHitResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputPartialDistanceDerivativesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputMotionVectorResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputPrevFrameHitPositionResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputSurfaceAlbedoResourceHandle)
     {
-        using namespace RootSignature::DownsampleNormalDepthHitPositionGeometryHitBilateralFilter;
+        using namespace RootSignature::DownsampleGBufferDataBilateralFilter;
         using namespace DefaultComputeShaderParams;
 
-        ScopedTimer _prof(L"DownsampleNormalDepthHitPositionGeometryHitBilateralFilter", commandList);
+        ScopedTimer _prof(L"DownsampleGBufferDataBilateralFilter", commandList);
 
         m_CB->textureDim = XMUINT2(width, height);
         m_CB->invTextureDim = XMFLOAT2(1.f / width, 1.f / height);
@@ -477,18 +475,17 @@ namespace GpuKernels
 
     // Resamples input resource.
     // width, height - dimensions of the output resource.
-    // ToDo should the input width/height be of output or input?
     void UpsampleBilateralFilter::Run(
         ID3D12GraphicsCommandList4* commandList,
-        UINT width, // Todo remove and deduce from outputResourceInstead?
+        UINT width,
         UINT height,
         FilterType type,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputLowResNormalResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputHiResNormalResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputHiResPartialDistanceDerivativeResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputLowResNormalResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputHiResNormalResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputHiResPartialDistanceDerivativeResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle,
         bool useBilinearWeights,
         bool useDepthWeights,
         bool useNormalWeights,
@@ -607,8 +604,8 @@ namespace GpuKernels
         UINT height,
         FilterType type,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputResourceHandle)
+        D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle)
     {
         using namespace RootSignature::GaussianFilter;
         using namespace DefaultComputeShaderParams;
@@ -716,9 +713,9 @@ namespace GpuKernels
         float normalWeightExponent,
         float minNormalWeightStrength,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputBlurStrengthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputBlurStrengthResourceHandle,
         GpuResource* outputResource,
         bool readWriteUAV_and_skipPassthrough)
     {
@@ -855,7 +852,6 @@ namespace GpuKernels
             m_maxFilterPasses = maxFilterPasses;
             UINT numInstancesPerFrame = maxFilterPasses * numCallsPerFrame;
             m_CB.Create(device, frameCount * numInstancesPerFrame, L"Constant Buffer: AtrousWaveletTransformCrossBilateralFilter");
-            m_CBfilterWeight.Create(device, frameCount * numInstancesPerFrame, L"Constant Buffer: AtrousWaveletTransformCrossBilateralFilter FilterWeightSum");
         }
     }
 
@@ -879,20 +875,18 @@ namespace GpuKernels
         }
     }
 
-    // ToDo add option to allow input, output being the same
     // Expects, and returns outputResource in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state.
     // Expects, and returns outputIntermediateResource in D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE state.
     void AtrousWaveletTransformCrossBilateralFilter::Run(
         ID3D12GraphicsCommandList4* commandList,
         ID3D12DescriptorHeap* descriptorHeap,
         FilterType filterType,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputValuesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputNormalsResourceHandle,
-        // ToDo document this assumes variance in the X component of the passed in resource.
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputVarianceResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputHitDistanceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputPartialDistanceDerivativesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputFrameAgeResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputValuesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputNormalsResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputVarianceResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputHitDistanceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputFrameAgeResourceHandle,
         GpuResource* outputResource,
         GpuResource* outputIntermediateResource,
         GpuResource* outputDebug1Resource,
@@ -905,7 +899,6 @@ namespace GpuKernels
         UINT passNumberToOutputToIntermediateResource,
         UINT numFilterPasses,
         Mode filterMode,
-        bool reverseFilterPassOrder,
         bool useCalculatedVariance,
         bool perspectiveCorrectDepthInterpolation,
         bool useAdaptiveKernelSize,
@@ -949,63 +942,51 @@ namespace GpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::Debug2, outputDebug2Resource->gpuDescriptorWriteAccess);
         }
 
-        // ToDo use input resource dims.
         auto resourceDesc = outputResource->resource.Get()->GetDesc();
         XMUINT2 resourceDim(static_cast<UINT>(resourceDesc.Width), static_cast<UINT>(resourceDesc.Height));
 
-        // ToDo split these into separate GpuKernels?
-        auto& cb = filterMode == OutputFilteredValue ? m_CB : m_CBfilterWeight;
         // Update the Constant Buffers.
         for (UINT i = 0; i < numFilterPasses; i++)
         {
             // Ref: Dammertz2010
             // Tighten value range smoothing for higher passes.
 
-            // Ref: Dundr2018
-            // Reverse wavelet order to blur out ringing at larger offsets.
-            int _i;
-            if (reverseFilterPassOrder)
-                _i = i == 0 ? 0 : numFilterPasses - 1 - i;
-            else
-                _i = i;
             if (useCalculatedVariance)
             {
-                cb->valueSigma = valueSigma;
+                m_CB->valueSigma = valueSigma;
             }
             else
             {
-                cb->valueSigma = _i > 0 ? valueSigma * powf(2.f, -float(i)) : 1;
+                m_CB->valueSigma = i > 0 ? valueSigma * powf(2.f, -float(i)) : 1;
             }
-            cb->depthSigma = depthSigma;
-            cb->normalSigma = normalSigma;
-            cb->weightScale = weightScale;
+            m_CB->depthSigma = depthSigma;
+            m_CB->normalSigma = normalSigma;
+            m_CB->weightScale = weightScale;
 #if RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS
-            cb->kernelStepShift = kernelStepShifts[_i];
+            m_CB->kernelStepShift = kernelStepShifts[i];
 #else
-            cb->kernelStepShift = _i;
+            m_CB->kernelStepShift = i;
 #endif
             // Move vars not changing inside loop outside of it.
-            cb->useCalculatedVariance = filterMode == OutputFilteredValue && useCalculatedVariance;
-            cb->outputFilteredVariance = numFilterPasses > 1 && filterMode == OutputFilteredValue && useCalculatedVariance;
-            cb->outputFilteredValue = filterMode == OutputFilteredValue;
-            cb->outputFilterWeightSum = filterMode == OutputPerPixelFilterWeightSum;
-            cb->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
-            cb->useAdaptiveKernelSize = useAdaptiveKernelSize;
-            cb->minHitDistanceToKernelWidthScale = minHitDistanceToKernelWidthScale;
-            cb->minKernelWidth = minKernelWidth;
-            cb->maxKernelWidth = maxKernelWidth;
-            cb->varianceSigmaScaleOnSmallKernels = varianceSigmaScaleOnSmallKernels;
-            cb->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
-            cb->textureDim = resourceDim;
-            cb->minVarianceToDenoise = minVarianceToDenoise;
-            cb->staleNeighborWeightScale = _i == 0 ? staleNeighborWeightScale : 1;  // ToDo revise
-            cb->depthWeightCutoff = depthWeightCutoff;
-            cb->useProjectedDepthTest = useProjectedDepthTest;
-            cb->forceDenoisePass = forceDenoisePass;
-
-            // ToDo pass precision
+            m_CB->useCalculatedVariance = filterMode == OutputFilteredValue && useCalculatedVariance;
+            m_CB->outputFilteredVariance = numFilterPasses > 1 && filterMode == OutputFilteredValue && useCalculatedVariance;
+            m_CB->outputFilteredValue = filterMode == OutputFilteredValue;
+            m_CB->outputFilterWeightSum = filterMode == OutputPerPixelFilterWeightSum;
+            m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
+            m_CB->useAdaptiveKernelSize = useAdaptiveKernelSize;
+            m_CB->minHitDistanceToKernelWidthScale = minHitDistanceToKernelWidthScale;
+            m_CB->minKernelWidth = minKernelWidth;
+            m_CB->maxKernelWidth = maxKernelWidth;
+            m_CB->varianceSigmaScaleOnSmallKernels = varianceSigmaScaleOnSmallKernels;
+            m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
+            m_CB->textureDim = resourceDim;
+            m_CB->minVarianceToDenoise = minVarianceToDenoise;
+            m_CB->staleNeighborWeightScale = i == 0 ? staleNeighborWeightScale : 1;  // ToDo revise
+            m_CB->depthWeightCutoff = depthWeightCutoff;
+            m_CB->useProjectedDepthTest = useProjectedDepthTest;
+            m_CB->forceDenoisePass = forceDenoisePass;
             m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);            
-            cb.CopyStagingToGpu(m_CBinstanceID + i);
+            m_CB.CopyStagingToGpu(m_CBinstanceID + i);
         }
 
         //
@@ -1034,7 +1015,7 @@ namespace GpuKernels
 
             for (UINT i = 0; i < numFilterPasses; i++)
             {
-                commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, cb.GpuVirtualAddress(m_CBinstanceID + i));
+                commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID + i));
                                 
                 // Dispatch.
                 commandList->Dispatch(groupSize.x, groupSize.y, 1);
@@ -1095,8 +1076,6 @@ namespace GpuKernels
     }
 
 
-
-    // ToDo reverse CalculatePartialDerivatives::RootSig  and then use as RootSig::Slot:: below?
     namespace RootSignature {
         namespace CalculatePartialDerivatives {
             namespace Slot {
@@ -1110,7 +1089,6 @@ namespace GpuKernels
         }
     }
 
-    // ToDo move type to execute
     void CalculatePartialDerivatives::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
@@ -1152,8 +1130,8 @@ namespace GpuKernels
         ID3D12DescriptorHeap* descriptorHeap,
         UINT width,
         UINT height,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputValuesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputResourceHandle)
+        D3D12_GPU_DESCRIPTOR_HANDLE inputValuesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle)
     {
         using namespace RootSignature::CalculatePartialDerivatives;
         using namespace DefaultComputeShaderParams;
@@ -1230,9 +1208,8 @@ namespace GpuKernels
         {
             D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
             descComputePSO.pRootSignature = m_rootSignature.Get();
-
-
         }
+
         // Create compute pipeline state.
         {
             D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
@@ -1273,11 +1250,11 @@ namespace GpuKernels
         UINT width,
         UINT height,
         FilterType filterType,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputValuesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputNormalsResourceHandle,  // ToDo standardize Normal vs Normals
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputDepthsResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputVarianceResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputMeanResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputValuesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputNormalsResourceHandle,  // ToDo standardize Normal vs Normals
+        D3D12_GPU_DESCRIPTOR_HANDLE inputDepthsResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputVarianceResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputMeanResourceHandle,
         float depthSigma,
         float normalSigma,
         bool outputMean,
@@ -1322,7 +1299,6 @@ namespace GpuKernels
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);
         commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
-
 
         // Dispatch.
         {
@@ -1370,6 +1346,7 @@ namespace GpuKernels
             CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
             SerializeAndCreateRootSignature(device, rootSignatureDesc, &m_rootSignature, L"Compute root signature: CalculateMeanVariance");
         }
+
         // Create compute pipeline state.
         {
             D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
@@ -1408,8 +1385,8 @@ namespace GpuKernels
         UINT width,
         UINT height,
         FilterType filterType,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputValuesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputMeanVarianceResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputValuesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputMeanVarianceResourceHandle,
         UINT kernelWidth,
         bool doCheckerboardSampling,
         bool checkerboardLoadEvenPixels)
@@ -1527,8 +1504,8 @@ namespace GpuKernels
         UINT width,
         UINT height,
         FilterType filterType,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle,
         bool fillEvenPixels)
     {
         using namespace RootSignature::FillInCheckerboard;
@@ -1663,17 +1640,17 @@ namespace GpuKernels
         UINT width,
         UINT height,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCurrentFrameNormalDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCurrentFrameLinearDepthDerivativeResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputReprojectedNormalDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputTextureSpaceMotionVectorResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCachedValueResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCachedNormalDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCachedFrameAgeResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCachedSquaredMeanValue,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCachedRayHitDistanceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputReprojectedCacheFrameAgeResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputReprojectedCacheValuesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameNormalDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameLinearDepthDerivativeResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedNormalDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputTextureSpaceMotionVectorResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedValueResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedNormalDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedFrameAgeResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedSquaredMeanValue,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedRayHitDistanceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheFrameAgeResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheValuesResourceHandle,
         float minSmoothingFactor,
         float depthTolerance,
         bool useDepthWeights,
@@ -1827,16 +1804,16 @@ namespace GpuKernels
         UINT width,
         UINT height,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCurrentFrameValueResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCurrentFrameLocalMeanVarianceResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputCurrentFrameRayHitDistanceResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputOutputValueResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputOutputFrameAgeResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputOutputSquaredMeanValueResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputOutputRayHitDistanceResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputReprojectedCacheValuesResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputVarianceResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputBlurStrengthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameValueResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameLocalMeanVarianceResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameRayHitDistanceResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputOutputValueResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputOutputFrameAgeResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputOutputSquaredMeanValueResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputOutputRayHitDistanceResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedCacheValuesResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputVarianceResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputBlurStrengthResourceHandle,
         float minSmoothingFactor,
         bool forceUseMinSmoothingFactor,
         bool clampCachedValues,
@@ -1970,7 +1947,7 @@ namespace GpuKernels
         ID3D12GraphicsCommandList4* commandList,
         const GenerateGrassStrawsConstantBuffer_AppParams& appParams,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputVertexBufferResourceHandle)
+        D3D12_GPU_DESCRIPTOR_HANDLE outputVertexBufferResourceHandle)
     {
         using namespace RootSignature::GenerateGrassPatch;
         using namespace DefaultComputeShaderParams;
@@ -2063,9 +2040,9 @@ namespace GpuKernels
         UINT height,
         bool useOctahedralRayDirectionQuantization,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputRayDirectionOriginDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputSortedToSourceRayIndexOffsetResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputDebugResourceHandle)
+        D3D12_GPU_DESCRIPTOR_HANDLE inputRayDirectionOriginDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputSortedToSourceRayIndexOffsetResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputDebugResourceHandle)
     {
         using namespace RootSignature::SortRays;
         using namespace SortRays;
@@ -2160,10 +2137,10 @@ namespace GpuKernels
         bool doCheckerboardRayGeneration,
         bool checkerboardGenerateRaysForEvenPixels,
         ID3D12DescriptorHeap* descriptorHeap,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputRayOriginSurfaceNormalDepthResourceHandle,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& inputRayOriginPositionResourceHandle,
-        const D3D12_GPU_VIRTUAL_ADDRESS& inputAlignedHemisphereSamplesBufferAddress,
-        const D3D12_GPU_DESCRIPTOR_HANDLE& outputRayDirectionOriginDepthResourceHandle)
+        D3D12_GPU_DESCRIPTOR_HANDLE inputRayOriginSurfaceNormalDepthResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputRayOriginPositionResourceHandle,
+        D3D12_GPU_VIRTUAL_ADDRESS inputAlignedHemisphereSamplesBufferAddress,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputRayDirectionOriginDepthResourceHandle)
     {
         using namespace RootSignature::AORayGenerator;
         using namespace DefaultComputeShaderParams;

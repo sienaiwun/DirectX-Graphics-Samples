@@ -594,20 +594,12 @@ void Scene::InitializeAllBottomLevelAccelerationStructures()
     {
         auto& bottomLevelASGeometry = bottomLevelASGeometryPair.second;
         bool updateOnBuild = false;
-        bool compactAS = false; // ToDo remove
    
         if (bottomLevelASGeometry.GetName().find(L"Grass Patch LOD") != wstring::npos)
         {
             updateOnBuild = true;
         }
-        if (bottomLevelASGeometry.GetName().find(L"Spaceship") != wstring::npos ||
-            bottomLevelASGeometry.GetName().find(L"Dragon") != wstring::npos ||
-            bottomLevelASGeometry.GetName().find(L"House") != wstring::npos ||
-            bottomLevelASGeometry.GetName().find(L"Car") != wstring::npos)
-        {
-            compactAS = false;
-        }
-        m_accelerationStructure->AddBottomLevelAS(device, buildFlags, bottomLevelASGeometry, updateOnBuild, updateOnBuild, compactAS);
+        m_accelerationStructure->AddBottomLevelAS(device, buildFlags, bottomLevelASGeometry, updateOnBuild, updateOnBuild);
     }
 }
 

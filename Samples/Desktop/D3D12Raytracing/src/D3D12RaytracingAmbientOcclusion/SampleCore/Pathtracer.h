@@ -102,7 +102,7 @@ private:
     D3D12_GPU_DESCRIPTOR_HANDLE m_nullVertexBufferGPUhandle;
 
     GpuKernels::CalculatePartialDerivatives  m_calculatePartialDerivativesKernel;
-    GpuKernels::DownsampleNormalDepthHitPositionGeometryHitBilateralFilter m_downsampleGBufferBilateralFilterKernel; //ToDo rename?
+    GpuKernels::DownsampleGBufferDataBilateralFilter m_downsampleGBufferBilateralFilterKernel; //ToDo rename?
 
     bool m_isRecreateRaytracingResourcesRequested = false;
 };

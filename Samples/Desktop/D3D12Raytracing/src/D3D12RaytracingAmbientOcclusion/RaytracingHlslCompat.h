@@ -56,6 +56,8 @@
     remove RTAO_ from names in RTAO component
     remove obsolete composition modes
     rename maxFrameAge to tspp
+    GpuKernels use helper structs to pass the data in
+    remove compaction
 
     - cleanup this file
 

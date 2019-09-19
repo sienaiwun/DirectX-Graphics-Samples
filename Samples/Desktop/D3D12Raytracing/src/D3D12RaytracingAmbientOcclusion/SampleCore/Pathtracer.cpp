@@ -186,7 +186,6 @@ void Pathtracer::CreateAuxilaryDeviceResources()
     D3D12_CPU_DESCRIPTOR_HANDLE nullCPUhandle;
     UINT nullHeapIndex = UINT_MAX;
     CreateBufferSRV(nullptr, device, 0, sizeof(VertexPositionNormalTextureTangent), m_cbvSrvUavHeap.get(), &nullCPUhandle, &m_nullVertexBufferGPUhandle, &nullHeapIndex);
-
 }
 
 // Create constant buffers.
@@ -208,8 +207,6 @@ void Pathtracer::CreateRootSignatures()
     {
         using namespace GlobalRootSignature;
 
-        // ToDo reorder
-        // ToDo use slot index in ranges everywhere
         CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; // Perfomance TIP: Order from most frequent to least frequent.
         ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output textures
         ranges[Slot::GBufferResources].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 5, 5);  // 5 output GBuffer textures
