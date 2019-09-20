@@ -63,7 +63,6 @@ private:
     std::shared_ptr<DX::DeviceResources> m_deviceResources;
     std::shared_ptr<DX::DescriptorHeap> m_cbvSrvUavHeap;
 
-    // ToDo cleanup - ReduceSum objects are in m_reduceSumKernel.
     ComPtr<ID3D12PipelineState>         m_computePSOs[ComputeShader::Type::Count];
     ComPtr<ID3D12RootSignature>         m_computeRootSigs[ComputeShader::Type::Count];
 

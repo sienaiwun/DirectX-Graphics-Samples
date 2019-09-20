@@ -18,7 +18,7 @@ Texture2D<float4> g_inNormalDepth : register(t1);
 Texture2D<float4> g_inHitPosition : register(t2);
 Texture2D<uint> g_inGeometryHit : register(t3);
 Texture2D<float2> g_inPartialDistanceDerivatives : register(t4);
-Texture2D<float> g_inDepth : register(t5);  // ToDo is thi needed?
+Texture2D<float> g_inDepth : register(t5); 
 Texture2D<float2> g_inMotionVector : register(t6);
 Texture2D<NormalDepthTexFormat> g_inReprojectedNormalDepth : register(t7);
 Texture2D<float4> g_inSurfaceAlbedo : register(t8);
@@ -42,11 +42,11 @@ void LoadDepthAndEncodedNormal(in uint2 texIndex, out float4 encodedNormalDepth,
     depth = encodedNormalDepth.z;
 }
 
-// ToDo dedupe - already in DownsampleBilateralFilterCS.hlsli
 // Returns a selected depth index when bilateral downsapling.
 uint GetIndexFromDepthAwareBilateralDownsample2x2(in float4 vDepths, in uint2 DTid)
 {
-    // Alternate between min max depth sample in a checkerboard 2x2 pattern to improve depth correlations for bilateral 2x2 upsampling.
+    // Alternate between min max depth sample in a checkerboard 2x2 pattern to improve 
+    // depth matching for bilateral 2x2 upsampling in a later pass.
     // Ref: http://c0de517e.blogspot.com/2016/02/downsampled-effects-with-depth-aware.html
     bool checkerboardTakeMin = ((DTid.x + DTid.y) & 1) == 0;
 
@@ -56,7 +56,6 @@ uint GetIndexFromDepthAwareBilateralDownsample2x2(in float4 vDepths, in uint2 DT
     return GetIndexOfValueClosestToTheReference(lowResDepth, vDepths);
 }
 
-// ToDo split into multiple per texture downsample (and use a mask input?)
 [numthreads(DefaultComputeShaderParams::ThreadGroup::Width, DefaultComputeShaderParams::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID)
 {
@@ -75,7 +74,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     // Either that or the multiplier should be applied when calculating weights.
     // ToDo it would be cleaner to apply that multiplier at weights calculation. 
     // Or recompute the partial derivatives on downsample?
-    // ToDo use perspective correct
+    // TRY: use perspective correct ddxy interpolation.
     g_outPartialDistanceDerivatives[DTid] = 2 * g_inPartialDistanceDerivatives[selectedDTid];
 
     g_outMotionVector[DTid] = g_inMotionVector[selectedDTid];

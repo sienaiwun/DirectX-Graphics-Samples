@@ -189,7 +189,6 @@ void TopLevelAccelerationStructure::Initialize(
     m_allowUpdate = allowUpdate;
     m_updateOnBuild = bUpdateOnBuild; 
 	m_buildFlags = buildFlags;
-
     m_name = resourceName;
 
     if (allowUpdate)
@@ -290,7 +289,6 @@ UINT RaytracingAccelerationStructureManager::GetMaxInstanceContributionToHitGrou
     return maxInstanceContributionToHitGroupIndex;
 };
 
-
 // Initializes the top-level Acceleration Structure.
 void RaytracingAccelerationStructureManager::InitializeTopLevelAS(
     ID3D12Device5* device,
@@ -332,7 +330,7 @@ void RaytracingAccelerationStructureManager::Build(
                 bottomLevelAS.Build(commandList, m_accelerationStructureScratch.Get(), descriptorHeap, baseGeometryTransformGpuAddress);
 
                 // Since a single scratch resource is reused, put a barrier in-between each call.
-                // Optimization tip: use separate scratch resources to allow GPU driver to overlap build calls.
+                // PEFORMANCE tip: use separate scratch memory per BLAS build to allow a GPU driver to overlap build calls.
                 commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(bottomLevelAS.GetResource()));
             }
         }

@@ -39,8 +39,8 @@ public:
     // Getters & setters.
     void SetCamera(const GameCore::Camera& camera);
     GpuResource(&GBufferResources(bool getQuarterResResources = false))[GBufferResource::Count];
-    UINT Width() { return m_width; }
-    UINT Height() { return m_height; }
+    UINT Width() { return m_raytracingWidth; }
+    UINT Height() { return m_raytracingHeight; }
 
     void RequestRecreateRaytracingResources() { m_isRecreateRaytracingResourcesRequested = true; }
 private:
@@ -63,16 +63,16 @@ private:
     std::shared_ptr<DX::DeviceResources> m_deviceResources;
     std::shared_ptr<DX::DescriptorHeap> m_cbvSrvUavHeap;
 
-    UINT m_width;        // ToDo rename
-    UINT m_height;
+    UINT m_raytracingWidth;        // ToDo rename
+    UINT m_raytracingHeight;
     UINT m_quarterResWidth;
     UINT m_quarterResHeight;
 
     // Raytracing shaders.
     static const wchar_t* c_rayGenShaderNames[RayGenShaderType::Count];
-    static const wchar_t* c_closestHitShaderNames[RayType::Count];
-    static const wchar_t* c_missShaderNames[RayType::Count];
-    static const wchar_t* c_hitGroupNames[RayType::Count];
+    static const wchar_t* c_closestHitShaderNames[PathtracerRayType::Count];
+    static const wchar_t* c_missShaderNames[PathtracerRayType::Count];
+    static const wchar_t* c_hitGroupNames[PathtracerRayType::Count];
 
     // DirectX Raytracing (DXR) attributes
     ComPtr<ID3D12StateObject>   m_dxrStateObject;

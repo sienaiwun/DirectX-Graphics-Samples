@@ -47,11 +47,6 @@ namespace Composition_Args
     BoolVar Compose_VarianceVisualizeStdDeviation(L"Render/Render composition/Variance/Visualize std deviation", true);
     NumVar Compose_VarianceScale(L"Render/Render composition/Variance/Variance scale", 1.0f, 0, 10, 0.1f);
 
-    BoolVar UpsamplingUseBilinearWeights(L"Render/AO/RTAO/Down/Upsampling/Bilinear weighted", true);
-    BoolVar UpsamplingUseDepthWeights(L"Render/AO/RTAO/Down/Upsampling/Depth weighted", true);
-    BoolVar UpsamplingUseNormalWeights(L"Render/AO/RTAO/Down/Upsampling/Normal weighted", true);
-    BoolVar UpsamplingUseDynamicDepthThreshold(L"Render/AO/RTAO/Down/Upsampling/Dynamic depth threshold", true);        // ToDO rename to adaptive
-
     BoolVar AOEnabled(L"Render/AO/Enabled", true);
 }
 
@@ -264,11 +259,7 @@ void Composition::BilateralUpsample(
         inputLowResNormalDepthResourceHandle,
         inputHiResNormalDepthResourceHandle,
         inputHiResPartialDepthDerivativesResourceHandle,
-        outputHiResValueResource->gpuDescriptorWriteAccess,
-        Composition_Args::UpsamplingUseBilinearWeights,
-        Composition_Args::UpsamplingUseDepthWeights,
-        Composition_Args::UpsamplingUseNormalWeights,
-        Composition_Args::UpsamplingUseDynamicDepthThreshold
+        outputHiResValueResource->gpuDescriptorWriteAccess
     );
 
     resourceStateTracker->TransitionResource(outputHiResValueResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);

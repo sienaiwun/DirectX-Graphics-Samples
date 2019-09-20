@@ -104,13 +104,13 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
 float CalculateAO(out float tHit, in uint2 srcPixelIndex, in Ray AOray, in float3 surfaceNormal)
 {
     float ambientCoef = 1;
-    const float tMax = cb.maxShadowRayHitTime; // ToDo make sure its FLT_10BIT_MAX or less since we use 10bit origin depth in RaySort
+    const float tMax = cb.maxAORayHitTime; // ToDo make sure its FLT_10BIT_MAX or less since we use 10bit origin depth in RaySort
     if (TraceAORayAndReportIfHit(tHit, AOray, tMax, surfaceNormal))
     {
         float occlusionCoef = 1;
-        if (cb.isExponentialFalloffEnabled)
+        if (cb.applyExponentialFalloff)
         {
-            float theoreticalTMax = cb.maxTheoreticalShadowRayHitTime;
+            float theoreticalTMax = cb.maxTheoreticalAORayHitTime;
             float t = tHit / theoreticalTMax;
             float lambda = cb.exponentialFalloffDecayConstant;
             occlusionCoef = exp(-lambda * t * t);
@@ -167,7 +167,7 @@ void RayGenShader()
     }
 
     g_outAOcoefficient[srcRayIndex] = ambientCoef;
-    g_outAORayHitDistance[srcRayIndex] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalShadowRayHitTime;
+    g_outAORayHitDistance[srcRayIndex] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalAORayHitTime;
 }
 
 // Retrieves 2D source and sorted ray indices from a 1D ray index where
@@ -236,11 +236,8 @@ void RayGenShader_sortedRays()
         DecodeNormalDepth(g_texAORaysDirectionOriginDepth[srcRayIndex], rayDirection, dummy);
         float3 hitPosition = g_texRayOriginPosition[srcRayIndexFullRes].xyz;
 
-        // ToDo test trading for using ray direction insteads
         float3 surfaceNormal;
         float depth;
-
-        // ToDo use ray direction instead?
         DecodeNormalDepth(g_texRayOriginSurfaceNormalDepth[srcRayIndexFullRes], surfaceNormal, depth);
 
         Ray AORay = { hitPosition, rayDirection };
@@ -250,7 +247,7 @@ void RayGenShader_sortedRays()
     uint2 outPixel = srcRayIndexFullRes;
 
     g_outAOcoefficient[outPixel] = ambientCoef;
-    g_outAORayHitDistance[outPixel] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalShadowRayHitTime;
+    g_outAORayHitDistance[outPixel] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalAORayHitTime;
 }
 
 //***************************************************************************

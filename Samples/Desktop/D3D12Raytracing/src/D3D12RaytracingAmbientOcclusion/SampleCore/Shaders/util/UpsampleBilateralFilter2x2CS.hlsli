@@ -74,7 +74,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     const uint2 srcIndexOffsets[4] = { {0, 0}, {1, 0}, {0, 1}, {1, 1} };
 
     
-    float4  vHiResDepths;
+    float4 vHiResDepths;
     float3 hiResNormals[4];
     float2 hiResTexturePos = (topLeftHiResIndex + 0.5) * cb.invHiResTextureDim;
     {
@@ -86,7 +86,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         }
     }
 
-    float4  vLowResDepths;
+    float4 vLowResDepths;
     float3 lowResNormals[4];
     float2 lowResTexturePos = (topLeftLowResIndex + 0.5) * cb.invLowResTextureDim;
     {
@@ -115,12 +115,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
         float2(1 - offset, 1 - offset)
     };
     
-    float2x4 ddxy2x4 = 0;
-    if (cb.useDepthWeights && cb.useDynamicDepthThreshold)
-    {
-        ddxy2x4[0] = g_inHiResPartialDepthDerivative.GatherRed(ClampSampler, hiResTexturePos).wzxy;
-        ddxy2x4[1] = g_inHiResPartialDepthDerivative.GatherGreen(ClampSampler, hiResTexturePos).wzxy;
-    }
+    float2x4 ddxy2x4 = {
+        g_inHiResPartialDepthDerivative.GatherRed(ClampSampler, hiResTexturePos).wzxy,
+        g_inHiResPartialDepthDerivative.GatherGreen(ClampSampler, hiResTexturePos).wzxy,
+    };
 
     float4x2 ddxy = {
         ddxy2x4._11, ddxy2x4._21,

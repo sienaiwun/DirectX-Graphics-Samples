@@ -116,7 +116,7 @@ namespace RTAO_Args
     BoolVar RTAORaySortingUseOctahedralRayDirectionQuantization(L"Render/AO/RTAO/Ray Sorting/Octahedral ray direction quantization", true);
 
 
-    IntVar Rpp(L"Render/AO/RTAO/Rpp/Rays per pixel", 1, 1, 1024, 1, OnRppSampleSetChange);
+    IntVar Rpp(L"Render/AO/RTAO/Rpp/Rays per pixel", 1, 1, 1024, 1, OnRppSampleSetChange); // ToDo breaks on 1->2. Support spatial distribtuons for 2+ rpp
     IntVar Rpp_AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, 1, 8, 1, OnRppSampleSetChange);
     BoolVar Rpp_doCheckerboard(L"Render/AO/RTAO/Rpp/Overrides/Do checkerboard 0.5 rpp", false, OnToggleRppCheckerboard);
     BoolVar Rpp_useGroundTruthRpp(L"Render/AO/RTAO/Rpp/Overrides/Do ground truth rpp: " STRINGIZE(GROUND_TRUTH_RPP), false, OnToggleRppGroundTruth);
@@ -522,7 +522,7 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
     m_CB->approximateInterreflections = RTAO_Args::RTAOApproximateInterreflections;
     m_CB->diffuseReflectanceScale = RTAO_Args::RTAODiffuseReflectanceScale;
     m_CB->minimumAmbientIllumination = RTAO_Args::minimumAmbientIllumination;
-    m_CB->isExponentialFalloffEnabled = RTAO_Args::RTAOIsExponentialFalloffEnabled;
+    m_CB->applyExponentialFalloff = RTAO_Args::RTAOIsExponentialFalloffEnabled;
     m_CB->exponentialFalloffDecayConstant = RTAO_Args::RTAO_ExponentialFalloffDecayConstant;
 
     // Calculate a theoretical max ray distance to be used in occlusion factor computation.
@@ -538,8 +538,8 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
         // Invert occlusionFactor = exp(-lambda * t * t), where t is tHit/tMax of a ray.
         float t = sqrt(logf(occclusionCutoff) / -lambda);
 
-        m_CB->maxShadowRayHitTime = t * RTAO_Args::RTAOMaxRayHitTime;
-        m_CB->maxTheoreticalShadowRayHitTime = RTAO_Args::RTAOMaxRayHitTime;
+        m_CB->maxAORayHitTime = t * RTAO_Args::RTAOMaxRayHitTime;
+        m_CB->maxTheoreticalAORayHitTime = RTAO_Args::RTAOMaxRayHitTime;
     }
 
     m_CB.CopyStagingToGpu(frameIndex);

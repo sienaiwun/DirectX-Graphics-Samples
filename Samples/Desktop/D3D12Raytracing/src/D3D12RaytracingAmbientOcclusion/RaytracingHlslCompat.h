@@ -15,6 +15,7 @@
 /*
 //ToDo
 - cleanup filter shaders, remove obsolete
+ compare denoise quality from before the cleanup(video). It seems like current denoiser blurs much more on motion.
 
 - finetune clamping/remove ghosting (test gliding spaceship)
 - Adaptive kernel size - overblur under roof edge
@@ -59,6 +60,8 @@
     GpuKernels use helper structs to pass the data in
     split gpu kernel file
     add UAV barriers
+    prune redundant using namespace ...
+     zero out caches on resource reset.
 
 Documentation
     readme
@@ -165,23 +168,27 @@ struct Ray
     XMFLOAT3 direction;
 };
 
+// GBuffer data collected during pathtracing 
+// for subsequent Ambient Occlusion ray trace pass and denoising.
 struct AmbientOcclusionGBuffer
 {
     float tHit;
     XMFLOAT3 hitPosition;           // Position of the hit for which to calculate Ambient coefficient.
     UINT diffuseByte3;              // Diffuse reflectivity of the hit surface.
-    XMFLOAT2 encodedNormal;         // Normal of the hit surface. // ToDo encode as 16bit
+    // TODO: RTAO pipeline uses 16b encoded normal, therefore same bit enconding could be applied here 
+    //  to lower the struct's size and potentially improve Pathtracer's perf without much/any quality loss in RTAO.
+    //  Furthermore, _encodedNormal below could use lower bit range too.
+    XMFLOAT2 encodedNormal;         // Normal of the hit surface. 
 
     // Members for Motion Vector calculation.
     XMFLOAT3 _virtualHitPosition;   // virtual hitPosition in the previous frame.
                                     // For non-reflected points this is a true world position of a hit.
                                     // For reflected points, this is a world position of a hit reflected across the reflected surface 
                                     //   ultimately giving the same screen space coords when projected and the depth corresponding to the ray depth.
-    XMFLOAT2 _encodedNormal;        // normal in the previous frame
+    XMFLOAT2 _encodedNormal;        // surface normal in the previous frame
 };
 
 
-// ToDo rename To Pathtracer
 struct PathtracerRayPayload
 {
     UINT rayRecursionDepth;
@@ -273,9 +280,7 @@ struct RayGenConstantBuffer
 struct SortRaysConstantBuffer
 {
     XMUINT2 dim;
-
     BOOL useOctahedralRayDirectionQuantization;
-
     // Depth for a bin within which to sort further based on direction.
     float binDepthSize;
 };
@@ -285,21 +290,19 @@ namespace SortRays {
         enum Enum { Width = 64, Height = 16, Size = Width * Height };
     }
 
-    // ToDo comment ray group's heigh can only go up to 64 as the most significant bit is used to test if the cached value is valid.
     namespace RayGroup {
         enum Enum { NumElementPairsPerThread = 4, Width = ThreadGroup::Width, Height = NumElementPairsPerThread * 2 * ThreadGroup::Height, Size = Width * Height };
     }
 #ifndef HLSL
-    static_assert( RayGroup::Width < 128 
-                && RayGroup::Height < 256
+    static_assert( RayGroup::Width <= 64 
+                && RayGroup::Height <= 128
                 && RayGroup::Size <= 8192, "Ray group dimensions are outside the supported limits set by the Counting Sort shader.");
 #endif
 }
 
 struct PathtracerConstantBuffer
 {
-    // ToDo rename to world to view matrix and drop (0,0,0) note.
-    XMMATRIX projectionToWorldWithCameraEyeAtOrigin;	// projection to world matrix with Camera at (0,0,0).
+    XMMATRIX projectionToView;
     XMFLOAT3 cameraPosition;
     BOOL     useDiffuseFromMaterial;
     XMFLOAT3 lightPosition;     
@@ -326,19 +329,17 @@ struct RTAOConstantBuffer
     UINT numSampleSets;
     UINT numPixelsPerDimPerSet;
 
-    // ToDo rename to AOray
-    float maxShadowRayHitTime;             // Max shadow ray hit time used for tMax in TraceRay.
+    float maxAORayHitTime;             // Max AO ray hit time used for tMax in TraceRay.
     BOOL approximateInterreflections;      // Approximate interreflections. 
-    float diffuseReflectanceScale;              // Diffuse reflectance from occluding surfaces. 
-    float minimumAmbientIllumination;       // Ambient illumination coef when a ray is occluded.
+    float diffuseReflectanceScale;         // Diffuse reflectance from occluding surfaces. 
+    float minimumAmbientIllumination;      // Ambient illumination coef when a ray is occluded.
 
-    // toDo rename shadow to AO
-    float maxTheoreticalShadowRayHitTime;  // Max shadow ray hit time used in falloff computation accounting for
-                                                // RTAO_ExponentialFalloffMinOcclusionCutoff and maxShadowRayHitTime.    
+    float maxTheoreticalAORayHitTime;  // Max AO ray hit time used in falloff computation accounting for
+                                       // exponentialFalloffMinOcclusionCutoff and maxAORayHitTime.    
     BOOL RTAO_UseSortedRays;
     XMUINT2 raytracingDim;
 
-    BOOL isExponentialFalloffEnabled;               // Apply exponential falloff to AO coefficient based on ray hit distance.    
+    BOOL applyExponentialFalloff;     // Apply exponential falloff to AO coefficient based on ray hit distance.    
     float exponentialFalloffDecayConstant;
     BOOL doCheckerboardSampling;
     BOOL areEvenPixelsActive;
@@ -356,8 +357,8 @@ enum CompositionType {
     AmbientOcclusionOnly_RawOneFrame,
     AmbientOcclusionAndDisocclusionMap, // ToDo quarter res support
     AmbientOcclusionVariance,
-    AmbientOcclusionLocalVariance,  // ToDo rename spatial to local variance references
-    RTAOHitDistance,    // ToDo standardize naming
+    AmbientOcclusionLocalVariance,
+    RTAOHitDistance,
     NormalsOnly,
     DepthOnly,
     Diffuse,
@@ -458,7 +459,6 @@ struct FilterConstantBuffer
 };
 
 
-// ToDo rename be more specific
 struct BilateralFilterConstantBuffer
 {
     XMUINT2 textureDim;
@@ -472,11 +472,10 @@ struct BilateralFilterConstantBuffer
 
 struct TemporalSupersampling_ReverseReprojectConstantBuffer
 {
-    // ToDo pix missinterprets the format
     XMUINT2 textureDim;
     XMFLOAT2 invTextureDim;
 
-    XMMATRIX projectionToWorldWithCameraEyeAtOrigin;
+    XMMATRIX projectionToView;
     XMMATRIX prevProjectionToWorldWithCameraEyeAtOrigin;
 
     BOOL useDepthWeights;
@@ -531,11 +530,11 @@ struct DownAndUpsampleFilterConstantBuffer
     XMFLOAT2 invHiResTextureDim;
     XMFLOAT2 invLowResTextureDim;
 
-    // ToDo remove
-    BOOL useNormalWeights;
-    BOOL useDepthWeights;
-    BOOL useBilinearWeights;
-    BOOL useDynamicDepthThreshold;
+    //// ToDo remove
+    //BOOL useNormalWeights;
+    //BOOL useDepthWeights;
+    //BOOL useBilinearWeights;
+    //BOOL useDynamicDepthThreshold;
 };
 
 // Grass Geometry
@@ -565,7 +564,7 @@ struct GenerateGrassStrawsConstantBuffer_AppParams
 struct GenerateGrassStrawsConstantBuffer
 {
     XMFLOAT2 invActivePatchDim;
-    float padding1; // ToDo doing float p[2]; instead adds extra padding - as per PIX.
+    float padding1;
     float padding2;
     GenerateGrassStrawsConstantBuffer_AppParams p;
 };
@@ -588,7 +587,6 @@ namespace MaterialType {
     };
 }
 
-// ToDO use same naming as in PBR Material
 struct PrimitiveMaterialBuffer
 {
 	XMFLOAT3 Kd;
@@ -598,9 +596,9 @@ struct PrimitiveMaterialBuffer
     XMFLOAT3 opacity;
     XMFLOAT3 eta;
     float roughness;
-    UINT hasDiffuseTexture; // ToDO use BOOL?
-    UINT hasNormalTexture;
-    UINT hasPerVertexTangents;
+    BOOL hasDiffuseTexture; // ToDO use BOOL?
+    BOOL hasNormalTexture;
+    BOOL hasPerVertexTangents;
     MaterialType::Type type;
     float padding;
 };
@@ -645,7 +643,6 @@ struct VertexPositionNormalTexture
 	XMFLOAT2 uv;
 };
 
-// ToDo dedupe with Vertex in PBRT.
 struct VertexPositionNormalTextureTangent
 {
 	XMFLOAT3 position;
@@ -654,12 +651,11 @@ struct VertexPositionNormalTextureTangent
 	XMFLOAT3 tangent;
 };
 
-
 // Ray types traced in this sample.
-namespace RayType {
+namespace PathtracerRayType {
     enum Enum {
-        Radiance = 0,	// ~ Radiance ray generating color and GBuffer data.
-        Shadow,         // ~ Shadow/visibility rays, only testing for occlusion
+        Radiance = 0,	// ~ Radiance ray generating color and GBuffer data
+        Shadow,         // ~ Shadow/visibility rays
         Count
     };
 }
@@ -676,15 +672,15 @@ namespace TraceRayParameters
 {
     static const UINT InstanceMask = ~0;   // Everything is visible.
     namespace HitGroup {
-        static const UINT Offset[RayType::Count] =
+        static const UINT Offset[PathtracerRayType::Count] =
         {
             0, // Radiance ray
             1, // Shadow ray
         };
-		static const UINT GeometryStride = RayType::Count;
+		static const UINT GeometryStride = PathtracerRayType::Count;
     }
     namespace MissShader {
-        static const UINT Offset[RayType::Count] =
+        static const UINT Offset[PathtracerRayType::Count] =
         {
             0, // Radiance ray
             1, // Shadow ray

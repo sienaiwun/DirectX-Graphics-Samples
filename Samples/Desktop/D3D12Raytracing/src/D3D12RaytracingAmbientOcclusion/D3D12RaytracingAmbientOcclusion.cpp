@@ -346,8 +346,6 @@ namespace Sample
     {
         vector<wstring> labels;
 
-        // ToDo fix Window Tab and UI showing the same FPS.
-
         // Header information
         {
             // Prints <component name>[<resolution X>x<resolution Y>]: <GPU time>

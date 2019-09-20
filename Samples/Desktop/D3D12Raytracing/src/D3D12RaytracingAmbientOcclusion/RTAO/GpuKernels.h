@@ -105,11 +105,7 @@ namespace GpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputLowResNormalResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputHiResNormalResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputHiResPartialDistanceDerivativeResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle,
-            bool useBilinearWeights = true,
-            bool useDepthWeights = true,
-            bool useNormalWeights = true,
-            bool useDynamicDepthThreshold = true);
+            D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
@@ -421,7 +417,7 @@ namespace GpuKernels
         bool usingBilateralDownsampledBuffers,
         bool perspectiveCorrectDepthInterpolation,
         GpuResource debugResources[2],
-        const XMMATRIX& projectionToWorldWithCameraEyeAtOrigin,
+        const XMMATRIX& projectionToView,
         const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
         UINT maxFrameAge,
         UINT numRaysToTraceSinceTemporalMovement);

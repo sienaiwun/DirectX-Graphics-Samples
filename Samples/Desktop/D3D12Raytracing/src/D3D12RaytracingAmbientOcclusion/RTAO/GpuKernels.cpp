@@ -33,7 +33,7 @@
 #include "CompiledShaders\TemporalSupersampling_BlendWithCurrentFrameCS.hlsl.h"
 #include "CompiledShaders\TemporalSupersampling_ReverseReprojectCS.hlsl.h"
 #include "CompiledShaders\GenerateGrassStrawsCS.hlsl.h"
-#include "CompiledShaders\CountingSort_SortRays_128x64rayGroupCS.hlsl.h"
+#include "CompiledShaders\CountingSort_SortRays_64x128rayGroupCS.hlsl.h"
 #include "CompiledShaders\AORayGenCS.hlsl.h"
 #include "CompiledShaders\DepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt.hlsl.h"
 #include "CompiledShaders\NormalDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt.hlsl.h"
@@ -485,11 +485,7 @@ namespace GpuKernels
         D3D12_GPU_DESCRIPTOR_HANDLE inputLowResNormalResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputHiResNormalResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputHiResPartialDistanceDerivativeResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle,
-        bool useBilinearWeights,
-        bool useDepthWeights,
-        bool useNormalWeights,
-        bool useDynamicDepthThreshold)
+        D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle)
     {
         using namespace RootSignature::UpsampleBilateralFilter;
         using namespace DefaultComputeShaderParams;
@@ -499,10 +495,6 @@ namespace GpuKernels
         // Each shader execution processes 2x2 hiRes pixels
         XMUINT2 lowResDim = XMUINT2(CeilDivide(width, 2), CeilDivide(height, 2));
 
-        m_CB->useBilinearWeights = useBilinearWeights;
-        m_CB->useDepthWeights = useDepthWeights;
-        m_CB->useNormalWeights = useNormalWeights;
-        m_CB->useDynamicDepthThreshold = useDynamicDepthThreshold;
         m_CB->invHiResTextureDim = XMFLOAT2(1.f / width, 1.f / height);
         m_CB->invLowResTextureDim = XMFLOAT2(1.f / lowResDim.x, 1.f / lowResDim.y);
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
@@ -1639,7 +1631,7 @@ namespace GpuKernels
         bool usingBilateralDownsampledBuffers,
         bool perspectiveCorrectDepthInterpolation,
         GpuResource debugResources[2],
-        const XMMATRIX& projectionToWorldWithCameraEyeAtOrigin,
+        const XMMATRIX& projectionToView,
         const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
         UINT maxFrameAge,
         UINT numRaysToTraceSinceTemporalMovement)
@@ -1657,7 +1649,7 @@ namespace GpuKernels
         m_CB->floatEpsilonDepthTolerance = floatEpsilonDepthTolerance;
         m_CB->depthDistanceBasedDepthTolerance = depthDistanceBasedDepthTolerance;
         m_CB->depthSigma = depthSigma;
-        m_CB->projectionToWorldWithCameraEyeAtOrigin = XMMatrixTranspose(projectionToWorldWithCameraEyeAtOrigin);
+        m_CB->projectionToView = XMMatrixTranspose(projectionToView);
         m_CB->prevProjectionToWorldWithCameraEyeAtOrigin = XMMatrixTranspose(prevProjectionToWorldWithCameraEyeAtOrigin);
         m_CB->useWorldSpaceDistance = useWorldSpaceDistance;
         m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
@@ -1988,7 +1980,7 @@ namespace GpuKernels
         {
             D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
             descComputePSO.pRootSignature = m_rootSignature.Get();
-            descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pCountingSort_SortRays_128x64rayGroupCS), ARRAYSIZE(g_pCountingSort_SortRays_128x64rayGroupCS));
+            descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pCountingSort_SortRays_64x128rayGroupCS), ARRAYSIZE(g_pCountingSort_SortRays_64x128rayGroupCS));
 
             ThrowIfFailed(device->CreateComputePipelineState(&descComputePSO, IID_PPV_ARGS(&m_pipelineStateObject)));
             m_pipelineStateObject->SetName(L"Pipeline state object: Sort Rays");

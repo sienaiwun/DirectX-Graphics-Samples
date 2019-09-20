@@ -265,7 +265,6 @@
     <ClInclude Include="SampleCore\RaytracingAccelerationStructure.h" />
     <ClInclude Include="SampleCore\RaytracingSceneDefines.h" />
     <ClInclude Include="RaytracingHlslCompat.h" />
-    <ClInclude Include="RaytracingShaderHelper.hlsli" />
     <ClInclude Include="D3D12RaytracingAmbientOcclusion.h" />
     <ClInclude Include="RTAO\Denoiser.h" />
     <ClInclude Include="RTAO\RTAO.h" />
@@ -297,7 +296,6 @@
   <ItemGroup>
     <ClCompile Include="SampleCore\Composition.cpp" />
     <ClCompile Include="D3D12RaytracingAmbientOcclusion.cpp" />
-    <ClCompile Include="SampleCore\DirectXRaytracingHelper.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="SampleCore\Pathtracer.cpp" />
     <ClCompile Include="SampleCore\RaytracingAccelerationStructure.cpp" />
@@ -522,7 +520,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Ray sorting\CountingSort_SortRays_128x64rayGroupCS.hlsl">
+    <FxCompile Include="RTAO\Shaders\Ray sorting\CountingSort_SortRays_64x128rayGroupCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
@@ -650,6 +648,7 @@
       <VariableName Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">g_p%(Filename)</VariableName>
     </FxCompile>
     <None Include="packages.config" />
+    <None Include="RTAO\Shaders\RaytracingShaderHelper.hlsli" />
     <None Include="SampleCore\Shaders\BxDF.hlsli" />
     <None Include="RTAO\Shaders\RayGen.hlsli" />
     <None Include="RTAO\Shaders\Denoising\CrossBilateralWeights.hlsli" />

@@ -388,7 +388,10 @@ uint CreateDepthHashKey(in float rayOriginDepth, in float2 rayGroupMinMaxDepth)
     float rayGroupDepthRange = rayGroupMinMaxDepth.y - rayGroupMinMaxDepth.x;
     const uint DepthHashKeyBins = 1 << DEPTH_HASH_KEY_BITS;
     const uint MaxDepthHashKeyBinValue = DepthHashKeyBins - 1;
+    
+    // Simple linear quantization within the min/max range.
     float binDepthSize = max(rayGroupDepthRange / MaxDepthHashKeyBinValue, cb.binDepthSize);
+    // ToDo: this should be relativeDepth / ... Test.
     uint depthHashKey = min(rayOriginDepth / binDepthSize, MaxDepthHashKeyBinValue);
 
     return depthHashKey;

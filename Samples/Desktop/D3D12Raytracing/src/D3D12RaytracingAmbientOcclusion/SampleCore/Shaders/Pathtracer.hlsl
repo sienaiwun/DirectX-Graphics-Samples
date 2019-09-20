@@ -223,9 +223,9 @@ bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in UINT currentRay
     TraceRay(g_scene,
         rayFlags,
         TraceRayParameters::InstanceMask,
-        TraceRayParameters::HitGroup::Offset[RayType::Shadow],
+        TraceRayParameters::HitGroup::Offset[PathtracerRayType::Shadow],
         TraceRayParameters::HitGroup::GeometryStride,
-        TraceRayParameters::MissShader::Offset[RayType::Shadow],
+        TraceRayParameters::MissShader::Offset[PathtracerRayType::Shadow],
         rayDesc, shadowPayload);
     
     // Report a hit if Miss Shader didn't set the value to HitDistanceOnMiss.
@@ -286,9 +286,9 @@ PathtracerRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDept
 	TraceRay(g_scene,
         rayFlags,
 		TraceRayParameters::InstanceMask,
-		TraceRayParameters::HitGroup::Offset[RayType::Radiance],
+		TraceRayParameters::HitGroup::Offset[PathtracerRayType::Radiance],
 		TraceRayParameters::HitGroup::GeometryStride,
-		TraceRayParameters::MissShader::Offset[RayType::Radiance],
+		TraceRayParameters::MissShader::Offset[PathtracerRayType::Radiance],
 		rayDesc, rayPayload);
 
 	return rayPayload;
@@ -498,7 +498,7 @@ void MyRayGenShader_Pathtracer()
     uint2 DTid = DispatchRaysIndex().xy;
 
 	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-	Ray ray = GenerateCameraRay(DTid, g_cb.cameraPosition, g_cb.projectionToWorldWithCameraEyeAtOrigin);
+	Ray ray = GenerateCameraRay(DTid, g_cb.cameraPosition, g_cb.projectionToView);
 
 	// Cast a ray into the scene and retrieve GBuffer information.
 	UINT currentRayRecursionDepth = 0;
@@ -526,7 +526,7 @@ void MyRayGenShader_Pathtracer()
         g_rtReprojectedNormalDepth[DTid] = EncodeNormalDepth(DecodeNormal(rayPayload.AOGBuffer._encodedNormal), _depth);
         
         // Calculate linear z-depth
-        float3 cameraDirection = GenerateForwardCameraRayDirection(g_cb.projectionToWorldWithCameraEyeAtOrigin);
+        float3 cameraDirection = GenerateForwardCameraRayDirection(g_cb.projectionToView);
         float linearDepth = rayLength * dot(ray.direction, cameraDirection);
 
         g_rtGBufferNormalDepth[DTid] = EncodeNormalDepth(DecodeNormal(rayPayload.AOGBuffer.encodedNormal), linearDepth);

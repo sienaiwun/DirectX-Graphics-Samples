@@ -298,7 +298,7 @@ void Pathtracer::CreateHitGroupSubobjects(CD3DX12_STATE_OBJECT_DESC* raytracingP
 {
     // Triangle geometry hit groups
     {
-        for (UINT rayType = 0; rayType < RayType::Count; rayType++)
+        for (UINT rayType = 0; rayType < PathtracerRayType::Count; rayType++)
         {
             auto hitGroup = raytracingPipeline->CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
 
@@ -386,8 +386,8 @@ void Pathtracer::BuildShaderTables(Scene& scene)
     auto device = m_deviceResources->GetD3DDevice();
 
     void* rayGenShaderIDs[RayGenShaderType::Count];
-    void* missShaderIDs[RayType::Count];
-    void* hitGroupShaderIDs_TriangleGeometry[RayType::Count];
+    void* missShaderIDs[PathtracerRayType::Count];
+    void* hitGroupShaderIDs_TriangleGeometry[PathtracerRayType::Count];
 
     // A shader name look-up table for shader table debug print out.
     unordered_map<void*, wstring> shaderIdToStringMap;
@@ -400,13 +400,13 @@ void Pathtracer::BuildShaderTables(Scene& scene)
             shaderIdToStringMap[rayGenShaderIDs[i]] = c_rayGenShaderNames[i];
         }
 
-        for (UINT i = 0; i < RayType::Count; i++)
+        for (UINT i = 0; i < PathtracerRayType::Count; i++)
         {
             missShaderIDs[i] = stateObjectProperties->GetShaderIdentifier(c_missShaderNames[i]);
             shaderIdToStringMap[missShaderIDs[i]] = c_missShaderNames[i];
         }
 
-        for (UINT i = 0; i < RayType::Count; i++)
+        for (UINT i = 0; i < PathtracerRayType::Count; i++)
         {
             hitGroupShaderIDs_TriangleGeometry[i] = stateObjectProperties->GetShaderIdentifier(c_hitGroupNames[i]);
             shaderIdToStringMap[hitGroupShaderIDs_TriangleGeometry[i]] = c_hitGroupNames[i];
@@ -436,11 +436,11 @@ void Pathtracer::BuildShaderTables(Scene& scene)
 
     // Miss shader table.
     {
-        UINT numShaderRecords = RayType::Count;
+        UINT numShaderRecords = PathtracerRayType::Count;
         UINT shaderRecordSize = shaderIDSize; // No root arguments
 
         ShaderTable missShaderTable(device, numShaderRecords, shaderRecordSize, L"MissShaderTable");
-        for (UINT i = 0; i < RayType::Count; i++)
+        for (UINT i = 0; i < PathtracerRayType::Count; i++)
         {
             missShaderTable.push_back(ShaderRecord(missShaderIDs[i], shaderIDSize, nullptr, 0));
         }
@@ -463,9 +463,9 @@ void Pathtracer::BuildShaderTables(Scene& scene)
         for (auto& bottomLevelASGeometryPair : bottomLevelASGeometries)
         {
             auto& bottomLevelASGeometry = bottomLevelASGeometryPair.second;
-            numShaderRecords += static_cast<UINT>(bottomLevelASGeometry.m_geometryInstances.size()) * RayType::Count;
+            numShaderRecords += static_cast<UINT>(bottomLevelASGeometry.m_geometryInstances.size()) * PathtracerRayType::Count;
         }
-        UINT numGrassGeometryShaderRecords = 2 * UIParameters::NumGrassGeometryLODs * 3 * RayType::Count;
+        UINT numGrassGeometryShaderRecords = 2 * UIParameters::NumGrassGeometryLODs * 3 * PathtracerRayType::Count;
         numShaderRecords += numGrassGeometryShaderRecords;
 
         UINT shaderRecordSize = shaderIDSize + sizeof(LocalRootSignature::RootArguments);
@@ -600,8 +600,8 @@ void Pathtracer::DispatchRays(ID3D12Resource* rayGenShaderTable, UINT width, UIN
     dispatchDesc.MissShaderTable.StrideInBytes = m_missShaderTableStrideInBytes;
     dispatchDesc.RayGenerationShaderRecord.StartAddress = rayGenShaderTable->GetGPUVirtualAddress();
     dispatchDesc.RayGenerationShaderRecord.SizeInBytes = rayGenShaderTable->GetDesc().Width;
-    dispatchDesc.Width = width != 0 ? width : m_width;
-    dispatchDesc.Height = height != 0 ? height : m_height;
+    dispatchDesc.Width = width != 0 ? width : m_raytracingWidth;
+    dispatchDesc.Height = height != 0 ? height : m_raytracingHeight;
     dispatchDesc.Depth = 1;
     commandList->SetPipelineState1(m_dxrStateObject.Get());
 
@@ -612,14 +612,14 @@ void Pathtracer::DispatchRays(ID3D12Resource* rayGenShaderTable, UINT width, UIN
 void Pathtracer::SetCamera(const GameCore::Camera& camera)
 {
     XMMATRIX view, proj;
-    camera.GetProj(&proj, m_width, m_height);
+    camera.GetProj(&proj, m_raytracingWidth, m_raytracingHeight);
 
     // Calculate view matrix as if the camera was at (0,0,0) to avoid 
     // precision issues when camera position is too far from (0,0,0).
     // GenerateCameraRay takes this into consideration in the raytracing shader.
     view = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(camera.At() - camera.Eye(), 1), camera.Up());
     XMMATRIX viewProj = view * proj;
-    m_CB->projectionToWorldWithCameraEyeAtOrigin = XMMatrixInverse(nullptr, viewProj);
+    m_CB->projectionToView = XMMatrixInverse(nullptr, viewProj);
     XMStoreFloat3(&m_CB->cameraPosition, camera.Eye());
     m_CB->Znear = camera.ZMin;
     m_CB->Zfar = camera.ZMax;
@@ -673,7 +673,7 @@ void Pathtracer::Run(Scene& scene)
     // ToDo should we use cameraAtPosition0 too and offset the world space pos vector in the shader?
     auto& prevFrameCamera = scene.PrevFrameCamera();
     XMMATRIX prevView, prevProj;
-    prevFrameCamera.GetViewProj(&prevView, &prevProj, m_width, m_height);
+    prevFrameCamera.GetViewProj(&prevView, &prevProj, m_raytracingWidth, m_raytracingHeight);
     m_CB->prevViewProj = prevView * prevProj;
     XMStoreFloat3(&m_CB->prevCameraPosition, prevFrameCamera.Eye());
 
@@ -746,8 +746,8 @@ void Pathtracer::Run(Scene& scene)
         m_calculatePartialDerivativesKernel.Run(
             commandList,
             m_cbvSrvUavHeap->GetHeap(),
-            m_width,
-            m_height,
+            m_raytracingWidth,
+            m_raytracingHeight,
             m_GBufferResources[GBufferResource::Depth].gpuDescriptorReadAccess,
             m_GBufferResources[GBufferResource::PartialDepthDerivatives].gpuDescriptorWriteAccess);
 
@@ -766,8 +766,8 @@ void Pathtracer::CreateResolutionDependentResources()
 
 void Pathtracer::SetResolution(UINT GBufferWidth, UINT GBufferHeight, UINT RTAOWidth, UINT RTAOHeight)
 {
-    m_width = GBufferWidth;
-    m_height = GBufferHeight;
+    m_raytracingWidth = GBufferWidth;
+    m_raytracingHeight = GBufferHeight;
     m_quarterResWidth = RTAOWidth;
     m_quarterResHeight = RTAOHeight;
 
@@ -795,18 +795,18 @@ void Pathtracer::CreateTextureResources()
             m_GBufferResources[i].uavDescriptorHeapIndex = m_GBufferResources[0].uavDescriptorHeapIndex + i;
             m_GBufferResources[i].srvDescriptorHeapIndex = m_GBufferResources[0].srvDescriptorHeapIndex + i;
         }
-        CreateRenderTargetResource(device, DXGI_FORMAT_R8_UINT, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Hit], initialResourceState, L"GBuffer Hit");
-        CreateRenderTargetResource(device, DXGI_FORMAT_R32G32_UINT, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Material], initialResourceState, L"GBuffer Material");
+        CreateRenderTargetResource(device, DXGI_FORMAT_R8_UINT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Hit], initialResourceState, L"GBuffer Hit");
+        CreateRenderTargetResource(device, DXGI_FORMAT_R32G32_UINT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Material], initialResourceState, L"GBuffer Material");
 
 
-        CreateRenderTargetResource(device, hitPositionFormat, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::HitPosition], initialResourceState, L"GBuffer HitPosition");
-        CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::SurfaceNormalDepth], initialResourceState, L"GBuffer Normal Depth");
-        CreateRenderTargetResource(device, DXGI_FORMAT_R16_FLOAT, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Depth], initialResourceState, L"GBuffer Distance");
-        CreateRenderTargetResource(device, TextureResourceFormatRG::ToDXGIFormat(Pathtracer_Args::RTAO_PartialDepthDerivativesResourceFormat), m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::PartialDepthDerivatives], initialResourceState, L"GBuffer Partial Depth Derivatives");
-        CreateRenderTargetResource(device, TextureResourceFormatRG::ToDXGIFormat(Pathtracer_Args::RTAO_MotionVectorResourceFormat), m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::MotionVector], initialResourceState, L"GBuffer Texture Space Motion Vector");
-        CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::ReprojectedNormalDepth], initialResourceState, L"GBuffer Reprojected Hit Position");
-        CreateRenderTargetResource(device, backbufferFormat, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Color], initialResourceState, L"GBuffer Color");
-        CreateRenderTargetResource(device, DXGI_FORMAT_R11G11B10_FLOAT, m_width, m_height, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::AOSurfaceAlbedo], initialResourceState, L"GBuffer AO Surface Albedo");
+        CreateRenderTargetResource(device, hitPositionFormat, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::HitPosition], initialResourceState, L"GBuffer HitPosition");
+        CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::SurfaceNormalDepth], initialResourceState, L"GBuffer Normal Depth");
+        CreateRenderTargetResource(device, DXGI_FORMAT_R16_FLOAT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Depth], initialResourceState, L"GBuffer Distance");
+        CreateRenderTargetResource(device, TextureResourceFormatRG::ToDXGIFormat(Pathtracer_Args::RTAO_PartialDepthDerivativesResourceFormat), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::PartialDepthDerivatives], initialResourceState, L"GBuffer Partial Depth Derivatives");
+        CreateRenderTargetResource(device, TextureResourceFormatRG::ToDXGIFormat(Pathtracer_Args::RTAO_MotionVectorResourceFormat), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::MotionVector], initialResourceState, L"GBuffer Texture Space Motion Vector");
+        CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::ReprojectedNormalDepth], initialResourceState, L"GBuffer Reprojected Hit Position");
+        CreateRenderTargetResource(device, backbufferFormat, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::Color], initialResourceState, L"GBuffer Color");
+        CreateRenderTargetResource(device, DXGI_FORMAT_R11G11B10_FLOAT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_GBufferResources[GBufferResource::AOSurfaceAlbedo], initialResourceState, L"GBuffer AO Surface Albedo");
     }
 
     // Low-res GBuffer resources.
@@ -839,7 +839,7 @@ void Pathtracer::CreateTextureResources()
     {
         for (UINT i = 0; i < ARRAYSIZE(m_debugOutput); i++)
         {
-            CreateRenderTargetResource(device, debugFormat, m_width, m_height, m_cbvSrvUavHeap.get(), &m_debugOutput[i], D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"Debug");
+            CreateRenderTargetResource(device, debugFormat, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_debugOutput[i], D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"Debug");
         }
     }
 }
@@ -867,8 +867,8 @@ void Pathtracer::DownsampleGBuffer()
     // ToDo split into per resource downsamples?
     m_downsampleGBufferBilateralFilterKernel.Run(
         commandList,
-        m_width,
-        m_height,
+        m_raytracingWidth,
+        m_raytracingHeight,
         m_cbvSrvUavHeap->GetHeap(),
         m_GBufferResources[GBufferResource::SurfaceNormalDepth].gpuDescriptorReadAccess,
         m_GBufferResources[GBufferResource::HitPosition].gpuDescriptorReadAccess,

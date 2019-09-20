@@ -137,7 +137,7 @@ namespace BxDF {
             float3 Sample_Ft(in float3 V, out float3 wt, in float3 N, in float3 Fo)
             {
                 float ior = 1;
-                wt = -V; // ToDo refract(-V, N, ior);
+                wt = -V; // TODO: refract(-V, N, ior);
                 float cos_thetai = dot(V, N);
                 float3 Kr = Fresnel(Fo, cos_thetai);
 

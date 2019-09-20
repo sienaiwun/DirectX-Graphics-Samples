@@ -19,14 +19,13 @@
 #include "D3D12RaytracingAmbientOcclusion.h"
 #include "RaytracingSceneDefines.h"
 
-// ToDo prune unused
 using namespace std;
 using namespace DX;
 using namespace DirectX;
 using namespace SceneEnums;
 using namespace GameCore;
 
-UIParameters g_UIparameters;    // ToDo move
+UIParameters g_UIparameters;
 
 
 const D3D12_INPUT_ELEMENT_DESC StandardVertexDescription[] =
@@ -185,39 +184,13 @@ void Scene::CreateIndexAndVertexBuffers(
     CreateGeometry(device, commandList, m_cbvSrvUavHeap.get(), desc, geometry);
 }
 
-// ToDo move
 void Scene::LoadPBRTScene()
 {
     auto device = m_deviceResources->GetD3DDevice();
     auto commandList = m_deviceResources->GetCommandList();
     auto commandQueue = m_deviceResources->GetCommandQueue();
     auto commandAllocator = m_deviceResources->GetCommandAllocator();
-
-    // ToDo remove?
-    auto Vec3ToXMFLOAT3 = [](SceneParser::Vector3 v)
-    {
-        return XMFLOAT3(v.x, v.y, v.z);
-    };
-
-    auto Vec3ToXMVECTOR = [](SceneParser::Vector3 v)
-    {
-        return XMLoadFloat3(&XMFLOAT3(v.x, v.y, v.z));
-    };
-
-    auto Vec3ToXMFLOAT2 = [](SceneParser::Vector2 v)
-    {
-        return XMFLOAT2(v.x, v.y);
-    };
-
-
-    // ToDo
-    //m_camera.Set(
-    //	Vec3ToXMVECTOR(m_pbrtScene.m_Camera.m_Position),
-    //	Vec3ToXMVECTOR(m_pbrtScene.m_Camera.m_LookAt),
-    //	Vec3ToXMVECTOR(m_pbrtScene.m_Camera.m_Up));
-    //m_camera.fov = 2 * m_pbrtScene.m_Camera.m_FieldOfView;   
-
-
+    
     PBRTScene pbrtSceneDefinitions[] = {
         {L"Spaceship", "Assets\\spaceship\\scene.pbrt"},
         {L"GroundPlane", "Assets\\groundplane\\scene.pbrt"},
@@ -231,13 +204,10 @@ void Scene::LoadPBRTScene()
 #endif
     };
 
-    // ToDo reuse a single resourceUpload during scene load
     ResourceUploadBatch resourceUpload(device);
     resourceUpload.Begin();
 
-    // ToDo
     bool isVertexAnimated = false;
-
     for (auto& pbrtSceneDefinition : pbrtSceneDefinitions)
     {
         SceneParser::Scene pbrtScene;
@@ -348,7 +318,9 @@ void Scene::LoadPBRTScene()
 
 
             if (cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f &&
-                // Mark fully reflective mirrors as non opaque so that AO rays skip them as occluders.
+                // WORKAROUND: to prevent perfect mirrors occluding nearby surfaces.
+                // Mark fully reflective mirrors as non opaque so that AO rays can skip them 
+                // as occluders by ignoring non-opaque geometry on TraceRay.
                 !(cb.type == MaterialType::Mirror && cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f))
             {
                 geometryFlags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
@@ -812,7 +784,7 @@ void Scene::GenerateGrassGeometry()
                         if (LOD > prevFrameLOD) transitionType = 0;
                         else if (LOD == prevFrameLOD) transitionType = 1;
                         else transitionType = 2;
-                        UINT NumShaderRecordsPerHitGroup = RayType::Count;
+                        UINT NumShaderRecordsPerHitGroup = PathtracerRayType::Count;
 
                         *outShaderRecordIndexOffset = baseShaderRecordID + (m_currentGrassPatchVBIndex * NumTransitionTypes + transitionType) * NumShaderRecordsPerHitGroup;
                     };
@@ -845,7 +817,6 @@ void Scene::UpdateAccelerationStructure()
         m_accelerationStructure->Build(commandList, m_cbvSrvUavHeap->GetHeap(), frameIndex, forceBuild);
     }
 
-    // ToDo we could use single structured buffer and use previous frame copy?
     // Copy previous frame Bottom Level AS instance transforms to GPU. 
     m_prevFrameBottomLevelASInstanceTransforms.CopyStagingToGpu(frameIndex);
 

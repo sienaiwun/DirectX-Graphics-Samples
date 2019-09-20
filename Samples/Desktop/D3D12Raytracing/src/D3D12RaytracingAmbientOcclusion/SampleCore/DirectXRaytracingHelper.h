@@ -58,7 +58,6 @@ public:
     PointerWithSize localRootArguments;
 };
 
-// ToDo move to d3dx12.h?
 // Shader table = {{ ShaderRecord 1}, {ShaderRecord 2}, ...}
 class ShaderTable : public GpuUploadBuffer
 {
@@ -110,32 +109,9 @@ public:
         wstr << L"| --------------------------------------------------------------------\n";
         wstr << L"\n";
 
-        // ToDo this won't print more than ~ 200 lines
         OutputDebugStringW(wstr.str().c_str());
     }
 };
-
-
-template<class T, size_t N>
-void DefineExports(T* obj, LPCWSTR(&Exports)[N])
-{
-    for (UINT i = 0; i < N; i++)
-    {
-        obj->DefineExport(Exports[i]);
-    }
-}
-
-
-// ToDO remove
-template<class T, size_t N, size_t M>
-void DefineExports(T* obj, LPCWSTR(&Exports)[N][M])
-{
-    for (UINT i = 0; i < N; i++)
-        for (UINT j = 0; j < M; j++)
-        {
-            obj->DefineExport(Exports[i][j]);
-        }
-}
 
 // Allocate buffer and fill with input data.
 inline void AllocateUploadBuffer(ID3D12Device5* pDevice, void *pData, UINT64 datasize, ID3D12Resource **ppResource, const wchar_t* resourceName = nullptr)

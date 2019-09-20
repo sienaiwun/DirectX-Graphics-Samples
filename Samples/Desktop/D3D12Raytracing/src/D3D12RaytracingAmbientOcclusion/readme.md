@@ -1,8 +1,10 @@
 # D3D12 Raytracing Ambient Occlusion sample
 ![D3D12 Ambient Occlusion GUI](Screenshot.png)
+ToDo video link
 
+This sample implements a real-time denoising of 1 ray per pixel (rpp) raytraced Ambient Occlusion. The sample assumes familiarity with Dx12 programming and DirectX Raytracing concepts introduced in the [D3D12 Raytracing Procedural Geometry sample](../D3D12RaytracingDProceduralGeometry/readme.md). 
 
-This sample demonstrates how to implement a Denoised Raytraced Ambient Occlusion in Real-Time. The sample assumes familiarity with Dx12 programming and DirectX Raytracing concepts introduced in the [D3D12 Raytracing Procedural Geometry sample](../D3D12RaytracingDProceduralGeometry/readme.md).
+ ToDo give a brief overview of the readme's contents.
 
 ToDo... 
 - Renamte to D3D12RaytracingRealTimeDenoisedRaytracedAmbientOcclusion
@@ -50,6 +52,8 @@ See the sideloaded License.txt next to each asset for further license informatio
 
 # Raytraced Ambient Occlusion (RTAO)
 
+## Sampling
+Spatial improvement by reusing a sample set for NxN (i.e. 8x8) pixels and randomly picking a sample.
 
 ## Denoiser
 ### Temporal Reprojection
@@ -94,10 +98,17 @@ Temporal reprojection needs to be able to find vertices of a triangle that was h
                 //      Transition from higher LOD in previous frame
 
 				
-### What's next
-THere are multiple opportunities to improve the denoiser further both quality and performance wise
+### Potential improvements
+There are multiple opportunities to improve the denoiser further both quality and performance wise
 Quality:
-* Denoiser
+* RTAO
+** Variable rate sampling. For example, adjust sampling depending on trpp of a pixel. Temporal reprojection can be run before current's frame AO raytracing and thus provide per pixel trpp.
 ** Use a better sampler that suffers less from sample clunking that's visible at raw visualition. For example [Correlated Multi-Jittered Sampling](http://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf)
-*** There's a potential to detect undersampled parts of the hemisphere in accumulated samples over time, and use a progressive sampling technique.
-* Upsampling could be improved to find better candidates from low res inputs. Either by increasing the 2x2 sampling quad and/or improving the depth test to test against expected depth at the source low-res sample offset rather than using a blanket target depth +/- threshold.
+*** There's a potential to detect undersampled parts of the hemisphere in accumulated samples over time and improve coverage, and use a progressive sampling technique for better aggregated sample coverage. This could be extended in the spatial domain as well. 
+* Denoiser
+** The denoising filter blurs more towards available/similar samples and overblurs when some side of the kernel is not applicable. For example, surface under a car tire, or ground under the corner of stairstep gets blurred more since the samples from the tire/steps don't apply and the result gets biased by the visible samples making those regions be brighter than they should.
+* Upsampling could be improved to find better candidates from low res inputs. Either by increasing the 2x2 sampling quad and/or improving the depth test to be more strict by testing against expected depth at the source low-res sample offset instead of the current test target depth +/- threshold.
+
+
+
+### What's next

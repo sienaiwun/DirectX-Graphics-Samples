@@ -75,7 +75,7 @@ float CalculateAdjustedDepthThreshold(
     float _d = d * _z / z;
 
 
-    float3 forwardRay = GenerateForwardCameraRayDirection(cb.projectionToWorldWithCameraEyeAtOrigin);
+    float3 forwardRay = GenerateForwardCameraRayDirection(cb.projectionToView);
     float3 _forwardRay = GenerateForwardCameraRayDirection(cb.prevProjectionToWorldWithCameraEyeAtOrigin);
 
     float alpha = acos(dot(normal, forwardRay));

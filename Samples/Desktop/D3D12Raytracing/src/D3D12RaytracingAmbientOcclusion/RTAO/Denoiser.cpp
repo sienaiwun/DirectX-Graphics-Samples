@@ -102,7 +102,7 @@ namespace Denoiser_Args
     BoolVar Denoising_LowTsppUseUAVReadWrite(L"Render/AO/RTAO/Denoising_/Low tspp filter/Use single UAV resource Read+Write", true);
     NumVar Denoising_LowTsppDecayConstant(L"Render/AO/RTAO/Denoising_/Low tspp filter/Decay constant", 1.0f, 0.1f, 32.f, 0.1f);
     BoolVar Denoising_LowTsppFillMissingValues(L"Render/AO/RTAO/Denoising_/Low tspp filter/Post-Temporal fill in missing values", true);
-    BoolVar Denoising_LowTsppUseNormalWeights(L"Render/AO/RTAO/Denoising_/Low tspp filter/Normal Weights/Enabled", false);
+    BoolVar Denoising_LowTsppUseNormalWeights(L"Render/AO/RTAO/Denoising_/Low tspp filter/Normal Weights/Enabled", false);  // ToDo: test & finetune
     NumVar Denoising_LowTsppMinNormalWeight(L"Render/AO/RTAO/Denoising_/Low tspp filter/Normal Weights/Min weight", 0.25f, 0.0f, 1.f, 0.05f);
     NumVar Denoising_LowTsppNormalExponent(L"Render/AO/RTAO/Denoising_/Low tspp filter/Normal Weights/Exponent", 4.0f, 1.0f, 32.f, 1.0f);
 
@@ -170,11 +170,10 @@ void Denoiser::CreateAuxilaryDeviceResources()
 }
 
 
-// ToDo explicitly pass required variables rather than use global access
 // Run() can be optionally called in two explicit stages. This can
 // be beneficial to retrieve temporally reprojected values 
-// and configure current frame raytracing off of that (such as vary rpp 
-// based on average ray hit distance or trpp).
+// and configure current frame AO raytracing off of that 
+// (such as vary rpp based on average ray hit distance or trpp).
 // Otherwise, all denoiser steps can be run via a single execute call.
 void Denoiser::Run(Scene& scene, Pathtracer& pathtracer, RTAO& rtao, DenoiseStage stage)
 {
@@ -248,8 +247,6 @@ void Denoiser::CreateTextureResources()
 
     // Variance resources
     {
-
-        // ToDo specialize formats instead of using a common one?
         {
             for (UINT i = 0; i < AOVarianceResource::Count; i++)
             {
@@ -260,8 +257,8 @@ void Denoiser::CreateTextureResources()
     }
 
     // ToDo remove obsolete resources, QuarterResAO event triggers this so we may not need all low/gbuffer width AO resources.
+    // ToDo rename Multi Pass to Disocclusion blur?
     CreateRenderTargetResource(device, DXGI_FORMAT_R8_UNORM, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_multiPassDenoisingBlurStrength, initialResourceState, L"Multi Pass Denoising Blur Strength");
-       
     CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_prevFrameGBufferNormalDepth, initialResourceState, L"Previous Frame GBuffer Normal Depth");
 }
 
@@ -280,10 +277,8 @@ void Denoiser::TemporalReverseReproject(Scene& scene, Pathtracer& pathtracer)
 
     UINT temporalCachePreviousFrameTemporalAOCoeficientResourceIndex = m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex;
     m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex = (m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex + 1) % 2;
-
-    // ToDo zero out caches on resource reset.
-
-    // ToDo
+    
+    // ToDo does this comment apply here, move it to the shader?
     // Calculate reverse projection transform T to the previous frame's screen space coordinates.
     //  xy(t-1) = xy(t) * T     // ToDo check mul order
     // The reverse projection transform consists:
@@ -292,17 +287,12 @@ void Denoiser::TemporalReverseReproject(Scene& scene, Pathtracer& pathtracer)
     //
     //  T = inverse(P(t)) * inverse(V(t)) * V(t-1) * P(t-1) 
     //      where P is a projection transform and V is a view transform. 
-    // Ref: ToDo
     auto& camera = scene.Camera();
     auto& prevFrameCamera = scene.PrevFrameCamera();
     XMMATRIX view, proj, prevView, prevProj;
     camera.GetProj(&proj, m_denoisingWidth, m_denoisingHeight);
     prevFrameCamera.GetProj(&prevProj, m_denoisingWidth, m_denoisingHeight);
 
-    // ToDO can we remove this or document.
-    // Calculate view matrix as if the camera was at (0,0,0) to avoid 
-    // precision issues when camera position is too far from (0,0,0).
-    // GenerateCameraRay takes this into consideration in the raytracing shader.
     view = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(camera.At() - camera.Eye(), 1), camera.Up());
     prevView = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(prevFrameCamera.At() - prevFrameCamera.Eye(), 1), prevFrameCamera.Up());
 
@@ -353,9 +343,7 @@ void Denoiser::TemporalReverseReproject(Scene& scene, Pathtracer& pathtracer)
         maxFrameAge,
         Denoiser_Args::Denoising_ExtraRaysToTraceSinceTemporalMovement);
 
-    // Transition output resources to SRV state.        
-    // ToDo use it as UAV in RTAO?
-    // Only the frame age is transitioned out of UAV state as it used in RTAO pass. 
+    // Transition output resources to SRV state.
     // All the others are used as input/output UAVs in 2nd stage of Temporal Supersampling.
     {
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -363,8 +351,9 @@ void Denoiser::TemporalReverseReproject(Scene& scene, Pathtracer& pathtracer)
         resourceStateTracker->InsertUAVBarrier(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge]);
     }
 
-    // ToDo test perf and ping-pong the resource instead of copy
+    // Cache the normal depth resource.
     {
+        // TODO: replace copy with using a source resource directly.
         CopyTextureRegion(
             commandList,
             GBufferResources[GBufferResource::SurfaceNormalDepth].GetResource(),
