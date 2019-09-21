@@ -12,8 +12,8 @@
 #define HLSL
 #include "RaytracingHlslCompat.h"
 
-Texture2D<float2> g_texInput : register(t0);
-RWTexture2D<float2> g_texOutput : register(u0);
+Texture2D<float2> g_input : register(t0);
+RWTexture2D<float2> g_output : register(u0);
 ConstantBuffer<TextureDimConstantBuffer> cb : register(b0);
 
 SamplerState MirroredLinearSampler : register(s0);
@@ -89,13 +89,13 @@ void main(uint2 DTid : SV_DispatchThreadID)
         float2(0.5, 0.5) + float2(-0.077847 / (0.077847 + 0.123317), 1) };
 
     float2 samples[4];
-    samples[0] = g_texInput.SampleLevel(MirroredLinearSampler, (DTid + offsets[0]) * cb.invTextureDim, 0);
-    samples[1] = g_texInput.SampleLevel(MirroredLinearSampler, (DTid + offsets[1]) * cb.invTextureDim, 0);
-    samples[2] = g_texInput.SampleLevel(MirroredLinearSampler, (DTid + offsets[2]) * cb.invTextureDim, 0);
-    samples[3] = g_texInput[DTid + 1];
+    samples[0] = g_input.SampleLevel(MirroredLinearSampler, (DTid + offsets[0]) * cb.invTextureDim, 0);
+    samples[1] = g_input.SampleLevel(MirroredLinearSampler, (DTid + offsets[1]) * cb.invTextureDim, 0);
+    samples[2] = g_input.SampleLevel(MirroredLinearSampler, (DTid + offsets[2]) * cb.invTextureDim, 0);
+    samples[3] = g_input[DTid + 1];
 
     float4 samplesR = float4(samples[0].x, samples[1].x, samples[2].x, samples[3].x);
     float4 samplesG = float4(samples[0].y, samples[1].y, samples[2].y, samples[3].y);
 
-    g_texOutput[DTid] = float2(dot(samplesR, weights), dot(samplesG, weights));
+    g_output[DTid] = float2(dot(samplesR, weights), dot(samplesG, weights));
 }

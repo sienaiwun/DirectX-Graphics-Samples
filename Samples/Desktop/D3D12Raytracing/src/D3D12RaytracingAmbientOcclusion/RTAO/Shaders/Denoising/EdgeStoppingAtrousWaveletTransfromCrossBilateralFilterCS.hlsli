@@ -20,14 +20,14 @@
 #include "RTAO/Shaders/RTAO.hlsli"
 
 
-Texture2D<float> g_inValues : register(t0);
+Texture2D<float> g_inValue : register(t0);
 
 Texture2D<NormalDepthTexFormat> g_inNormalDepth : register(t1);
 Texture2D<float> g_inVariance : register(t4); 
 Texture2D<float> g_inSmoothedVariance : register(t5); 
 Texture2D<float> g_inHitDistance : register(t6);
 Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);
-Texture2D<uint2> g_inTrpp : register(t8);
+Texture2D<uint> g_inTrpp : register(t8);
 
 RWTexture2D<float> g_outFilteredValues : register(u0);
 RWTexture2D<float> g_outFilteredVariance : register(u1);
@@ -97,7 +97,7 @@ void AddFilterContribution(
         float iDepth;
         float3 iNormal;
         DecodeNormalDepth(g_inNormalDepth[id], iNormal, iDepth);
-        float iValue = g_inValues[id];
+        float iValue = g_inValue[id];
 
         bool iIsValidValue = iValue != RTAO::InvalidAOValue;
         if (!iIsValidValue || iDepth == 0)
@@ -201,7 +201,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     }
 
     // Initialize values to the current pixel / center filter kernel value.
-    float value = g_inValues[DTid];
+    float value = g_inValue[DTid];
     float3 normal;
     float depth;
     DecodeNormalDepth(g_inNormalDepth[DTid], normal, depth);

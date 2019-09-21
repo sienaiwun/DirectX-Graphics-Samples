@@ -43,8 +43,8 @@ RWTexture2D<float4> g_rtColor : register(u19);
 RWTexture2D<float4> g_rtAOSurfaceAlbedo : register(u20);
 
 // ToDo remove
-RWTexture2D<float4> g_texOutputDebug1 : register(u21);
-RWTexture2D<float4> g_texOutputDebug2 : register(u22);
+RWTexture2D<float4> g_outputDebug1 : register(u21);
+RWTexture2D<float4> g_outputDebug2 : register(u22);
 
 TextureCube<float4> g_texEnvironmentMap : register(t12);
 ConstantBuffer<PathtracerConstantBuffer> g_cb : register(b0);

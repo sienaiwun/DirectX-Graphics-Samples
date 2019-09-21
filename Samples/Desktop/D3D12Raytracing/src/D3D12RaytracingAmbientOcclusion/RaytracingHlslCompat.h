@@ -41,6 +41,8 @@
     - Finetune
    - Fine tune min std dev tolerance in clamping
 
+   Glitches
+   - disocclussions on static geometry and camera around reflections
 
 - Cleanup:
     double check all CS for out of bounds.
@@ -56,12 +58,14 @@
     remove obsolete GPukernel vars
     remove RTAO_ from names in RTAO component
     remove obsolete composition modes
-    rename maxTrpp to tspp
+    rename maxTrpp to trpp
     RTAOGpuKernels use helper structs to pass the data in
     split gpu kernel file
     add UAV barriers
     prune redundant using namespace ...
      zero out caches on resource reset.
+    Test all UI parameters, finetune and set best limits
+    Test denoising quality at 60 and 100, 200+ FPS
 
 Documentation
     readme
@@ -112,8 +116,6 @@ typedef uint NormalDepthTexFormat;
 #else
 #define COMPACT_NORMAL_DEPTH_DXGI_FORMAT DXGI_FORMAT_R32_UINT
 #endif
-
-#define ENABLE_VSYNC 1
 
 #ifdef _DEBUG
 #define LOAD_ONLY_ONE_PBRT_MESH 1 

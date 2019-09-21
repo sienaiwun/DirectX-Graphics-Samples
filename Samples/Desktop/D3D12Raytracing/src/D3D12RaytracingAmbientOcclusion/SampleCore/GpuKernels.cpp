@@ -46,13 +46,13 @@ namespace GpuKernels
 		{
 			using namespace RootSignature::ReduceSum;
 
-			CD3DX12_DESCRIPTOR_RANGE ranges[2];
-			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
-			ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
+			CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
+			ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
+			ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
 
 			CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
-			rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[0]);
-			rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[1]);
+			rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
+			rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
 
 			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
 			SerializeAndCreateRootSignature(device, rootSignatureDesc, &m_rootSignature, L"Compute root signature: ReduceSum");
@@ -223,8 +223,7 @@ namespace GpuKernels
         namespace DownsampleGBufferDataBilateralFilter {
             namespace Slot {
                 enum Enum {
-                    Output = 0,
-                    OutputNormal,
+                    OutputNormal = 0,
                     OutputPosition,
                     OutputGeometryHit,
                     OutputPartialDistanceDerivative,
@@ -232,7 +231,6 @@ namespace GpuKernels
                     OutputPrevFrameHitPosition,
                     OutputDepth,
                     OutputSurfaceAlbedo,
-                    Input,
                     InputNormal,
                     InputPosition,
                     InputGeometryHit,
@@ -254,45 +252,41 @@ namespace GpuKernels
         {
             using namespace RootSignature::DownsampleGBufferDataBilateralFilter;
 
-            CD3DX12_DESCRIPTOR_RANGE ranges[18]; 
-            ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
-            ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);  // 1 input normal texture
-            ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);  // 1 input position texture
-            ranges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);  // 1 input geometry hit texture
-            ranges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);  // 1 input partial distance derivative
-            ranges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
-            ranges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);  // 1 output normal texture
-            ranges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);  // 1 output position texture
-            ranges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);  // 1 output geometry hit texture
-            ranges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);  // 1 output partial distance derivative
-            ranges[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  // 1 input depth
-            ranges[11].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);  // 1 output depth
-            ranges[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);  // 1 input motion vector
-            ranges[13].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 6);  // 1 output motion vector
-            ranges[14].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);  // 1 input previous frame hit position
-            ranges[15].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 7);  // 1 output previous frame hit position
-            ranges[16].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);  
-            ranges[17].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 8);  
+            CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; 
+            ranges[Slot::InputNormal].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);  // 1 input normal texture
+            ranges[Slot::InputPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);  // 1 input position texture
+            ranges[Slot::InputGeometryHit].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);  // 1 input geometry hit texture
+            ranges[Slot::InputPartialDistanceDerivative].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);  // 1 input partial distance derivative
+            ranges[Slot::OutputNormal].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);  // 1 output normal texture
+            ranges[Slot::OutputPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);  // 1 output position texture
+            ranges[Slot::OutputGeometryHit].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);  // 1 output geometry hit texture
+            ranges[Slot::OutputPartialDistanceDerivative].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);  // 1 output partial distance derivative
+            ranges[Slot::InputDepth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  // 1 input depth
+            ranges[Slot::OutputDepth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);  // 1 output depth
+            ranges[Slot::InputMotionVector].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);  // 1 input motion vector
+            ranges[Slot::OutputMotionVector].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 6);  // 1 output motion vector
+            ranges[Slot::InputPrevFrameHitPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);  // 1 input previous frame hit position
+            ranges[Slot::OutputPrevFrameHitPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 7);  // 1 output previous frame hit position
+            ranges[Slot::InputSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
+            ranges[Slot::OutputSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 8);
         
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
-            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[0]);
-            rootParameters[Slot::InputNormal].InitAsDescriptorTable(1, &ranges[1]);
-            rootParameters[Slot::InputPosition].InitAsDescriptorTable(1, &ranges[2]);
-            rootParameters[Slot::InputGeometryHit].InitAsDescriptorTable(1, &ranges[3]);
-            rootParameters[Slot::InputPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[4]);
-            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[5]);
-            rootParameters[Slot::OutputNormal].InitAsDescriptorTable(1, &ranges[6]);
-            rootParameters[Slot::OutputPosition].InitAsDescriptorTable(1, &ranges[7]);
-            rootParameters[Slot::OutputGeometryHit].InitAsDescriptorTable(1, &ranges[8]);
-            rootParameters[Slot::OutputPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[9]);
-            rootParameters[Slot::InputDepth].InitAsDescriptorTable(1, &ranges[10]);
-            rootParameters[Slot::OutputDepth].InitAsDescriptorTable(1, &ranges[11]);
-            rootParameters[Slot::InputMotionVector].InitAsDescriptorTable(1, &ranges[12]);
-            rootParameters[Slot::OutputMotionVector].InitAsDescriptorTable(1, &ranges[13]);
-            rootParameters[Slot::InputPrevFrameHitPosition].InitAsDescriptorTable(1, &ranges[14]);
-            rootParameters[Slot::OutputPrevFrameHitPosition].InitAsDescriptorTable(1, &ranges[15]);
-            rootParameters[Slot::InputSurfaceAlbedo].InitAsDescriptorTable(1, &ranges[16]);
-            rootParameters[Slot::OutputSurfaceAlbedo].InitAsDescriptorTable(1, &ranges[17]);
+            rootParameters[Slot::InputNormal].InitAsDescriptorTable(1, &ranges[Slot::InputNormal]);
+            rootParameters[Slot::InputPosition].InitAsDescriptorTable(1, &ranges[Slot::InputPosition]);
+            rootParameters[Slot::InputGeometryHit].InitAsDescriptorTable(1, &ranges[Slot::InputGeometryHit]);
+            rootParameters[Slot::InputPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[Slot::InputPartialDistanceDerivative]);
+            rootParameters[Slot::OutputNormal].InitAsDescriptorTable(1, &ranges[Slot::OutputNormal]);
+            rootParameters[Slot::OutputPosition].InitAsDescriptorTable(1, &ranges[Slot::OutputPosition]);
+            rootParameters[Slot::OutputGeometryHit].InitAsDescriptorTable(1, &ranges[Slot::OutputGeometryHit]);
+            rootParameters[Slot::OutputPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[Slot::OutputPartialDistanceDerivative]);
+            rootParameters[Slot::InputDepth].InitAsDescriptorTable(1, &ranges[Slot::InputDepth]);
+            rootParameters[Slot::OutputDepth].InitAsDescriptorTable(1, &ranges[Slot::OutputDepth]);
+            rootParameters[Slot::InputMotionVector].InitAsDescriptorTable(1, &ranges[Slot::InputMotionVector]);
+            rootParameters[Slot::OutputMotionVector].InitAsDescriptorTable(1, &ranges[Slot::OutputMotionVector]);
+            rootParameters[Slot::InputPrevFrameHitPosition].InitAsDescriptorTable(1, &ranges[Slot::InputPrevFrameHitPosition]);
+            rootParameters[Slot::OutputPrevFrameHitPosition].InitAsDescriptorTable(1, &ranges[Slot::OutputPrevFrameHitPosition]);
+            rootParameters[Slot::InputSurfaceAlbedo].InitAsDescriptorTable(1, &ranges[Slot::InputSurfaceAlbedo]);
+            rootParameters[Slot::OutputSurfaceAlbedo].InitAsDescriptorTable(1, &ranges[Slot::OutputSurfaceAlbedo]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
             CD3DX12_STATIC_SAMPLER_DESC staticSamplers[] = {
@@ -406,19 +400,19 @@ namespace GpuKernels
         {
             using namespace RootSignature::UpsampleBilateralFilter;
 
-            CD3DX12_DESCRIPTOR_RANGE ranges[5]; 
-            ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
-            ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);  // 1 input normal low res texture
-            ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);  // 1 input normal high res texture
-            ranges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);  // 1 input partial distance derivative texture
-            ranges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
+            CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
+            ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
+            ranges[Slot::InputLowResNormal].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);  // 1 input normal low res texture
+            ranges[Slot::InputHiResNormal].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);  // 1 input normal high res texture
+            ranges[Slot::InputHiResPartialDistanceDerivative].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);  // 1 input partial distance derivative texture
+            ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
 
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
-            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[0]);
-            rootParameters[Slot::InputLowResNormal].InitAsDescriptorTable(1, &ranges[1]);
-            rootParameters[Slot::InputHiResNormal].InitAsDescriptorTable(1, &ranges[2]);
-            rootParameters[Slot::InputHiResPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[3]);
-            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[4]);
+            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
+            rootParameters[Slot::InputLowResNormal].InitAsDescriptorTable(1, &ranges[Slot::InputLowResNormal]);
+            rootParameters[Slot::InputHiResNormal].InitAsDescriptorTable(1, &ranges[Slot::InputHiResNormal]);
+            rootParameters[Slot::InputHiResPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[Slot::InputHiResPartialDistanceDerivative]);
+            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
             CD3DX12_STATIC_SAMPLER_DESC staticSamplers[] = {
@@ -525,13 +519,13 @@ namespace GpuKernels
         {
             using namespace RootSignature::CalculatePartialDerivatives;
 
-            CD3DX12_DESCRIPTOR_RANGE ranges[2];
-            ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // input values
-            ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // output filtered values
+            CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
+            ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // input values
+            ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // output filtered values
 
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
-            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[0]);
-            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[1]);
+            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
+            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
             CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);

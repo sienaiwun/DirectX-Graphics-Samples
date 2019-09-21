@@ -15,7 +15,7 @@
 #include "RaytracingHlslCompat.h"
 #include "RaytracingShaderHelper.hlsli"
 
-Texture2D<float> g_inValues : register(t0);
+Texture2D<float> g_inValue : register(t0);
 RWTexture2D<float2> g_outMeanVariance : register(u0);
 
 ConstantBuffer<CalculateMeanVarianceConstantBuffer> cb: register(b0);
@@ -38,7 +38,7 @@ groupshared float SquaredValueSumCache[256];
 
 void LoadToSharedMemory(UINT smemIndex, int2 pixel)
 {
-    VCache[smemIndex] = g_inValues[pixel];
+    VCache[smemIndex] = g_inValue[pixel];
 }
 
 void PrefetchData(uint index, int2 ST)

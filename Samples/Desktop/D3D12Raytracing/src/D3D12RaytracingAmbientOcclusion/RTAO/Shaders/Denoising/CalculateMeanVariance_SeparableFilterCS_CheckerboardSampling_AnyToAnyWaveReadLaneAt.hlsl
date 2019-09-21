@@ -27,7 +27,7 @@
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO/Shaders/RTAO.hlsli"
 
-Texture2D<float> g_inValues : register(t0);
+Texture2D<float> g_inValue : register(t0);
 RWTexture2D<float2> g_outMeanVariance : register(u0);
 
 RWTexture2D<float4> g_outDebug1 : register(u3);
@@ -88,7 +88,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
         // However, we need to keep it as an active lane for a below split sum.
         if (GTid4x16.x < NumValuesToLoadPerRowOrColumn && IsWithinBounds(pixel, cb.textureDim))
         {
-            value = g_inValues[pixel];
+            value = g_inValue[pixel];
         }
 
         // Filter the values for the first GroupDim columns.

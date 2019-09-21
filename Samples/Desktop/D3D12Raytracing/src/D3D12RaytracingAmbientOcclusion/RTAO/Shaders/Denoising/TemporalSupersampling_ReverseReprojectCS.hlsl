@@ -21,22 +21,22 @@
 
 // ToDo some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
 // ToDo sharp edges fail temporal reprojection due to clamping even for static scene
-Texture2D<NormalDepthTexFormat> g_texInputCurrentFrameNormalDepth : register(t0);
-Texture2D<float2> g_texInputCurrentFrameLinearDepthDerivative : register(t1);
-Texture2D<NormalDepthTexFormat> g_texInputReprojectedNormalDepth : register(t2); 
-Texture2D<float2> g_texInputTextureSpaceMotionVector : register(t3);
-Texture2D<NormalDepthTexFormat> g_texInputCachedNormalDepth : register(t4);
-Texture2D<float> g_texInputCachedValue : register(t5);
-Texture2D<uint2> g_texInputCachedTrpp : register(t6);
-Texture2D<float> g_texInputCachedValueSquaredMean : register(t7);
-Texture2D<float> g_texInputCachedRayHitDepth : register(t8);
+Texture2D<NormalDepthTexFormat> g_inCurrentFrameNormalDepth : register(t0);
+Texture2D<float2> g_inCurrentFrameLinearDepthDerivative : register(t1);
+Texture2D<NormalDepthTexFormat> g_inReprojectedNormalDepth : register(t2); 
+Texture2D<float2> g_inTextureSpaceMotionVector : register(t3);
+Texture2D<NormalDepthTexFormat> g_inCachedNormalDepth : register(t4);
+Texture2D<float> g_inCachedValue : register(t5);
+Texture2D<uint2> g_inCachedTrpp : register(t6);
+Texture2D<float> g_inCachedValueSquaredMean : register(t7);
+Texture2D<float> g_inCachedRayHitDepth : register(t8);
 
 
-RWTexture2D<uint2> g_texOutputCachedTrpp : register(u0);
-RWTexture2D<uint4> g_texOutputReprojectedCachedValues : register(u1);
+RWTexture2D<uint> g_outCachedTrpp : register(u0);
+RWTexture2D<uint4> g_outReprojectedCachedValues : register(u1);
 
-RWTexture2D<float4> g_texOutputDebug1 : register(u10);
-RWTexture2D<float4> g_texOutputDebug2 : register(u11);
+RWTexture2D<float4> g_outDebug1 : register(u10);
+RWTexture2D<float4> g_outDebug2 : register(u11);
 
 ConstantBuffer<TemporalSupersampling_ReverseReprojectConstantBuffer> cb : register(b0);
 SamplerState ClampSampler : register(s0);
@@ -147,14 +147,14 @@ void main(uint2 DTid : SV_DispatchThreadID)
 {
     float3 _normal;
     float _depth;
-    DecodeNormalDepth(g_texInputReprojectedNormalDepth[DTid], _normal, _depth);
-    float2 textureSpaceMotionVector = g_texInputTextureSpaceMotionVector[DTid];
+    DecodeNormalDepth(g_inReprojectedNormalDepth[DTid], _normal, _depth);
+    float2 textureSpaceMotionVector = g_inTextureSpaceMotionVector[DTid];
 
-    //g_texOutputDebug1[DTid] = float4(_normal, _depth);
+    //g_outDebug1[DTid] = float4(_normal, _depth);
     // ToDo compare against common predefined value
     if (_depth == 0 || textureSpaceMotionVector.x > 1e2f)
     {
-        g_texOutputCachedTrpp[DTid] = 0;
+        g_outCachedTrpp[DTid] = 0;
         return;
     }
 
@@ -181,7 +181,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     float3 cacheNormals[4];
     float4 vCacheDepths;
     {
-        uint4 packedEncodedNormalDepths = g_texInputCachedNormalDepth.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+        uint4 packedEncodedNormalDepths = g_inCachedNormalDepth.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
         [unroll]
         for (int i = 0; i < 4; i++)
         {
@@ -189,7 +189,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         }
     }
 
-    float2 dxdy = g_texInputCurrentFrameLinearDepthDerivative[DTid];
+    float2 dxdy = g_inCurrentFrameLinearDepthDerivative[DTid];
 
     // ToDo retest/finetune depth testing. Moving car back and forth fails. Needs world space Depth & depth sigma of 2+.
     /*
@@ -199,7 +199,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     float  ddxy = dot(1, dxdy);
         float3 normal;
         float depth;
-        DecodeNormalDepth(g_texInputCurrentFrameNormalDepth[DTid], normal, depth);
+        DecodeNormalDepth(g_inCurrentFrameNormalDepth[DTid], normal, depth);
         cacheDdxy = CalculateAdjustedDepthThreshold(ddxy, depth, _depth, normal, _normal);
     }
     */
@@ -208,9 +208,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
     weights = BilateralResampleWeights(_depth, _normal, vCacheDepths, cacheNormals, cachePixelOffset, DTid, cacheIndices, dxdy);
     
     // Invalidate weights for invalid values in the cache.
-    float4 vCacheValues = g_texInputCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+    float4 vCacheValues = g_inCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
     weights = vCacheValues != RTAO::InvalidAOValue ? weights : 0;
-    //g_texOutputDebug1[DTid] = weights;
+    //g_outDebug1[DTid] = weights;
     float weightSum = dot(1, weights);
     
     float cachedValue = RTAO::InvalidAOValue;
@@ -237,7 +237,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     UINT numRaysToGenerate;
     if (areCacheValuesValid)
     {
-        uint4 vCachedTrpp = g_texInputCachedTrpp.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+        uint4 vCachedTrpp = g_inCachedTrpp.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
         // Enforce frame age of at least 1 for reprojection for valid values.
         // This is because the denoiser will fill in invalid values with filtered 
         // ones if it can. But it doesn't increase frame age.
@@ -246,8 +246,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
         float4 nWeights = weights / weightSum;   // Normalize the weights.
 
-       // g_texOutputDebug1[DTid] = float4(weights.xyz, weightSum);
-       // g_texOutputDebug2[DTid] = nWeights;
+       // g_outDebug1[DTid] = float4(weights.xyz, weightSum);
+       // g_outDebug2[DTid] = nWeights;
 
         // ToDo revisit this and potentially make it UI adjustable - weight ^ 2 ?,...
         // Scale the frame age by the total weight. This is to keep the frame age low for 
@@ -272,7 +272,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
             else // pass-through the value in the cache
             {
                 uint2 pixelIndex = floor(texturePos * cb.textureDim - 0.5);
-                numRaysToGenerate = g_texInputCachedTrpp[pixelIndex].y;
+                numRaysToGenerate = g_inCachedTrpp[pixelIndex].y;
             }
         }
         else
@@ -283,16 +283,16 @@ void main(uint2 DTid : SV_DispatchThreadID)
         // ToDo move this to a separate pass?
         if (Trpp > 0)
         {
-            float4 vCacheValues = g_texInputCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+            float4 vCacheValues = g_inCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
             cachedValue = dot(nWeights, vCacheValues);
 
-            float4 vCachedValueSquaredMean = g_texInputCachedValueSquaredMean.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+            float4 vCachedValueSquaredMean = g_inCachedValueSquaredMean.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
             cachedValueSquaredMean = dot(nWeights, vCachedValueSquaredMean);
 
-            float4 vCachedRayHitDepths = g_texInputCachedRayHitDepth.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+            float4 vCachedRayHitDepths = g_inCachedRayHitDepth.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
             cachedRayHitDepth = dot(nWeights, vCachedRayHitDepths);
-            g_texOutputDebug1[DTid] = nWeights;
-            g_texOutputDebug1[DTid] = vCachedRayHitDepths;
+            g_outDebug1[DTid] = nWeights;
+            g_outDebug1[DTid] = vCachedRayHitDepths;
         }
 
     }
@@ -303,9 +303,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
         numRaysToGenerate = cb.maxTrpp;
         Trpp = 0;
     }
-
-    uint packedTrppRaysToGenerate = Pack_R8G8_to_R16_UINT(Trpp, numRaysToGenerate);
-
-    g_texOutputCachedTrpp[DTid] = uint2(Trpp, numRaysToGenerate);
-    g_texOutputReprojectedCachedValues[DTid] = uint4(packedTrppRaysToGenerate, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
+    g_outCachedTrpp[DTid] = Trpp;
+    g_outReprojectedCachedValues[DTid] = uint4(Trpp, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
 }

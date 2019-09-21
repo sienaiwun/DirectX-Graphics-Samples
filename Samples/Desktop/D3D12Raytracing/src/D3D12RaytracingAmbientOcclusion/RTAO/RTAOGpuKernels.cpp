@@ -52,13 +52,13 @@ namespace RTAOGpuKernels
         {
             using namespace RootSignature::GaussianFilter;
 
-            CD3DX12_DESCRIPTOR_RANGE ranges[2];
-            ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
-            ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
+            CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
+            ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
+            ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
 
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
-            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[0]);
-            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[1]);
+            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
+            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
             CD3DX12_STATIC_SAMPLER_DESC staticSampler(0, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_MIRROR, D3D12_TEXTURE_ADDRESS_MODE_MIRROR);
@@ -1040,8 +1040,8 @@ namespace RTAOGpuKernels
         float clampDifferenceToTrppScale,
         GpuResource debugResources[2],
         UINT numFramesToDenoiseAfterLastTracedRay,
-        UINT lowTsppBlurStrengthMaxTrpp,
-        float lowTsppBlurStrengthDecayConstant,
+        UINT lowTrppBlurStrengthMaxTrpp,
+        float lowTrppBlurStrengthDecayConstant,
         bool doCheckerboardSampling,
         bool checkerboardLoadEvenPixels)
     {
@@ -1060,8 +1060,8 @@ namespace RTAOGpuKernels
         m_CB->minTrppToUseTemporalVariance = minTrppToUseTemporalVariance;
         m_CB->clampDifferenceToTrppScale = clampDifferenceToTrppScale;
         m_CB->numFramesToDenoiseAfterLastTracedRay = numFramesToDenoiseAfterLastTracedRay;
-        m_CB->blurStrength_MaxTrpp = lowTsppBlurStrengthMaxTrpp;
-        m_CB->blurDecayStrength = lowTsppBlurStrengthDecayConstant;
+        m_CB->blurStrength_MaxTrpp = lowTrppBlurStrengthMaxTrpp;
+        m_CB->blurDecayStrength = lowTrppBlurStrengthDecayConstant;
         m_CB->doCheckerboardSampling = doCheckerboardSampling;
         m_CB->areEvenPixelsActive = checkerboardLoadEvenPixels;
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();

@@ -77,6 +77,12 @@ void DXSample::ParseCommandLineArgs(WCHAR* argv[], int argc)
             m_adapterIDoverride = _wtoi(argv[i + 1]);
             i++;
         }
+        // -vsync
+        else if (_wcsnicmp(argv[i], L"-vsync", wcslen(argv[i])) == 0 ||
+            _wcsnicmp(argv[i], L"/vsync", wcslen(argv[i])) == 0)
+        {
+            m_syncInterval = 1;
+        }
     }
 
 }

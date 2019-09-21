@@ -7,6 +7,9 @@ This sample implements a real-time denoising of 1 ray per pixel (rpp) raytraced 
  ToDo give a brief overview of the readme's contents.
  The sample layout (files + project) is partitioned into RTAO (raytracing + denoising) and the rest of the sample. This makes it easy for copy&pasting RTAO code out into your projects and integrate it.
 
+Goal:
+- real-time denoised raytraced ambient occlusion at 60+ FPS. Add comment about lower FPS scenarios.
+
 ToDo... 
 - Renamte to D3D12RaytracingRealTimeDenoisedRaytracedAmbientOcclusion
 - Capitatlization
@@ -17,7 +20,8 @@ ToDo
 
 D3D12RaytracingAmbientOcclusion.exe [...]
   * [-forceAdapter \<ID>] - create a D3D12 device on an adapter <ID>. Defaults to adapter 0.
-
+  * [-vsync] - renders with VSync enabled.
+ 
 ### UI
 The title bar of the sample provides runtime information:
 * Name of the sample

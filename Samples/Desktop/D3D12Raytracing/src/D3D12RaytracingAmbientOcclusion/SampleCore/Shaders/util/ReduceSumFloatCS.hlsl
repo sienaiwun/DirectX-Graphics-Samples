@@ -13,8 +13,8 @@
 #define HLSL
 #include "RaytracingHlslCompat.h"
 
-Texture2D<float> g_texInput : register(t0);
-RWTexture2D<float> g_texOutput : register(u0);
+Texture2D<float> g_input : register(t0);
+RWTexture2D<float> g_output : register(u0);
 
 groupshared float gShared[ReduceSumCS::ThreadGroup::Size];
 
@@ -30,7 +30,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint GIndex: SV_GroupIndex, uint2 Gi
 	uint2 index = DTid + uint2(Gid.x * ((ReduceSumCS::ThreadGroup::NumElementsToLoadPerThread - 1) * ReduceSumCS::ThreadGroup::Width), 0);
 	for (UINT i = 0; i < ReduceSumCS::ThreadGroup::NumElementsToLoadPerThread; i++)
 	{
-		sum += g_texInput[index];
+		sum += g_input[index];
 		index += uint2(ReduceSumCS::ThreadGroup::Width, 0);
 	}
 
@@ -58,6 +58,6 @@ void main(uint2 DTid : SV_DispatchThreadID, uint GIndex: SV_GroupIndex, uint2 Gi
 	// Write out summed result for each thread group.
 	if (GIndex == 0)
 	{
-		g_texOutput[Gid] = sum;
+		g_output[Gid] = sum;
 	}
 }

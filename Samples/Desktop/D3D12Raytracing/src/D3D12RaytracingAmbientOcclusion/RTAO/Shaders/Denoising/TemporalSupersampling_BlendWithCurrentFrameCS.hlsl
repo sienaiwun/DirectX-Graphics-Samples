@@ -14,37 +14,30 @@
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO\Shaders\RTAO.hlsli"
 
-Texture2D<float> g_texInputCurrentFrameValue : register(t0);
-Texture2D<float2> g_texInputCurrentFrameLocalMeanVariance : register(t1);
-Texture2D<float> g_texInputCurrentFrameRayHitDistance : register(t2);
-Texture2D<uint4> g_texInputReprojected_Trpp_Value_SquaredMeanValue_RayHitDistance : register(t3);
+// ToDo remove tex
+Texture2D<float> g_inCurrentFrameValue : register(t0);
+Texture2D<float2> g_inCurrentFrameLocalMeanVariance : register(t1);
+Texture2D<float> g_inCurrentFrameRayHitDistance : register(t2);
+Texture2D<uint4> g_inReprojected_Trpp_Value_SquaredMeanValue_RayHitDistance : register(t3);
 
-RWTexture2D<float> g_texInputOutputValue : register(u0);
-RWTexture2D<uint2> g_texInputOutputTrpp : register(u1);
-RWTexture2D<float> g_texInputOutputSquaredMeanValue : register(u2);
-RWTexture2D<float> g_texInputOutputRayHitDistance : register(u3);
-RWTexture2D<float> g_texOutputVariance : register(u4);
-RWTexture2D<float> g_texOutputBlurStrength: register(u5);
+RWTexture2D<float> g_inOutValue : register(u0);
+RWTexture2D<uint> g_inOutTrpp : register(u1);
+RWTexture2D<float> g_inOutSquaredMeanValue : register(u2);
+RWTexture2D<float> g_inOutRayHitDistance : register(u3);
+RWTexture2D<float> g_outVariance : register(u4);
+RWTexture2D<float> g_outBlurStrength: register(u5);
 
-RWTexture2D<float4> g_texOutputDebug1 : register(u10);
-RWTexture2D<float4> g_texOutputDebug2 : register(u11);
+RWTexture2D<float4> g_outDebug1 : register(u10);
+RWTexture2D<float4> g_outDebug2 : register(u11);
 
 ConstantBuffer<TemporalSupersampling_BlendWithCurrentFrameConstantBuffer> cb : register(b0);
 
 [numthreads(DefaultComputeShaderParams::ThreadGroup::Width, DefaultComputeShaderParams::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID)
 {
-    uint4 encodedCachedValues = g_texInputReprojected_Trpp_Value_SquaredMeanValue_RayHitDistance[DTid];
-    uint packedTrppRaysToGenerate = encodedCachedValues.x;
-    uint Trpp;
-    uint numRaysToGenerateOrDenoisePasses;
-    Unpack_R16_to_R8G8_UINT(packedTrppRaysToGenerate, Trpp, numRaysToGenerateOrDenoisePasses);
-
-    // ToDo remove
-    bool isRayCountValue = !(numRaysToGenerateOrDenoisePasses & 0x80);
-    uint numRaysToGenerate = isRayCountValue ? numRaysToGenerateOrDenoisePasses : 0;
-    uint numDenoisePasses = 0x7F & numRaysToGenerateOrDenoisePasses;
-
+    uint4 encodedCachedValues = g_inReprojected_Trpp_Value_SquaredMeanValue_RayHitDistance[DTid];
+    uint Trpp = encodedCachedValues.x;
+    
     float4 cachedValues = float4(Trpp, f16tof32(encodedCachedValues.yzw));
 
     bool isCurrentFrameRayActive = true;
@@ -54,7 +47,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         isCurrentFrameRayActive = cb.areEvenPixelsActive == isEvenPixel;
     }
 
-    float value = isCurrentFrameRayActive ? g_texInputCurrentFrameValue[DTid] : RTAO::InvalidAOValue;
+    float value = isCurrentFrameRayActive ? g_inCurrentFrameValue[DTid] : RTAO::InvalidAOValue;
     bool isValidValue = value != RTAO::InvalidAOValue;
     float valueSquaredMean = isValidValue ? value * value : RTAO::InvalidAOValue;
     float rayHitDistance = RTAO::InvalidAOValue;
@@ -67,7 +60,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
         float cachedValue = cachedValues.y;
 
-        float2 localMeanVariance = g_texInputCurrentFrameLocalMeanVariance[DTid];
+        float2 localMeanVariance = g_inCurrentFrameLocalMeanVariance[DTid];
         float localMean = localMeanVariance.x;
         float localVariance = localMeanVariance.y;
         if (cb.clampCachedValues)
@@ -106,7 +99,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         variance = max(0.1, variance);
 
         // RayHitDistance.
-        rayHitDistance = isValidValue ? g_texInputCurrentFrameRayHitDistance[DTid] : 0; // ToDO use a common const.
+        rayHitDistance = isValidValue ? g_inCurrentFrameRayHitDistance[DTid] : 0; // ToDO use a common const.
         float cachedRayHitDistance = cachedValues.w;
         rayHitDistance = isValidValue ? lerp(cachedRayHitDistance, rayHitDistance, a) : cachedRayHitDistance;
 
@@ -119,19 +112,18 @@ void main(uint2 DTid : SV_DispatchThreadID)
         Trpp = 1;
         value = value;
 
-        rayHitDistance = g_texInputCurrentFrameRayHitDistance[DTid];
-        variance = g_texInputCurrentFrameLocalMeanVariance[DTid].y;
+        rayHitDistance = g_inCurrentFrameRayHitDistance[DTid];
+        variance = g_inCurrentFrameLocalMeanVariance[DTid].y;
         valueSquaredMean = valueSquaredMean;
     }
-    numRaysToGenerateOrDenoisePasses = 33;  // ToDo remove
 
     float TrppRatio = min(Trpp, cb.blurStrength_MaxTrpp) / float(cb.blurStrength_MaxTrpp);
     float blurStrength = pow(1 - TrppRatio, cb.blurDecayStrength);
 
-    g_texInputOutputTrpp[DTid] = uint2(Trpp, numRaysToGenerateOrDenoisePasses);
-    g_texInputOutputValue[DTid] = value;
-    g_texInputOutputSquaredMeanValue[DTid] = valueSquaredMean;
-    g_texInputOutputRayHitDistance[DTid] = rayHitDistance;
-    g_texOutputVariance[DTid] = variance; 
-    g_texOutputBlurStrength[DTid] = blurStrength;
+    g_inOutTrpp[DTid] = Trpp;
+    g_inOutValue[DTid] = value;
+    g_inOutSquaredMeanValue[DTid] = valueSquaredMean;
+    g_inOutRayHitDistance[DTid] = rayHitDistance;
+    g_outVariance[DTid] = variance; 
+    g_outBlurStrength[DTid] = blurStrength;
 }

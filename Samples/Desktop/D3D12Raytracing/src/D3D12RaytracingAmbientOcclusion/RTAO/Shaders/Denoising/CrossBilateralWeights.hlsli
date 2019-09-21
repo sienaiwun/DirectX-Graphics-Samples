@@ -118,7 +118,7 @@ namespace CrossBilateral
 
         float fEpsilon = 1e-6 * TargetDepth;
         depthWeights = min(vDepthTolerances / (abs(SampleDepths - vExpectedDepths) + fEpsilon), 1);
-        //g_texOutputDebug2[TargetIndex] = depthWeights;
+        //g_outputDebug2[TargetIndex] = depthWeights;
         // ToDo Should there be a Depth falloff with a cutoff below 1?
         // ToDo revise the coefficient
         depthWeights *= depthWeights >= 0.5;   // ToDo revise - this is same as comparing to depth tolerance

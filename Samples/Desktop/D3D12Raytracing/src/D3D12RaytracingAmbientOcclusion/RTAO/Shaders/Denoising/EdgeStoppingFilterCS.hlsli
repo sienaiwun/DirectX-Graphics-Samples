@@ -15,7 +15,7 @@ ToDo fix or remove
 #include "RaytracingShaderHelper.hlsli"
 #include "Kernels.hlsli"
 
-Texture2D<float> g_inValues : register(t0); // ToDo input is 3841x2161 instead of 2160p..
+Texture2D<float> g_inValue : register(t0); // ToDo input is 3841x2161 instead of 2160p..
 
 Texture2D<NormalDepthTexFormat> g_inNormalDepth : register(t1);
 Texture2D<float> g_inVariance : register(t4);   // ToDo remove
@@ -80,7 +80,7 @@ void AddFilterContribution(
 
     if (IsWithinBounds(id, cb.textureDim))
     {
-        float iValue = g_inValues[id];
+        float iValue = g_inValue[id];
         float iVariance = g_inVariance[id];
         float3 iNormal;
         float iDepth;
@@ -158,7 +158,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         return;
 
     // Initialize values to the current pixel / center filter kernel value.
-    float value = g_inValues[DTid];
+    float value = g_inValue[DTid];
     float4 packedNormalDepth = g_inNormalDepth[DTid];
     float3 normal = DecodeNormal(packedNormalDepth.xy);
     float depth = packedNormalDepth.z;

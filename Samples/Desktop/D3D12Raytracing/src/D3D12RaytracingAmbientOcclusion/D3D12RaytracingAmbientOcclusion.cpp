@@ -55,18 +55,19 @@ namespace Sample
 
     void D3D12RaytracingAmbientOcclusion::OnInit()
     {
+        UINT flags =
+            m_syncInterval > 0
+            ? 0
+            // Sample shows handling of use cases with tearing support, which is OS dependent and has been supported since TH2.
+            // Since the DXR requires October 2018 update, we don't need to handle non-tearing cases.
+            : DeviceResources::c_RequireTearingSupport;
+
         m_deviceResources = make_shared<DeviceResources>(
             DXGI_FORMAT_R8G8B8A8_UNORM,
             DXGI_FORMAT_UNKNOWN,
             FrameCount,
             D3D_FEATURE_LEVEL_11_0,
-#if ENABLE_VSYNC
-            0,
-#else
-            // Sample shows handling of use cases with tearing support, which is OS dependent and has been supported since TH2.
-            // Since the DXR requires October 2018 update, we don't need to handle non-tearing cases.
-            DeviceResources::c_RequireTearingSupport,
-#endif
+            flags,
             m_adapterIDoverride
             );
         m_deviceResources->RegisterDeviceNotify(this);
@@ -381,7 +382,7 @@ namespace Sample
                         L"RenderPass_TemporalSupersamplingBlendWithCurrentFrame",
                         L"DenoiseAO",
                         L"Upsample AO",
-                        L"Low-Tspp Multi-pass blur"
+                        L"Low-Trpp Multi-pass blur"
                 };
 
                 wstring line;
@@ -575,11 +576,7 @@ namespace Sample
             m_uiLayer->Render(m_deviceResources->GetCurrentFrameIndex());
         }
 
-#if ENABLE_VSYNC
-        m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT, 1);
-#else
-        m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT, 0);
-#endif
+        m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT, m_syncInterval);
     }
 
 

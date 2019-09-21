@@ -290,8 +290,8 @@ namespace RTAOGpuKernels
             float clampDifferenceToTrppScale,   // ToDo remove?
             GpuResource debugResources[2],
             UINT numFramesToDenoiseAfterLastTracedRay,
-            UINT lowTsppBlurStrengthMaxTrpp,
-            float lowTsppBlurStrengthDecayConstant,
+            UINT lowTrppBlurStrengthMaxTrpp,
+            float lowTrppBlurStrengthDecayConstant,
             bool doCheckerboardSampling = false,
             bool checkerboardLoadEvenPixels = false);
 

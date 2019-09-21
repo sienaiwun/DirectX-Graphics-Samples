@@ -25,7 +25,7 @@
 #define GAUSSIAN_KERNEL_3X3
 #include "Kernels.hlsli"
 
-Texture2D<float> g_inValues : register(t0);
+Texture2D<float> g_inValue : register(t0);
 Texture2D<NormalDepthTexFormat> g_inNormalDepth : register(t1);
 Texture2D<float> g_inBlurStrength: register(t2);
 RWTexture2D<float> g_outValues : register(u0);
@@ -60,7 +60,7 @@ float ReadValue(in uint2 pixel)
     }
     else
     {
-        return g_inValues[pixel];
+        return g_inValue[pixel];
     }
 }
 
@@ -291,7 +291,7 @@ void main(uint2 Gid : SV_GroupID, uint2 GTid : SV_GroupThreadID, uint GI : SV_Gr
         {
             if (!cb.readWriteUAV_and_skipPassthrough)
             {
-                g_outValues[sDTid] = g_inValues[sDTid];
+                g_outValues[sDTid] = g_inValue[sDTid];
             }
             return;
         }

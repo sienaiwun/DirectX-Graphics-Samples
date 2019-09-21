@@ -77,6 +77,7 @@ protected:
 
     // D3D device resources
     UINT m_adapterIDoverride;
+    UINT m_syncInterval = 0;
     std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
 private:

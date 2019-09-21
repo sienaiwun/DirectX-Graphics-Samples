@@ -13,7 +13,6 @@
 #include "RaytracingHlslCompat.h"
 #include "RaytracingShaderHelper.hlsli"
 
-Texture2D<float> g_texInput : register(t0);
 Texture2D<float4> g_inNormalDepth : register(t1);
 Texture2D<float4> g_inHitPosition : register(t2);
 Texture2D<uint> g_inGeometryHit : register(t3);
@@ -22,7 +21,6 @@ Texture2D<float> g_inDepth : register(t5);
 Texture2D<float2> g_inMotionVector : register(t6);
 Texture2D<NormalDepthTexFormat> g_inReprojectedNormalDepth : register(t7);
 Texture2D<float4> g_inSurfaceAlbedo : register(t8);
-RWTexture2D<float> g_texOutput : register(u0);
 RWTexture2D<float4> g_outNormalDepth : register(u1);
 RWTexture2D<float4> g_outHitPosition : register(u2);
 RWTexture2D<uint> g_outGeometryHit : register(u3); 
