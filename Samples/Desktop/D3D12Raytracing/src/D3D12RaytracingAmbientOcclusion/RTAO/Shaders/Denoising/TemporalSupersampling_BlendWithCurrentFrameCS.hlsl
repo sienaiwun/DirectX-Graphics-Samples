@@ -37,7 +37,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 {
     uint4 encodedCachedValues = g_inReprojected_Trpp_Value_SquaredMeanValue_RayHitDistance[DTid];
     uint Trpp = encodedCachedValues.x;
-    
     float4 cachedValues = float4(Trpp, f16tof32(encodedCachedValues.yzw));
 
     bool isCurrentFrameRayActive = true;
