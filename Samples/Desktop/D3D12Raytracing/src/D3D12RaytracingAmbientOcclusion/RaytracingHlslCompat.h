@@ -56,7 +56,7 @@
     remove obsolete GPukernel vars
     remove RTAO_ from names in RTAO component
     remove obsolete composition modes
-    rename maxFrameAge to tspp
+    rename maxTrpp to tspp
     RTAOGpuKernels use helper structs to pass the data in
     split gpu kernel file
     add UAV barriers
@@ -231,7 +231,7 @@ struct AtrousWaveletTransformFilterConstantBuffer
     BOOL useProjectedDepthTest;
     BOOL forceDenoisePass;
     float kernelStepScale;
-    float weightByFrameAge;
+    float weightByTrpp;
 };
 
 struct CalculateVariance_BilateralFilterConstantBuffer
@@ -486,8 +486,8 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
 
     float floatEpsilonDepthTolerance;
     float depthDistanceBasedDepthTolerance;
-    UINT numRaysToTraceAfterTemporalAtMaxFrameAge;
-    UINT maxFrameAge;
+    UINT numRaysToTraceAfterTemporalAtMaxTrpp;
+    UINT maxTrpp;
 };
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
@@ -500,13 +500,13 @@ struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
     float minSmoothingFactor;
     float stdDevGamma;
 
-    UINT minFrameAgeToUseTemporalVariance;
+    UINT minTrppToUseTemporalVariance;
     float minStdDevTolerance;
-    float frameAgeAdjustmentDueClamping;
-    float clampDifferenceToFrameAgeScale;
+    float TrppAdjustmentDueClamping;
+    float clampDifferenceToTrppScale;
 
     UINT numFramesToDenoiseAfterLastTracedRay;
-    UINT blurStrength_MaxFrameAge;
+    UINT blurStrength_MaxTrpp;
     float blurDecayStrength;
     float padding;
 

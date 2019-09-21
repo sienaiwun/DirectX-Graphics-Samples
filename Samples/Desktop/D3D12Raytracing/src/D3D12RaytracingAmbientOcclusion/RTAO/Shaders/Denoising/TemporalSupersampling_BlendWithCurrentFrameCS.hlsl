@@ -17,10 +17,10 @@
 Texture2D<float> g_texInputCurrentFrameValue : register(t0);
 Texture2D<float2> g_texInputCurrentFrameLocalMeanVariance : register(t1);
 Texture2D<float> g_texInputCurrentFrameRayHitDistance : register(t2);
-Texture2D<uint4> g_texInputReprojected_FrameAge_Value_SquaredMeanValue_RayHitDistance : register(t3);
+Texture2D<uint4> g_texInputReprojected_Trpp_Value_SquaredMeanValue_RayHitDistance : register(t3);
 
 RWTexture2D<float> g_texInputOutputValue : register(u0);
-RWTexture2D<uint2> g_texInputOutputFrameAge : register(u1);
+RWTexture2D<uint2> g_texInputOutputTrpp : register(u1);
 RWTexture2D<float> g_texInputOutputSquaredMeanValue : register(u2);
 RWTexture2D<float> g_texInputOutputRayHitDistance : register(u3);
 RWTexture2D<float> g_texOutputVariance : register(u4);
@@ -34,18 +34,18 @@ ConstantBuffer<TemporalSupersampling_BlendWithCurrentFrameConstantBuffer> cb : r
 [numthreads(DefaultComputeShaderParams::ThreadGroup::Width, DefaultComputeShaderParams::ThreadGroup::Height, 1)]
 void main(uint2 DTid : SV_DispatchThreadID)
 {
-    uint4 encodedCachedValues = g_texInputReprojected_FrameAge_Value_SquaredMeanValue_RayHitDistance[DTid];
-    uint packedFrameAgeRaysToGenerate = encodedCachedValues.x;
-    uint frameAge;
+    uint4 encodedCachedValues = g_texInputReprojected_Trpp_Value_SquaredMeanValue_RayHitDistance[DTid];
+    uint packedTrppRaysToGenerate = encodedCachedValues.x;
+    uint Trpp;
     uint numRaysToGenerateOrDenoisePasses;
-    Unpack_R16_to_R8G8_UINT(packedFrameAgeRaysToGenerate, frameAge, numRaysToGenerateOrDenoisePasses);
+    Unpack_R16_to_R8G8_UINT(packedTrppRaysToGenerate, Trpp, numRaysToGenerateOrDenoisePasses);
 
     // ToDo remove
     bool isRayCountValue = !(numRaysToGenerateOrDenoisePasses & 0x80);
     uint numRaysToGenerate = isRayCountValue ? numRaysToGenerateOrDenoisePasses : 0;
     uint numDenoisePasses = 0x7F & numRaysToGenerateOrDenoisePasses;
 
-    float4 cachedValues = float4(frameAge, f16tof32(encodedCachedValues.yzw));
+    float4 cachedValues = float4(Trpp, f16tof32(encodedCachedValues.yzw));
 
     bool isCurrentFrameRayActive = true;
     if (cb.doCheckerboardSampling)
@@ -60,10 +60,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
     float rayHitDistance = RTAO::InvalidAOValue;
     float variance = RTAO::InvalidAOValue;
     
-    if (frameAge > 0)
+    if (Trpp > 0)
     {     
-        uint maxFrameAge = 1 / cb.minSmoothingFactor;
-        frameAge = isValidValue ? min(frameAge + 1, maxFrameAge) : frameAge;
+        uint maxTrpp = 1 / cb.minSmoothingFactor;
+        Trpp = isValidValue ? min(Trpp + 1, maxTrpp) : Trpp;
 
         float cachedValue = cachedValues.y;
 
@@ -80,11 +80,11 @@ void main(uint2 DTid : SV_DispatchThreadID)
             cachedValue = clamp(cachedValue, localMean - localStdDev, localMean + localStdDev);
 
             // Scale down the frame age based on how strongly the cached value got clamped to give more weight to new samples.
-            float frameAgeScale = saturate(cb.clampDifferenceToFrameAgeScale * abs(cachedValue - nonClampedCachedValue));
-            frameAge = lerp(frameAge, 0, frameAgeScale);
+            float TrppScale = saturate(cb.clampDifferenceToTrppScale * abs(cachedValue - nonClampedCachedValue));
+            Trpp = lerp(Trpp, 0, TrppScale);
         }
-        float invFrameAge = 1.f / frameAge;
-        float a = cb.forceUseMinSmoothingFactor ? cb.minSmoothingFactor : max(invFrameAge, cb.minSmoothingFactor);
+        float invTrpp = 1.f / Trpp;
+        float a = cb.forceUseMinSmoothingFactor ? cb.minSmoothingFactor : max(invTrpp, cb.minSmoothingFactor);
         float MaxSmoothingFactor = 1;
         a = min(a, MaxSmoothingFactor);
 
@@ -102,7 +102,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         // Variance.
         float temporalVariance = valueSquaredMean - value * value;
         temporalVariance = max(0, temporalVariance);    // Ensure variance doesn't go negative due to imprecision.
-        variance = frameAge >= cb.minFrameAgeToUseTemporalVariance ? temporalVariance : localVariance;
+        variance = Trpp >= cb.minTrppToUseTemporalVariance ? temporalVariance : localVariance;
         variance = max(0.1, variance);
 
         // RayHitDistance.
@@ -116,7 +116,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     }
     else if (isValidValue)
     {
-        frameAge = 1;
+        Trpp = 1;
         value = value;
 
         rayHitDistance = g_texInputCurrentFrameRayHitDistance[DTid];
@@ -125,10 +125,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
     }
     numRaysToGenerateOrDenoisePasses = 33;  // ToDo remove
 
-    float frameAgeRatio = min(frameAge, cb.blurStrength_MaxFrameAge) / float(cb.blurStrength_MaxFrameAge);
-    float blurStrength = pow(1 - frameAgeRatio, cb.blurDecayStrength);
+    float TrppRatio = min(Trpp, cb.blurStrength_MaxTrpp) / float(cb.blurStrength_MaxTrpp);
+    float blurStrength = pow(1 - TrppRatio, cb.blurDecayStrength);
 
-    g_texInputOutputFrameAge[DTid] = uint2(frameAge, numRaysToGenerateOrDenoisePasses);
+    g_texInputOutputTrpp[DTid] = uint2(Trpp, numRaysToGenerateOrDenoisePasses);
     g_texInputOutputValue[DTid] = value;
     g_texInputOutputSquaredMeanValue[DTid] = valueSquaredMean;
     g_texInputOutputRayHitDistance[DTid] = rayHitDistance;

@@ -58,7 +58,7 @@ namespace Denoiser_Args
     BoolVar TemporalSupersampling_CacheSquaredMean(L"Render/AO/RTAO/Temporal Cache/Cached SquaredMean", false);
     NumVar TemporalSupersampling_ClampCachedValues_StdDevGamma(L"Render/AO/RTAO/Temporal Cache/Clamping/Std.dev gamma", 1.0f, 0.1f, 20.f, 0.1f);
     NumVar TemporalSupersampling_ClampCachedValues_MinStdDevTolerance(L"Render/AO/RTAO/Temporal Cache/Clamping/Minimum std.dev", 0.04f, 0.0f, 1.f, 0.01f);   // ToDo finetune
-    NumVar TemporalSupersampling_ClampDifferenceToFrameAgeScale(L"Render/AO/RTAO/Temporal Cache/Clamping/Frame Age scale", 4.00f, 0, 10.f, 0.05f);
+    NumVar TemporalSupersampling_ClampDifferenceToTrppScale(L"Render/AO/RTAO/Temporal Cache/Clamping/Frame Age scale", 4.00f, 0, 10.f, 0.05f);
     NumVar TemporalSupersampling_ClampCachedValues_AbsoluteDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Absolute depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
     NumVar TemporalSupersampling_ClampCachedValues_DepthBasedDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Depth based depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
 
@@ -79,7 +79,7 @@ namespace Denoiser_Args
     BoolVar Denoising_Variance_UseDepthWeights(L"Render/AO/RTAO/Denoising_/Variance/Use normal weights", true);
     BoolVar Denoising_Variance_UseNormalWeights(L"Render/AO/RTAO/Denoising_/Variance/Use normal weights", true);
     BoolVar Denoising_ForceDenoisePass(L"Render/AO/RTAO/Denoising_/Force denoise pass", false);
-    IntVar Denoising_MinFrameAgeToUseTemporalVariance(L"Render/AO/RTAO/Denoising_/Min Temporal Variance Frame Age", 4, 1, 40);
+    IntVar Denoising_MinTrppToUseTemporalVariance(L"Render/AO/RTAO/Denoising_/Min Temporal Variance Frame Age", 4, 1, 40);
     NumVar Denoising_MinVarianceToDenoise(L"Render/AO/RTAO/Denoising_/Min Variance to denoise", 0.0f, 0.0f, 1.f, 0.01f);
     // ToDo specify which variance - local or temporal
     BoolVar Denoising_UseSmoothedVariance(L"Render/AO/RTAO/Denoising_/Use smoothed variance", false);
@@ -89,13 +89,13 @@ namespace Denoiser_Args
 
 
     // TODo This probalby should be false, otherwise the newly disoccluded samples get too biased?
-    BoolVar Denoising_FilterWeightByFrameAge(L"Render/AO/RTAO/Denoising_/Filter weight by frame age", false);
+    BoolVar Denoising_FilterWeightByTrpp(L"Render/AO/RTAO/Denoising_/Filter weight by frame age", false);
 
 
 #define MIN_NUM_PASSES_LOW_TSPP 2 // THe blur writes to the initial input resource and thus must numPasses must be 2+.
 #define MAX_NUM_PASSES_LOW_TSPP 6
     BoolVar Denoising_LowTspp(L"Render/AO/RTAO/Denoising_/Low tspp filter/enabled", true);
-    IntVar Denoising_LowTsppMaxFrameAge(L"Render/AO/RTAO/Denoising_/Low tspp filter/Max frame age", 12, 0, 33);
+    IntVar Denoising_LowTsppMaxTrpp(L"Render/AO/RTAO/Denoising_/Low tspp filter/Max frame age", 12, 0, 33);
     IntVar Denoising_LowTspBlurPasses(L"Render/AO/RTAO/Denoising_/Low tspp filter/Num blur passes", 3, 2, MAX_NUM_PASSES_LOW_TSPP);
     BoolVar Denoising_LowTsppUseUAVReadWrite(L"Render/AO/RTAO/Denoising_/Low tspp filter/Use single UAV resource Read+Write", true);
     NumVar Denoising_LowTsppDecayConstant(L"Render/AO/RTAO/Denoising_/Low tspp filter/Decay constant", 1.0f, 0.1f, 32.f, 0.1f);
@@ -230,7 +230,7 @@ void Denoiser::CreateTextureResources()
 
             // ToDo cleanup raytracing resolution - twice for coefficient.
             // ToDo cleanup frame age format
-            CreateRenderTargetResource(device, DXGI_FORMAT_R8G8_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::FrameAge], initialResourceState, L"Temporal Cache: Frame Age");
+            CreateRenderTargetResource(device, DXGI_FORMAT_R8G8_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::Trpp], initialResourceState, L"Temporal Cache: Frame Age");
             CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::CoefficientSquaredMean], initialResourceState, L"Temporal Cache: Coefficient Squared Mean");
             CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::RayHitDistance), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::RayHitDistance], initialResourceState, L"Temporal Cache: Ray Hit Distance");
             CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalAOCoefficient[i], initialResourceState, L"Render/AO Temporally Supersampled Coefficient");
@@ -241,7 +241,7 @@ void Denoiser::CreateTextureResources()
     {
         CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalSupersampling_blendedAOCoefficient[i], initialResourceState, L"Temporal Supersampling: AO coefficient current frame blended with the cache.");
     }
-    CreateRenderTargetResource(device, DXGI_FORMAT_R16G16B16A16_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_cachedFrameAgeValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"Temporal Supersampling intermediate reprojected Frame Age, Value, Squared Mean Value, Ray Hit Distance");
+    CreateRenderTargetResource(device, DXGI_FORMAT_R16G16B16A16_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_cachedTrppValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"Temporal Supersampling intermediate reprojected Frame Age, Value, Squared Mean Value, Ray Hit Distance");
 
     // Variance resources
     {
@@ -301,13 +301,13 @@ void Denoiser::TemporalSupersamplingReverseReproject(Scene& scene, Pathtracer& p
 
     // Transition output resource to UAV state.        
     {
-        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        resourceStateTracker->TransitionResource(&m_cachedFrameAgeValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        resourceStateTracker->TransitionResource(&m_cachedTrppValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     }
 
     GpuResource (&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
 
-    UINT maxFrameAge = static_cast<UINT>(1 / Denoiser_Args::TemporalSupersampling_MinSmoothingFactor);
+    UINT maxTrpp = static_cast<UINT>(1 / Denoiser_Args::TemporalSupersampling_MinSmoothingFactor);
     resourceStateTracker->FlushResourceBarriers();
 
     // ToDo use a struct to pass vars?
@@ -322,11 +322,11 @@ void Denoiser::TemporalSupersamplingReverseReproject(Scene& scene, Pathtracer& p
         GBufferResources[GBufferResource::MotionVector].gpuDescriptorReadAccess,
         m_temporalAOCoefficient[temporalCachePreviousFrameTemporalAOCoeficientResourceIndex].gpuDescriptorReadAccess,
         m_prevFrameGBufferNormalDepth.gpuDescriptorReadAccess,
-        m_temporalCache[temporalCachePreviousFrameResourceIndex][TemporalSupersampling::FrameAge].gpuDescriptorReadAccess,
+        m_temporalCache[temporalCachePreviousFrameResourceIndex][TemporalSupersampling::Trpp].gpuDescriptorReadAccess,
         m_temporalCache[temporalCachePreviousFrameResourceIndex][TemporalSupersampling::CoefficientSquaredMean].gpuDescriptorReadAccess,
         m_temporalCache[temporalCachePreviousFrameResourceIndex][TemporalSupersampling::RayHitDistance].gpuDescriptorReadAccess,
-        m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge].gpuDescriptorWriteAccess,
-        m_cachedFrameAgeValueSquaredValueRayHitDistance.gpuDescriptorWriteAccess,
+        m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp].gpuDescriptorWriteAccess,
+        m_cachedTrppValueSquaredValueRayHitDistance.gpuDescriptorWriteAccess,
         Denoiser_Args::TemporalSupersampling_MinSmoothingFactor,
         Denoiser_Args::TemporalSupersampling_DepthTolerance,
         Denoiser_Args::TemporalSupersampling_UseDepthWeights,
@@ -340,15 +340,15 @@ void Denoiser::TemporalSupersamplingReverseReproject(Scene& scene, Pathtracer& p
         Sample::g_debugOutput,
         invViewProj,
         prevInvViewProj,
-        maxFrameAge,
+        maxTrpp,
         Denoiser_Args::Denoising_ExtraRaysToTraceSinceTemporalMovement);
 
     // Transition output resources to SRV state.
     // All the others are used as input/output UAVs in 2nd stage of Temporal Supersampling.
     {
-        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        resourceStateTracker->TransitionResource(&m_cachedFrameAgeValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        resourceStateTracker->InsertUAVBarrier(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge]);
+        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        resourceStateTracker->TransitionResource(&m_cachedTrppValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        resourceStateTracker->InsertUAVBarrier(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp]);
     }
 
     // Cache the normal depth resource.
@@ -436,12 +436,12 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
     // Transition output resource to UAV state.      
     {
         resourceStateTracker->TransitionResource(TemporalOutCoefficient, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::CoefficientSquaredMean], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&m_varianceResources[AOVarianceResource::Raw], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&m_multiPassDenoisingBlurStrength, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        resourceStateTracker->InsertUAVBarrier(&m_cachedFrameAgeValueSquaredValueRayHitDistance);
+        resourceStateTracker->InsertUAVBarrier(&m_cachedTrppValueSquaredValueRayHitDistance);
     }
 
     resourceStateTracker->FlushResourceBarriers();
@@ -454,10 +454,10 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         m_localMeanVarianceResources[AOVarianceResource::Raw].gpuDescriptorReadAccess,
         AOResources[AOResource::RayHitDistance].gpuDescriptorReadAccess,
         TemporalOutCoefficient->gpuDescriptorWriteAccess,
-        m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge].gpuDescriptorWriteAccess,
+        m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp].gpuDescriptorWriteAccess,
         m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::CoefficientSquaredMean].gpuDescriptorWriteAccess,
         m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance].gpuDescriptorWriteAccess,
-        m_cachedFrameAgeValueSquaredValueRayHitDistance.gpuDescriptorReadAccess,
+        m_cachedTrppValueSquaredValueRayHitDistance.gpuDescriptorReadAccess,
         m_varianceResources[AOVarianceResource::Raw].gpuDescriptorWriteAccess,
         m_multiPassDenoisingBlurStrength.gpuDescriptorWriteAccess,
         Denoiser_Args::TemporalSupersampling_MinSmoothingFactor,
@@ -465,18 +465,18 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_UseClamping,
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_StdDevGamma,
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_MinStdDevTolerance,
-        Denoiser_Args::Denoising_MinFrameAgeToUseTemporalVariance,
-        Denoiser_Args::TemporalSupersampling_ClampDifferenceToFrameAgeScale,
+        Denoiser_Args::Denoising_MinTrppToUseTemporalVariance,
+        Denoiser_Args::TemporalSupersampling_ClampDifferenceToTrppScale,
         Sample::g_debugOutput,
         Denoiser_Args::Denoising_numFramesToDenoiseAfterLastTracedRay,
-        Denoiser_Args::Denoising_LowTsppMaxFrameAge,
+        Denoiser_Args::Denoising_LowTsppMaxTrpp,
         Denoiser_Args::Denoising_LowTsppDecayConstant,
         isCheckerboardSamplingEnabled,
         checkerboardLoadEvenPixels);
 
     // Transition output resource to SRV state.        
     {
-        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::CoefficientSquaredMean], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         resourceStateTracker->TransitionResource(&m_varianceResources[AOVarianceResource::Raw], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -563,6 +563,7 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
         ? RTAOGpuKernels::BilateralFilter::NormalDepthAware_GaussianFilter5x5
         : RTAOGpuKernels::BilateralFilter::DepthAware_GaussianFilter5x5;
 
+    // ToDo test perf win by using 16b Depth over 32b encoded normal depth.
     GpuResource(&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
     GpuResource* depthResource =
         Denoiser_Args::Denoising_LowTsppUseNormalWeights
@@ -752,7 +753,7 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             VarianceResource->gpuDescriptorReadAccess,
             m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance].gpuDescriptorReadAccess,
             GBufferResources[GBufferResource::PartialDepthDerivatives].gpuDescriptorReadAccess,
-            m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::FrameAge].gpuDescriptorReadAccess,
+            m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Trpp].gpuDescriptorReadAccess,
             &AOResources[AOResource::Smoothed],
             OutputIntermediateResource,
             &Sample::g_debugOutput[0],
@@ -778,7 +779,7 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             Denoiser_Args::AODenoiseDepthWeightCutoff,
             Denoiser_Args::Denoising_UseProjectedDepthTest,
             forceDenoisePass,
-            Denoiser_Args::Denoising_FilterWeightByFrameAge);
+            Denoiser_Args::Denoising_FilterWeightByTrpp);
     }
 
     resourceStateTracker->TransitionResource(&AOResources[AOResource::Smoothed], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);

@@ -27,7 +27,7 @@ Texture2D<float> g_inVariance : register(t4);
 Texture2D<float> g_inSmoothedVariance : register(t5); 
 Texture2D<float> g_inHitDistance : register(t6);
 Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);
-Texture2D<uint2> g_inFrameAge : register(t8);
+Texture2D<uint2> g_inTrpp : register(t8);
 
 RWTexture2D<float> g_outFilteredValues : register(u0);
 RWTexture2D<float> g_outFilteredVariance : register(u1);
@@ -118,15 +118,15 @@ void AddFilterContribution(
         // 
         // ToDo explain / remove
         float w_fa = 1;
-        uint iFrameAge = g_inFrameAge[id].x;
+        uint iTrpp = g_inTrpp[id].x;
 
         // TODO
         // Enforce frame age of at least 1 for reprojected values.
         // This is because the denoiser will fill in invalid values with filtered 
         // ones if it can. But it doesn't increase the frame age.
-        iFrameAge = max(iFrameAge, 1);
+        iTrpp = max(iTrpp, 1);
 
-        w_fa = cb.weightByFrameAge ? iFrameAge : 1;
+        w_fa = cb.weightByTrpp ? iTrpp : 1;
 
 
         // Value based weight.
@@ -205,9 +205,9 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     float3 normal;
     float depth;
     DecodeNormalDepth(g_inNormalDepth[DTid], normal, depth);
-    uint2 frameAgeRaysToGenerate = g_inFrameAge[DTid];
-    uint frameAge = frameAgeRaysToGenerate.x;
-    uint numRaysToGenerateOrDenoisePasses = frameAgeRaysToGenerate.y;
+    uint2 TrppRaysToGenerate = g_inTrpp[DTid];
+    uint Trpp = TrppRaysToGenerate.x;
+    uint numRaysToGenerateOrDenoisePasses = TrppRaysToGenerate.y;
 
     
     bool isValidValue = value != RTAO::InvalidAOValue;
@@ -236,7 +236,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
         if (isValidValue)
         {
-            float pixelWeight = cb.weightByFrameAge ? frameAge : 1;
+            float pixelWeight = cb.weightByTrpp ? Trpp : 1;
             float w = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
             weightSum = pixelWeight * w;
             weightedValueSum = weightSum * value;

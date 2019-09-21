@@ -112,7 +112,7 @@ void Composition::CreateShaderResources()
         ranges[Slot::GBufferResources].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0); 
         ranges[Slot::AO].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  
         ranges[Slot::AORayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9); 
-        ranges[Slot::FrameAge].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); 
+        ranges[Slot::Trpp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); 
         ranges[Slot::Color].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
         ranges[Slot::AOSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
         ranges[Slot::Variance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13);
@@ -123,7 +123,7 @@ void Composition::CreateShaderResources()
         rootParameters[Slot::GBufferResources].InitAsDescriptorTable(1, &ranges[Slot::GBufferResources]);
         rootParameters[Slot::AO].InitAsDescriptorTable(1, &ranges[Slot::AO]);
         rootParameters[Slot::AORayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::AORayHitDistance]);
-        rootParameters[Slot::FrameAge].InitAsDescriptorTable(1, &ranges[Slot::FrameAge]);
+        rootParameters[Slot::Trpp].InitAsDescriptorTable(1, &ranges[Slot::Trpp]);
         rootParameters[Slot::Color].InitAsDescriptorTable(1, &ranges[Slot::Color]);
         rootParameters[Slot::AOSurfaceAlbedo].InitAsDescriptorTable(1, &ranges[Slot::AOSurfaceAlbedo]);
         rootParameters[Slot::Variance].InitAsDescriptorTable(1, &ranges[Slot::Variance]);
@@ -310,7 +310,7 @@ void Composition::Render(
             Composition_Args::CompositionMode == CompositionType::AmbientOcclusionOnly_Denoised
             ? &denoiser.m_temporalAOCoefficient[denoiser.m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex]
             : AOResource = &rtao.AOResources()[AOResource::Coefficient];
-        GpuResource* TrppResource = &TemporalResources[TemporalSupersampling::FrameAge];
+        GpuResource* TrppResource = &TemporalResources[TemporalSupersampling::Trpp];
 
         if (RTAO_Args::QuarterResAO)
         {
@@ -341,7 +341,7 @@ void Composition::Render(
         commandList->SetComputeRootDescriptorTable(Slot::AOSurfaceAlbedo, GBufferResources[GBufferResource::AOSurfaceAlbedo].gpuDescriptorReadAccess);
 
 
-        commandList->SetComputeRootDescriptorTable(Slot::FrameAge, TrppResource->gpuDescriptorReadAccess);
+        commandList->SetComputeRootDescriptorTable(Slot::Trpp, TrppResource->gpuDescriptorReadAccess);
     }
 
     // Dispatch.

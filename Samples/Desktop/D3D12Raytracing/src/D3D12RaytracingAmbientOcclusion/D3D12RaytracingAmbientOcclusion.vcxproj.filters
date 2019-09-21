@@ -297,9 +297,6 @@
     <FxCompile Include="SampleCore\Shaders\Pathtracer.hlsl">
       <Filter>Shaders\SampleCore</Filter>
     </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\EdgeStoppingAtrousWaveletTransfromCrossBilateralFilter_Box3x3CS.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
     <FxCompile Include="RTAO\Shaders\Denoising\EdgeStoppingAtrousWaveletTransfromCrossBilateralFilter_Gaussian3x3CS.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
     </FxCompile>

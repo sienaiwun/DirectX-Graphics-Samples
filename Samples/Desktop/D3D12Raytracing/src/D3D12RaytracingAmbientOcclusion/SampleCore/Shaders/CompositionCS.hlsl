@@ -26,7 +26,7 @@ Texture2D<NormalDepthTexFormat> g_texGBufferNormalDepth : register(t3);	// ToDo 
 Texture2D<float> g_texAO : register(t5);
 StructuredBuffer<PrimitiveMaterialBuffer> g_materials : register(t7);
 Texture2D<float> g_texRayHitDistance : register(t9);
-Texture2D<uint> g_texTemporalSupersamplingDisocclusionMap : register(t10);  // ToDo is this frameAge? rename
+Texture2D<uint> g_texTemporalSupersamplingDisocclusionMap : register(t10);  // ToDo is this Trpp? rename
 Texture2D<float4> g_texColor : register(t11);
 Texture2D<float4> g_texAOSurfaceAlbedo : register(t12);
 Texture2D<float4> g_texVariance : register(t13);
@@ -81,14 +81,14 @@ float4 RenderAOResult(in uint2 DTid)
 
         if (cb.compositionType == AmbientOcclusionAndDisocclusionMap)
         {
-            uint frameAge = g_texTemporalSupersamplingDisocclusionMap[DTid].x;
-            color = frameAge == 1 ? float4(1, 0, 0, 1) : color;
+            uint Trpp = g_texTemporalSupersamplingDisocclusionMap[DTid].x;
+            color = Trpp == 1 ? float4(1, 0, 0, 1) : color;
 
 
-            float normalizedFrameAge = min(1.f, frameAge / 32.f);
-            float3 minFrameAgeColor = float3(153, 18, 15) / 255;
-            float3 maxFrameAgeColor = float3(170, 220, 200) / 255;
-            color = float4(lerp(minFrameAgeColor, maxFrameAgeColor, normalizedFrameAge), 1);
+            float normalizedTrpp = min(1.f, Trpp / 32.f);
+            float3 minTrppColor = float3(153, 18, 15) / 255;
+            float3 maxTrppColor = float3(170, 220, 200) / 255;
+            color = float4(lerp(minTrppColor, maxTrppColor, normalizedTrpp), 1);
         }
     }
 

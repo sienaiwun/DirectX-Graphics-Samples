@@ -11,7 +11,7 @@
 
 // ToDo Desc
 // Desc: Sample temporal cache via reverse reprojection.
-// If no valid values have been retrieved from the cache, the frameAge is set to 0.
+// If no valid values have been retrieved from the cache, the Trpp is set to 0.
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -27,12 +27,12 @@ Texture2D<NormalDepthTexFormat> g_texInputReprojectedNormalDepth : register(t2);
 Texture2D<float2> g_texInputTextureSpaceMotionVector : register(t3);
 Texture2D<NormalDepthTexFormat> g_texInputCachedNormalDepth : register(t4);
 Texture2D<float> g_texInputCachedValue : register(t5);
-Texture2D<uint2> g_texInputCachedFrameAge : register(t6);
+Texture2D<uint2> g_texInputCachedTrpp : register(t6);
 Texture2D<float> g_texInputCachedValueSquaredMean : register(t7);
 Texture2D<float> g_texInputCachedRayHitDepth : register(t8);
 
 
-RWTexture2D<uint2> g_texOutputCachedFrameAge : register(u0);
+RWTexture2D<uint2> g_texOutputCachedTrpp : register(u0);
 RWTexture2D<uint4> g_texOutputReprojectedCachedValues : register(u1);
 
 RWTexture2D<float4> g_texOutputDebug1 : register(u10);
@@ -47,7 +47,7 @@ SamplerState ClampSampler : register(s0);
 // standardize naming cache vs cached
 // Optimizations:
 //  - split into several passes>?
-//  - condition to only necessary reads on frameAge 1 and/or invalid value
+//  - condition to only necessary reads on Trpp 1 and/or invalid value
 //  - on 0 motion vector read in only 1 cached value
 
 // Calculates a depth threshold for surface at angle beta from camera plane
@@ -154,7 +154,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     // ToDo compare against common predefined value
     if (_depth == 0 || textureSpaceMotionVector.x > 1e2f)
     {
-        g_texOutputCachedFrameAge[DTid] = 0;
+        g_texOutputCachedTrpp[DTid] = 0;
         return;
     }
 
@@ -228,20 +228,20 @@ void main(uint2 DTid : SV_DispatchThreadID)
         float screenSpaceReprojectionDepthAsWidthPercentage = min(1, length((currentFrameTexturePos - cacheFrameTexturePos) * float2(1, aspectRatio)));
     //&& screenSpaceReprojectionDepthAsWidthPercentage <= maxScreenSpaceReprojectionDepth;
 
-   //frameAgeClamp = screenSpaceReprojectionDepthAsWidthPercentage / maxScreenSpaceReprojectionDepth;
+   //TrppClamp = screenSpaceReprojectionDepthAsWidthPercentage / maxScreenSpaceReprojectionDepth;
    //uint maxFrame
-   //frameAge = lerp(frameAge, 0, frameAgeClamp);
+   //Trpp = lerp(Trpp, 0, TrppClamp);
 #endif
-    uint frameAge;
+    uint Trpp;
     bool areCacheValuesValid = weightSum > 1e-3f; // ToDo
     UINT numRaysToGenerate;
     if (areCacheValuesValid)
     {
-        uint4 vCachedFrameAge = g_texInputCachedFrameAge.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+        uint4 vCachedTrpp = g_texInputCachedTrpp.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
         // Enforce frame age of at least 1 for reprojection for valid values.
         // This is because the denoiser will fill in invalid values with filtered 
         // ones if it can. But it doesn't increase frame age.
-        vCachedFrameAge = max(1, vCachedFrameAge);
+        vCachedTrpp = max(1, vCachedTrpp);
 
 
         float4 nWeights = weights / weightSum;   // Normalize the weights.
@@ -258,30 +258,30 @@ void main(uint2 DTid : SV_DispatchThreadID)
         // such as on disocclussions of surfaces on rotation, are kept around long enough to create 
         // visible streaks that fade away very slow.
         // Example: rotating camera around dragon's nose up close. 
-        float frameAgeScale = 1;// saturate(weightSum);
+        float TrppScale = 1;// saturate(weightSum);
 
-        float cachedFrameAge = frameAgeScale * dot(nWeights, vCachedFrameAge);
-        frameAge = round(cachedFrameAge);
+        float cachedTrpp = TrppScale * dot(nWeights, vCachedTrpp);
+        Trpp = round(cachedTrpp);
 
-        if (frameAge >= cb.maxFrameAge)
+        if (Trpp >= cb.maxTrpp)
         {
             if (dot(1, abs(textureSpaceMotionVector * cb.textureDim)) > 0.001)
             {
-                numRaysToGenerate = cb.numRaysToTraceAfterTemporalAtMaxFrameAge;
+                numRaysToGenerate = cb.numRaysToTraceAfterTemporalAtMaxTrpp;
             }
             else // pass-through the value in the cache
             {
                 uint2 pixelIndex = floor(texturePos * cb.textureDim - 0.5);
-                numRaysToGenerate = g_texInputCachedFrameAge[pixelIndex].y;
+                numRaysToGenerate = g_texInputCachedTrpp[pixelIndex].y;
             }
         }
         else
         {
-            numRaysToGenerate = cb.maxFrameAge - frameAge;
+            numRaysToGenerate = cb.maxTrpp - Trpp;
         }
         
         // ToDo move this to a separate pass?
-        if (frameAge > 0)
+        if (Trpp > 0)
         {
             float4 vCacheValues = g_texInputCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
             cachedValue = dot(nWeights, vCacheValues);
@@ -298,14 +298,14 @@ void main(uint2 DTid : SV_DispatchThreadID)
     }
     else
     {
-        // ToDo take an average? and set frameAge low?
+        // ToDo take an average? and set Trpp low?
         // No valid values can be retrieved from the cache.
-        numRaysToGenerate = cb.maxFrameAge;
-        frameAge = 0;
+        numRaysToGenerate = cb.maxTrpp;
+        Trpp = 0;
     }
 
-    uint packedFrameAgeRaysToGenerate = Pack_R8G8_to_R16_UINT(frameAge, numRaysToGenerate);
+    uint packedTrppRaysToGenerate = Pack_R8G8_to_R16_UINT(Trpp, numRaysToGenerate);
 
-    g_texOutputCachedFrameAge[DTid] = uint2(frameAge, numRaysToGenerate);
-    g_texOutputReprojectedCachedValues[DTid] = uint4(packedFrameAgeRaysToGenerate, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
+    g_texOutputCachedTrpp[DTid] = uint2(Trpp, numRaysToGenerate);
+    g_texOutputReprojectedCachedValues[DTid] = uint4(packedTrppRaysToGenerate, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
 }

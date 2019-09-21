@@ -113,8 +113,7 @@ namespace RTAOGpuKernels
         };
 
         enum FilterType {
-            EdgeStoppingBox3x3 = 0,
-            EdgeStoppingGaussian3x3,
+            EdgeStoppingGaussian3x3 = 0,
             EdgeStoppingGaussian5x5,
             Count
         };
@@ -135,7 +134,7 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputVarianceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputHitDistanceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputFrameAgeResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputTrppResourceHandle,
             GpuResource* outputResource,
             GpuResource* outputIntermediateResource,
             GpuResource* outputDebug1ResourceHandle,
@@ -161,7 +160,7 @@ namespace RTAOGpuKernels
             float depthWeightCutoff = 0.5f,
             bool useProjectedDepthTest = false,
             bool forceDenoisePass = false,
-            bool weightByFrameAge = false);
+            bool weightByTrpp = false);
 
         GpuResource& VarianceOutputResource() { return m_intermediateVarianceOutputs[0]; }
 
@@ -194,7 +193,6 @@ namespace RTAOGpuKernels
         UINT                                m_CBinstanceID = 0;
     };
 
-    // ToDo rename to VarianceMean to match the result layout
     class CalculateMeanVariance
     {
     public:
@@ -233,10 +231,10 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputTextureSpaceMotionVectorResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedValueResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedNormalDepthResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedFrameAgeResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedTrppResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedSquaredMeanValue,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedRayHitDistanceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheFrameAgeResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheTrppResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheValuesResourceHandle,
             float minSmoothingFactor,
             float depthTolerance,
@@ -251,7 +249,7 @@ namespace RTAOGpuKernels
             GpuResource debugResources[2],
             const XMMATRIX& projectionToView,
             const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
-            UINT maxFrameAge,
+            UINT maxTrpp,
             UINT numRaysToTraceSinceTemporalMovement);
 
     private:
@@ -277,7 +275,7 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameLocalMeanVarianceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameRayHitDistanceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputOutputValueResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputOutputFrameAgeResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputOutputTrppResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputOutputSquaredMeanValueResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputOutputRayHitDistanceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedCacheValuesResourceHandle,
@@ -288,11 +286,11 @@ namespace RTAOGpuKernels
             bool clampCachedValues,
             float clampStdDevGamma,
             float clampMinStdDevTolerance,
-            UINT minFrameAgeToUseTemporalVariance,
-            float clampDifferenceToFrameAgeScale,
+            UINT minTrppToUseTemporalVariance,
+            float clampDifferenceToTrppScale,   // ToDo remove?
             GpuResource debugResources[2],
             UINT numFramesToDenoiseAfterLastTracedRay,
-            UINT lowTsppBlurStrengthMaxFrameAge,
+            UINT lowTsppBlurStrengthMaxTrpp,
             float lowTsppBlurStrengthDecayConstant,
             bool doCheckerboardSampling = false,
             bool checkerboardLoadEvenPixels = false);

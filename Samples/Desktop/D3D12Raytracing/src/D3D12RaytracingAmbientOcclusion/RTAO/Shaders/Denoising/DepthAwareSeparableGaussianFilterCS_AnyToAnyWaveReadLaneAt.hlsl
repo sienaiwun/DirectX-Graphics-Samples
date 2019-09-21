@@ -13,16 +13,15 @@
 // Desc: Filters invalid values from neighborhood via gaussian filter.
 // Supports up to 9x9 kernels.
 // Requirements:
-//  - wave lane size 16 or higher.
-//  - WaveReadLaneAt() with any to any to wave read lane support. Use the non-wave intrinsic version if not available.
-// Performance: 
-// ToDo:
+//  - Wave lane size 16 or higher.
+//  - WaveReadLaneAt() with any to any to wave read lane support.
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO/Shaders/RTAO.hlsli"
 
+// ToDo add this to the sahder name
 #define GAUSSIAN_KERNEL_3X3
 #include "Kernels.hlsli"
 
