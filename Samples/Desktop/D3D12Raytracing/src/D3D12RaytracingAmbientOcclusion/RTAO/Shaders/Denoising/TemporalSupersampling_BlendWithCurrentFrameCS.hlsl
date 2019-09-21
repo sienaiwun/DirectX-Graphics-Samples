@@ -88,9 +88,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
         float MaxSmoothingFactor = 1;
         a = min(a, MaxSmoothingFactor);
 
-        // Suggestion/ToDo: use average weighting instead of exponential for the first few samples 
-        // to even out the weights for the noisy start instead of weighting first samples much more.
-        // Ref: Koskela2019, Blockwise Multi-Order Feature Regression for Real-Time Path-Tracing Reconstruction
+        // TODO: use average weighting instead of exponential for the first few samples 
+        //  to even out the weights for the noisy start instead of weighting first samples much more than the rest.
+        //  Ref: Koskela2019, Blockwise Multi-Order Feature Regression for Real-Time Path-Tracing Reconstruction
 
         // Value.
         value = isValidValue ? lerp(cachedValue, value, a) : cachedValue;

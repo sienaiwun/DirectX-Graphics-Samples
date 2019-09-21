@@ -9,7 +9,7 @@
 //
 //*********************************************************
 
-// Desc: Calculate Variance via Separable kernel.
+// Desc: Calculate Mean and Variance via a separable kernel.
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -23,7 +23,8 @@ ConstantBuffer<CalculateMeanVarianceConstantBuffer> cb: register(b0);
 // Group shared memory caches.
 // Spaced at 4 Byte element widths to avoid bank conflicts on access.
 // Trade precision for speed and pack floats to 16bit.
-// 0.4ms -> 0.31ms for 7x7 kernel at 4K on TitanXp.
+// Performance:
+// - 4K, 2080 Ti, 9x9 kernel: 0.37 ms
 #define PACK_OPTIMIZATION 1
 
 #if PACK_OPTIMIZATION

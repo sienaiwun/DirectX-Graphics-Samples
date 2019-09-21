@@ -19,7 +19,6 @@
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO/Shaders/RTAO.hlsli"
 
-Texture2D<float2> g_inValues : register(t0);    // ToDo remove
 RWTexture2D<float2> g_inOutValues : register(u0);
 
 RWTexture2D<float4> g_outDebug1 : register(u3);

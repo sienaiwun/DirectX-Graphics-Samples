@@ -43,6 +43,9 @@
     <Filter Include="Shaders\RTAO\Denoising\Temporal">
       <UniqueIdentifier>{acb7aaa8-5a7d-4362-b42d-246b1bea7b4b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\RTAO\Denoising\Filtering\Unused">
+      <UniqueIdentifier>{00eb5d4f-1dc3-484f-8d29-098231ff2e27}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RTAO\Denoiser.h">
@@ -141,8 +144,11 @@
     <ClInclude Include="SampleCore\util\GpuResource.h">
       <Filter>Source Files\SampleCore\Util</Filter>
     </ClInclude>
-    <ClInclude Include="RTAO\GpuKernels.h">
+    <ClInclude Include="RTAO\RTAOGpuKernels.h">
       <Filter>Source Files\RTAO</Filter>
+    </ClInclude>
+    <ClInclude Include="SampleCore\GpuKernels.h">
+      <Filter>Source Files\SampleCore</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -221,8 +227,11 @@
     <ClCompile Include="SampleCore\util\GpuResourceStateTracker.cpp">
       <Filter>Source Files\SampleCore\Util</Filter>
     </ClCompile>
-    <ClCompile Include="RTAO\GpuKernels.cpp">
+    <ClCompile Include="RTAO\RTAOGpuKernels.cpp">
       <Filter>Source Files\RTAO</Filter>
+    </ClCompile>
+    <ClCompile Include="SampleCore\GpuKernels.cpp">
+      <Filter>Source Files\SampleCore</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -279,22 +288,7 @@
     <FxCompile Include="RTAO\Shaders\AORayGenCS.hlsl">
       <Filter>Shaders\RTAO</Filter>
     </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\CalculateMeanVariance_SeparableFilterCS.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\CalculateMeanVariance_SeparableFilterCS_AnyToAnyWaveReadLaneAt.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
     <FxCompile Include="RTAO\Shaders\Denoising\CalculateMeanVariance_SeparableFilterCS_CheckerboardSampling_AnyToAnyWaveReadLaneAt.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\CalculateVariance_BilateralFilterCS.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\CalculateVariance_SeparableBilateralFilterCS.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\CalculateVariance_SeparableFilterCS.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
     </FxCompile>
     <FxCompile Include="SampleCore\Shaders\CompositionCS.hlsl">
@@ -350,6 +344,9 @@
     </FxCompile>
     <FxCompile Include="RTAO\Shaders\Ray sorting\CountingSort_SortRays_64x128rayGroupCS.hlsl">
       <Filter>Shaders\RTAO\Ray Sorting</Filter>
+    </FxCompile>
+    <FxCompile Include="RTAO\Shaders\Denoising\CalculateMeanVariance_SeparableFilterCS.hlsl">
+      <Filter>Shaders\RTAO\Denoising\Filtering\Unused</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

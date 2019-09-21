@@ -372,7 +372,7 @@ namespace Sample
                 set<wstring> profileMarkers = {
                         L"DownsampleGBuffer",
                         L"RTAO_Root",
-                        L"TemporalReverseReproject",
+                        L"TemporalSupersamplingReverseReproject",
                         L"[Sorted]CalculateAmbientOcclusion",
                         L"CalculateAmbientOcclusion_Root",
                         L"Adaptive Ray Gen",

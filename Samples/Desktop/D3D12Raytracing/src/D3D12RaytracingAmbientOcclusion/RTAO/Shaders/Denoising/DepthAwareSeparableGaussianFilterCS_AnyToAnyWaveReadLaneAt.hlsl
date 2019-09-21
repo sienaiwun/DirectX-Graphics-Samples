@@ -13,7 +13,8 @@
 // Desc: Filters invalid values from neighborhood via gaussian filter.
 // Supports up to 9x9 kernels.
 // Requirements:
-// - wave lane size 16 or higher.
+//  - wave lane size 16 or higher.
+//  - WaveReadLaneAt() with any to any to wave read lane support. Use the non-wave intrinsic version if not available.
 // Performance: 
 // ToDo:
 
@@ -72,11 +73,11 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 {
     const uint2 GroupDim = uint2(8, 8);
 
-    // Process the thread group as row-major 16x4, where each sub group of 16 threads processes one row.
+    // Processes the thread group as row-major 4x16, where each sub group of 16 threads processes one row.
     // Each thread loads up to 4 values, with the sub groups loading rows interleaved.
-    // Loads up to 16x4x4 == 256 input values.
+    // Loads up to 4x16x4 == 256 input values.
     // ToDo rename to 4x16
-    uint2 GTid16x4_row0 = uint2(GI % 16, GI / 16);
+    uint2 GTid4x16_row0 = uint2(GI % 16, GI / 16);
     int2 GroupKernelBasePixel = GetPixelIndex(Gid, 0) - int(FilterKernel::Radius * cb.step);
     const uint NumRowsToLoadPerThread = 4;
     const uint Row_BaseWaveLaneIndex = (WaveGetLaneIndex() / 16) * 16;
@@ -87,14 +88,14 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
     [unroll]
     for (uint i = 0; i < NumRowsToLoadPerThread; i++)
     {
-        uint2 GTid16x4 = GTid16x4_row0 + uint2(0, i * 4);
-        if (GTid16x4.y >= NumValuesToLoadPerRowOrColumn)
+        uint2 GTid4x16 = GTid4x16_row0 + uint2(0, i * 4);
+        if (GTid4x16.y >= NumValuesToLoadPerRowOrColumn)
         {
             break;
         }
 
         // Load all the contributing columns for each row.
-        int2 pixel = GroupKernelBasePixel + GTid16x4 * cb.step;
+        int2 pixel = GroupKernelBasePixel + GTid4x16 * cb.step;
         float value = RTAO::InvalidAOValue;
         float depth = 0;
 
@@ -102,16 +103,16 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
         // but could be within bounds of the input texture,
         // so don't read it from the texture.
         // However, we need to keep it as an active lane for a below split sum.
-        if (GTid16x4.x < NumValuesToLoadPerRowOrColumn && IsWithinBounds(pixel, cb.textureDim))
+        if (GTid4x16.x < NumValuesToLoadPerRowOrColumn && IsWithinBounds(pixel, cb.textureDim))
         {
             value = ReadValue(pixel);
             depth = g_inDepth[pixel];
         }
 
         // Cache the kernel center values.
-        if (IsInRange(GTid16x4.x, FilterKernel::Radius, FilterKernel::Radius + GroupDim.x - 1))
+        if (IsInRange(GTid4x16.x, FilterKernel::Radius, FilterKernel::Radius + GroupDim.x - 1))
         {
-            PackedValueDepthCache[GTid16x4.y][GTid16x4.x - FilterKernel::Radius] = Float2ToHalf(float2(value, depth));
+            PackedValueDepthCache[GTid4x16.y][GTid4x16.x - FilterKernel::Radius] = Float2ToHalf(float2(value, depth));
         }
 
         // Filter the values for the first GroupDim columns.
@@ -128,8 +129,8 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
             // Get the lane index that has the first value for a kernel in this lane.
             uint Row_KernelStartLaneIndex =
-                (Row_BaseWaveLaneIndex + GTid16x4.x)
-                - (GTid16x4.x < GroupDim.x
+                (Row_BaseWaveLaneIndex + GTid4x16.x)
+                - (GTid4x16.x < GroupDim.x
                     ? 0
                     : GroupDim.x);
 
@@ -140,7 +141,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
             // Initialize the first 8 lanes to the center cell contribution of the kernel. 
             // This covers the remainder of 1 in FilterKernel::Width / 2 used in the loop below. 
-            if (GTid16x4.x < GroupDim.x && kcValue != RTAO::InvalidAOValue && kcDepth != 0)
+            if (GTid4x16.x < GroupDim.x && kcValue != RTAO::InvalidAOValue && kcDepth != 0)
             {
                 float w_h = FilterKernel::Kernel1D[FilterKernel::Radius];
                 gaussianWeightedValueSum = w_h * kcValue;
@@ -151,7 +152,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
             // Second 8 lanes start just past the kernel center.
             uint KernelCellIndexOffset =
-                GTid16x4.x < GroupDim.x
+                GTid4x16.x < GroupDim.x
                 ? 0
                 : (FilterKernel::Radius + 1); // Skip over the already accumulated center cell of the kernel.
 
@@ -181,19 +182,19 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
             }
 
             // Combine the sub-results.
-            uint laneToReadFrom = min(WaveGetLaneCount() - 1, Row_BaseWaveLaneIndex + GTid16x4.x + GroupDim.x);
+            uint laneToReadFrom = min(WaveGetLaneCount() - 1, Row_BaseWaveLaneIndex + GTid4x16.x + GroupDim.x);
             weightedValueSum += WaveReadLaneAt(weightedValueSum, laneToReadFrom);
             weightSum += WaveReadLaneAt(weightSum, laneToReadFrom);
             gaussianWeightedValueSum += WaveReadLaneAt(gaussianWeightedValueSum, laneToReadFrom);
             gaussianWeightedSum += WaveReadLaneAt(gaussianWeightedSum, laneToReadFrom);
 
             // Store only the valid results, i.e. first GroupDim columns.
-            if (GTid16x4.x < GroupDim.x)
+            if (GTid4x16.x < GroupDim.x)
             {
                 float gaussianFilteredValue = gaussianWeightedSum > 1e-6 ? gaussianWeightedValueSum / gaussianWeightedSum : RTAO::InvalidAOValue;
                 float filteredValue = weightSum > 1e-6 ? weightedValueSum / weightSum : gaussianFilteredValue;
 
-                FilteredResultCache[GTid16x4.y][GTid16x4.x] = filteredValue;
+                FilteredResultCache[GTid4x16.y][GTid4x16.x] = filteredValue;
             }
         }
     }

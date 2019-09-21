@@ -10,110 +10,13 @@
 //*********************************************************
 
 //
-// Helpers for doing CPU & GPU performance timing and statitics
+// GpuKernels used in RTAO paths (raytracing + denoising)
 //
-
-// ToDo add header desc to each kernel.
 
 #pragma once
 
-namespace GpuKernels
+namespace RTAOGpuKernels
 {
-	class ReduceSum
-	{
-	public:
-        enum Type {
-            Uint = 0,
-            Float
-        };
-
-		void Initialize(ID3D12Device5* device, Type type);
-		void CreateInputResourceSizeDependentResources(
-			ID3D12Device5* device,
-			DX::DescriptorHeap* descriptorHeap,
-			UINT frameCount,
-			UINT width,
-			UINT height,
-			UINT numInvocationsPerFrame = 1);
-		void Run(
-			ID3D12GraphicsCommandList4* commandList,
-			ID3D12DescriptorHeap* descriptorHeap,
-			UINT frameIndex,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
-			void* resultSum,
-            UINT invocationIndex = 0 );
-
-	private:
-        Type                                m_resultType;
-        UINT                                m_resultSize;
-		ComPtr<ID3D12RootSignature>         m_rootSignature;
-		ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
-		std::vector<GpuResource>			m_csReduceSumOutputs;
-		std::vector<ComPtr<ID3D12Resource>>	m_readbackResources;
-	};
-
-    class DownsampleGBufferDataBilateralFilter
-    {
-    public:
-        void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
-        void Run(
-            ID3D12GraphicsCommandList4* commandList,
-            UINT width,
-            UINT height,
-            ID3D12DescriptorHeap* descriptorHeap,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputNormalResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputPositionResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputGeometryHitResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputMotionVectorResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputPrevFrameHitPositionResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputDepthResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputSurfaceAlbedoResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputNormalResourceHandle,            
-            D3D12_GPU_DESCRIPTOR_HANDLE outputPositionResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputGeometryHitResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputPartialDistanceDerivativesResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputMotionVectorResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputPrevFrameHitPositionResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputDepthResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputSurfaceAlbedoResourceHandle);
-
-    private:
-        ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
-        ConstantBuffer<TextureDimConstantBuffer> m_CB;
-        UINT                                m_CBinstanceID = 0;
-    };
-
-    class UpsampleBilateralFilter
-    {
-    public:
-        enum FilterType {
-            Filter2x2R = 0,
-            Filter2x2RG,
-            Count
-        };
-
-        void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
-        void Run(
-            ID3D12GraphicsCommandList4* commandList,
-            UINT width,
-            UINT height,
-            FilterType type,
-            ID3D12DescriptorHeap* descriptorHeap,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputLowResNormalResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputHiResNormalResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputHiResPartialDistanceDerivativeResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle);
-
-    private:
-        ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
-        ConstantBuffer<DownAndUpsampleFilterConstantBuffer> m_CB;
-        UINT                                m_CBinstanceID = 0;
-    };
-
     class GaussianFilter
     {
     public:
@@ -233,7 +136,7 @@ namespace GpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputHitDistanceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputFrameAgeResourceHandle,
-            GpuResource* outputResource, 
+            GpuResource* outputResource,
             GpuResource* outputIntermediateResource,
             GpuResource* outputDebug1ResourceHandle,
             GpuResource* outputDebug2ResourceHandle,
@@ -272,83 +175,21 @@ namespace GpuKernels
         UINT                                m_maxFilterPasses = 0;
     };
 
-    class CalculatePartialDerivatives
-    {
-    public:
-        void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
-        void Run(
-            ID3D12GraphicsCommandList4* commandList,
-            ID3D12DescriptorHeap* descriptorHeap,
-            UINT width,
-            UINT height,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle);
-
-    private:
-        ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
-        ConstantBuffer<AtrousWaveletTransformFilterConstantBuffer> m_CB;
-        UINT                                m_CBinstanceID = 0;
-    };
-
-    class CalculateVariance
-    {
-    public:
-        enum FilterType {
-            SquareBilateral = 0,
-            SeparableBilateral,
-            Separable,
-            Count
-        };
-
-        void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
-        void Run(
-            ID3D12GraphicsCommandList4* commandList,
-            ID3D12DescriptorHeap* descriptorHeap,
-            UINT width,
-            UINT height,
-            FilterType filterType,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputValuesResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputNormalsResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputDepthsResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputVarianceResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputMeanResourceHandle,
-            float depthSigma,
-            float normalSigma,
-            bool outputMean,
-            bool useDepthWeights,
-            bool useNormalWeights,
-            UINT kernelWidth);
-
-    private:
-        ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
-        ConstantBuffer<CalculateVariance_BilateralFilterConstantBuffer> m_CB;
-        UINT                                m_CBinstanceID = 0;
-    };
-
     class FillInCheckerboard
     {
     public:
-        enum FilterType {
-            CrossBox4TapFilter = 0,
-            Count
-        };
-
         void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
         void Run(
             ID3D12GraphicsCommandList4* commandList,
             ID3D12DescriptorHeap* descriptorHeap,
             UINT width,
             UINT height,
-            FilterType filterType,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputOutputResourceHandle,
             bool fillEvenPixels = false);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
+        ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
         ConstantBuffer<CalculateMeanVarianceConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
     };
@@ -357,20 +198,12 @@ namespace GpuKernels
     class CalculateMeanVariance
     {
     public:
-        enum FilterType {
-            Separable_AnyToAnyWaveReadLaneAt = 0,
-            Separable,
-            Separable_CheckerboardSampling_AnyToAnyWaveReadLaneAt,
-            Count
-        };
-
         void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
         void Run(
             ID3D12GraphicsCommandList4* commandList,
             ID3D12DescriptorHeap* descriptorHeap,
             UINT width,
             UINT height,
-            FilterType filterType,
             D3D12_GPU_DESCRIPTOR_HANDLE inputValuesResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE outputMeanVarianceResourceHandle,
             UINT kernelWidth,
@@ -379,48 +212,47 @@ namespace GpuKernels
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
+        ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
         ConstantBuffer<CalculateMeanVarianceConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
     };
 
-    
     class TemporalSupersampling_ReverseReproject
     {
     public:
         // ToDo set default parameters
         void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
         void Run(
-        ID3D12GraphicsCommandList4* commandList,
-        UINT width,
-        UINT height,
-        ID3D12DescriptorHeap* descriptorHeap,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameNormalDepthResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameLinearDepthDerivativeResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedNormalDepthResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputTextureSpaceMotionVectorResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedValueResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedNormalDepthResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedFrameAgeResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedSquaredMeanValue,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedRayHitDistanceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheFrameAgeResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheValuesResourceHandle,
-        float minSmoothingFactor,
-        float depthTolerance,
-        bool useDepthWeights,
-        bool useNormalWeights,
-        float floatEpsilonDepthTolerance,
-        float depthDistanceBasedDepthTolerance,
-        float depthSigma,
-        bool useWorldSpaceDistance,
-        bool usingBilateralDownsampledBuffers,
-        bool perspectiveCorrectDepthInterpolation,
-        GpuResource debugResources[2],
-        const XMMATRIX& projectionToView,
-        const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
-        UINT maxFrameAge,
-        UINT numRaysToTraceSinceTemporalMovement);
+            ID3D12GraphicsCommandList4* commandList,
+            UINT width,
+            UINT height,
+            ID3D12DescriptorHeap* descriptorHeap,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameNormalDepthResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameLinearDepthDerivativeResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedNormalDepthResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputTextureSpaceMotionVectorResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedValueResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedNormalDepthResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedFrameAgeResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedSquaredMeanValue,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedRayHitDistanceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheFrameAgeResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheValuesResourceHandle,
+            float minSmoothingFactor,
+            float depthTolerance,
+            bool useDepthWeights,
+            bool useNormalWeights,
+            float floatEpsilonDepthTolerance,
+            float depthDistanceBasedDepthTolerance,
+            float depthSigma,
+            bool useWorldSpaceDistance,
+            bool usingBilateralDownsampledBuffers,
+            bool perspectiveCorrectDepthInterpolation,
+            GpuResource debugResources[2],
+            const XMMATRIX& projectionToView,
+            const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
+            UINT maxFrameAge,
+            UINT numRaysToTraceSinceTemporalMovement);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
@@ -460,7 +292,7 @@ namespace GpuKernels
             float clampDifferenceToFrameAgeScale,
             GpuResource debugResources[2],
             UINT numFramesToDenoiseAfterLastTracedRay,
-            UINT lowTsppBlurStrengthMaxFrameAge, 
+            UINT lowTsppBlurStrengthMaxFrameAge,
             float lowTsppBlurStrengthDecayConstant,
             bool doCheckerboardSampling = false,
             bool checkerboardLoadEvenPixels = false);
@@ -470,30 +302,6 @@ namespace GpuKernels
         ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
         ConstantBuffer<TemporalSupersampling_BlendWithCurrentFrameConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
-    };
-       
-    class GenerateGrassPatch
-    {
-    public:
-        void Initialize(ID3D12Device5* device, const wchar_t* windTexturePath, DX::DescriptorHeap* descriptorHeap, ResourceUploadBatch* resourceUpload, UINT frameCount, UINT numCallsPerFrame = 1);
-        void Run(
-            ID3D12GraphicsCommandList4* commandList,
-            const GenerateGrassStrawsConstantBuffer_AppParams& appParams,
-            ID3D12DescriptorHeap* descriptorHeap,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputVertexBufferResourceHandle);
-
-        UINT GetVertexBufferSize(UINT grassStrawsX, UINT grassStrawsY)
-        {
-            return grassStrawsX * grassStrawsY * N_GRASS_VERTICES * sizeof(VertexPositionNormalTextureTangent);
-        }
-
-    private:
-        ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
-
-        ConstantBuffer<GenerateGrassStrawsConstantBuffer> m_CB;
-        UINT                                m_CBinstanceID = 0;
-        D3DTexture                          m_windTexture;
     };
 
     class SortRays
@@ -546,6 +354,4 @@ namespace GpuKernels
         ConstantBuffer<RayGenConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
     };
-
 }
-

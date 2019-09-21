@@ -57,7 +57,7 @@
     remove RTAO_ from names in RTAO component
     remove obsolete composition modes
     rename maxFrameAge to tspp
-    GpuKernels use helper structs to pass the data in
+    RTAOGpuKernels use helper structs to pass the data in
     split gpu kernel file
     add UAV barriers
     prune redundant using namespace ...
@@ -96,10 +96,6 @@ Documentation
 #define RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS 1      // ToDo cleanup
 
 #define RTAO_MARK_CACHED_VALUES_NEGATIVE  1   // ToDo cleanup
-#define RTAO_GAUSSIAN_BLUR_AFTER_Temporal 0
-#if RTAO_GAUSSIAN_BLUR_AFTER_Temporal && RTAO_MARK_CACHED_VALUES_NEGATIVE
-Incompatible macros
-#endif
 
 #define SAMPLER_FILTER D3D12_FILTER_ANISOTROPIC
 

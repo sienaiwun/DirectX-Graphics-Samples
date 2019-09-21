@@ -64,16 +64,16 @@ namespace RTAO_Args
 {
     void OnRppSampleSetChange(void*)
     {
-        RTAO_Args::Rpp_doCheckerboard.SetValue(false);
-        RTAO_Args::Rpp_useGroundTruthRpp.SetValue(false);
+        RTAO_Args::Rpp_useGroundTruthRpp.SetValue(false, false);
 
         if (RTAO_Args::Rpp > 1)
         {
             // GetRandomRayDirection() supports sample set distribution only for 1 rpp.
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(1);
+            // ToDO fix that
+            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(1, false);
 
             // Only non-ray sorted path supports > 1rpp.
-            RTAO_Args::RTAOUseRaySorting.SetValue(false);
+            RTAO_Args::RTAOUseRaySorting.SetValue(false, false);
         }
 
         Sample::instance().RTAOComponent().RequestRecreateAOSamples();
@@ -83,26 +83,30 @@ namespace RTAO_Args
     {
         if (RTAO_Args::Rpp_useGroundTruthRpp)
         {
-            RTAO_Args::Rpp.SetValue(GROUND_TRUTH_RPP);
-            RTAO_Args::Rpp_doCheckerboard.SetValue(false);
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(1);
+            RTAO_Args::Rpp.SetValue(GROUND_TRUTH_RPP, false);
+            RTAO_Args::Rpp_doCheckerboard.SetValue(false, false);
+            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(1, false);
         }
         else
         {
-            RTAO_Args::Rpp.SetValue(1);
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D);
+            RTAO_Args::Rpp.SetValue(1, false);
+            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, false);
         }
 
         Sample::instance().RTAOComponent().RequestRecreateAOSamples();
     }
 
+    // ToDo:
+    // - no perf difference on checkerboard. Add checkerboard support when not using ray sorting.
+    // - support checkerboard + 2+ rpp
+    // - visible random clamping on checkerboard.
     void OnToggleRppCheckerboard(void*)
     {
         if (RTAO_Args::Rpp_doCheckerboard)
         {
-            RTAO_Args::Rpp.SetValue(1);
-            RTAO_Args::Rpp_useGroundTruthRpp.SetValue(false);
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D);
+            RTAO_Args::Rpp.SetValue(1, false);
+            RTAO_Args::Rpp_useGroundTruthRpp.SetValue(false, false);
+            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, false);
         }
         
         Sample::instance().RTAOComponent().RequestRecreateAOSamples();
@@ -203,7 +207,6 @@ void RTAO::CreateAuxilaryDeviceResources()
     auto commandList = m_deviceResources->GetCommandList();
     auto FrameCount = m_deviceResources->GetBackBufferCount();
 
-    m_reduceSumKernel.Initialize(device, GpuKernels::ReduceSum::Uint);
     m_rayGen.Initialize(device, FrameCount);
     m_raySorter.Initialize(device, FrameCount);
 
@@ -676,12 +679,6 @@ void RTAO::CreateResolutionDependentResources()
     auto FrameCount = m_deviceResources->GetBackBufferCount();
 
     CreateTextureResources();
-    m_reduceSumKernel.CreateInputResourceSizeDependentResources(
-        device,
-        m_cbvSrvUavHeap.get(),
-        FrameCount,
-        m_raytracingWidth,
-        m_raytracingHeight);
 }
 
 void RTAO::SetResolution(UINT width, UINT height)

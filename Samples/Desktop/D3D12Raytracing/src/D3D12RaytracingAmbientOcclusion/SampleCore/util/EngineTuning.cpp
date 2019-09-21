@@ -267,8 +267,6 @@ void EngineVar::Initialize(const wstring& path, function<void(void*)> callback, 
     EngineTuning::RegisterVariable(path, *this);
 }
 
-
-
 EngineVar* EngineVar::NextVar(void)
 {
     EngineVar* next = nullptr;
@@ -294,9 +292,9 @@ EngineVar* EngineVar::PrevVar(void)
     return prev != nullptr ? prev : this;
 }
 
-void EngineVar::OnChanged() 
+void EngineVar::OnChanged(bool callCallback)
 {
-	if (m_Callback)
+	if (callCallback && m_Callback)
 	{
 		m_Callback(m_Arguments);
 	}
@@ -343,6 +341,13 @@ void BoolVar::SetValue(FILE* file, const wstring& setting)
         0 == _wcsicmp(valstr, L"true"));
 }
 
+void BoolVar::SetValue(bool value, bool callCallback) 
+{ 
+    m_Flag = value;
+    OnChanged(callCallback);
+}
+
+
 NumVar::NumVar(const wstring& path, float val, float minValue, float maxValue, float stepSize, function<void(void*)> callback, void* args)
     : EngineVar(path, callback, args)
 {
@@ -386,10 +391,10 @@ void NumVar::SetValue(FILE* file, const wstring& setting)
         *this = valueRead; 
 }
 
-void NumVar::SetValue(float value)
+void NumVar::SetValue(float value, bool callCallback)
 {
     m_Value = Clamp(value);
-    OnChanged();
+    OnChanged(callCallback);
 }
 
 #if _MSC_VER < 1800
@@ -483,10 +488,10 @@ void IntVar::SetValue(FILE* file, const wstring& setting)
         *this = valueRead;
 }
 
-void IntVar::SetValue(int value)
+void IntVar::SetValue(int value, bool callCallback)
 {
     m_Value = Clamp(value);
-    OnChanged();
+    OnChanged(callCallback);
 }
 
 
@@ -541,10 +546,10 @@ void EnumVar::SetValue(FILE* file, const wstring& setting)
     }
 }
 
-void EnumVar::SetValue(int value)
+void EnumVar::SetValue(int value, bool callCallback)
 {
     m_Value = Clamp(value);
-    OnChanged();
+    OnChanged(callCallback);
 }
 
 CallbackTrigger::CallbackTrigger(const wstring& path, function<void (void*)> callback, void* args)

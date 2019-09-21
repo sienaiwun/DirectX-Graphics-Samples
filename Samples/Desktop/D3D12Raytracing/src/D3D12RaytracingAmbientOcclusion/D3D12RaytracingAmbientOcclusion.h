@@ -18,7 +18,7 @@
 #include "GpuTimeManager.h"
 #include "Sampler.h"
 #include "UILayer.h"
-#include "GpuKernels.h"
+#include "RTAOGpuKernels.h"
 #include "PBRTParser.h"
 #include "SceneParameters.h"
 #include "RTAO.h"

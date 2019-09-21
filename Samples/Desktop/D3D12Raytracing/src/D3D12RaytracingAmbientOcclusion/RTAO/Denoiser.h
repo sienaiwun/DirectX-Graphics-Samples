@@ -16,7 +16,7 @@
 #include "CameraController.h"
 #include "PerformanceTimers.h"
 #include "Sampler.h"
-#include "GpuKernels.h"
+#include "RTAOGpuKernels.h"
 #include "EngineTuning.h"
 #include "Scene.h"
 #include "RTAO/RTAO.h"
@@ -37,9 +37,9 @@ public:
     };
 
     enum DenoiseStage {
-        Denoise_Stage1_TemporalReverseReproject = 0x1 << 0,
+        Denoise_Stage1_TemporalSupersamplingReverseReproject = 0x1 << 0,
         Denoise_Stage2_Denoise = 0x1 << 1,
-        Denoise_StageAll = Denoise_Stage1_TemporalReverseReproject | Denoise_Stage2_Denoise
+        Denoise_StageAll = Denoise_Stage1_TemporalSupersamplingReverseReproject | Denoise_Stage2_Denoise
     };
 
     // Public methods.
@@ -55,7 +55,7 @@ public:
     static const UINT c_MaxAtrousDesnoisePasses = 5;
 
 private:
-    void TemporalReverseReproject(Scene& scene, Pathtracer& pathtracer);
+    void TemporalSupersamplingReverseReproject(Scene& scene, Pathtracer& pathtracer);
     void TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao);
     void BlurDisocclusions(Pathtracer& pathtracer);
 
@@ -88,17 +88,17 @@ private:
     GpuResource m_multiPassDenoisingBlurStrength;
     GpuResource m_prevFrameGBufferNormalDepth;
 
-    // GpuKernels
-    GpuKernels::FillInCheckerboard      m_fillInCheckerboardKernel;
-    GpuKernels::GaussianFilter          m_gaussianSmoothingKernel;
-    GpuKernels::TemporalSupersampling_ReverseReproject m_temporalCacheReverseReprojectKernel;
-    GpuKernels::TemporalSupersampling_BlendWithCurrentFrame m_temporalCacheBlendWithCurrentFrameKernel;
-    GpuKernels::AtrousWaveletTransformCrossBilateralFilter m_atrousWaveletTransformFilter;
-    GpuKernels::CalculateMeanVariance   m_calculateMeanVarianceKernel;
+    // RTAOGpuKernels
+    RTAOGpuKernels::FillInCheckerboard      m_fillInCheckerboardKernel;
+    RTAOGpuKernels::GaussianFilter          m_gaussianSmoothingKernel;
+    RTAOGpuKernels::TemporalSupersampling_ReverseReproject m_temporalCacheReverseReprojectKernel;
+    RTAOGpuKernels::TemporalSupersampling_BlendWithCurrentFrame m_temporalCacheBlendWithCurrentFrameKernel;
+    RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter m_atrousWaveletTransformFilter;
+    RTAOGpuKernels::CalculateMeanVariance   m_calculateMeanVarianceKernel;
     const UINT                          MaxCalculateVarianceKernelInvocationsPerFrame =
         1
         + 1; // Temporal Super-Sampling.
-    GpuKernels::BilateralFilter m_bilateralFilterKernel;
+    RTAOGpuKernels::BilateralFilter m_bilateralFilterKernel;
 
     // ToDo remove
     friend class Composition;

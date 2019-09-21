@@ -149,8 +149,6 @@ void Composition::CreateShaderResources()
     }
 }
 
-
-
 // Upsample downsampled resources needed for the composition pass.
 void Composition::UpsampleResourcesForRenderComposePass(
     Pathtracer& pathtracer,

@@ -16,7 +16,7 @@
 #include "CameraController.h"
 #include "PerformanceTimers.h"
 #include "Sampler.h"
-#include "GpuKernels.h"
+#include "RTAOGpuKernels.h"
 #include "EngineTuning.h"
 #include "Composition.h"
 #include "Scene.h"
@@ -126,9 +126,8 @@ private:
     ComPtr<ID3D12RootSignature> m_raytracingLocalRootSignature;
 
     // Compute shader & resources.
-    GpuKernels::ReduceSum		m_reduceSumKernel;
-    GpuKernels::AORayGenerator  m_rayGen;
-    GpuKernels::SortRays        m_raySorter;
+    RTAOGpuKernels::AORayGenerator  m_rayGen;
+    RTAOGpuKernels::SortRays        m_raySorter;
 
 
     friend class Composition;

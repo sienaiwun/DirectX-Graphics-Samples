@@ -37,7 +37,7 @@ protected:
 
     void Initialize(const std::wstring& path, std::function<void(void*)> callback = nullptr, void* args = nullptr);
 
-	void OnChanged();
+	void OnChanged(bool callCallback = true);
 
 	std::function<void(void*)> m_Callback;
 	void* m_Arguments;
@@ -64,7 +64,7 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
-    virtual void SetValue(bool value) { m_Flag = value; }
+    virtual void SetValue(bool value, bool callCallback = true);
 
 private:
     using EngineVar::Initialize;
@@ -88,7 +88,7 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting)  override;  
-    virtual void SetValue(float value); 
+    virtual void SetValue(float value, bool callCallback = true);
     void SetMaxValue(float value) { m_MaxValue = value; m_MinValue = std::min(m_MinValue, value); }
     void SetMinValue(float value) { m_MinValue = value; m_MaxValue = std::max(m_MaxValue, value); }
     float MaxValue() const { return m_MaxValue; }
@@ -140,7 +140,7 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
-    virtual void SetValue(int value);
+    virtual void SetValue(int value, bool callCallback = true);
     void SetMaxValue(int value) { m_MaxValue = value; m_MinValue = std::min(m_MinValue, value); }
     void SetMinValue(int value) { m_MinValue = value; m_MaxValue = std::max(m_MaxValue, value); }
     int MaxValue() const { return m_MaxValue; }
@@ -174,7 +174,7 @@ public:
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;
     virtual void SetValue(FILE* file, const std::wstring& setting) override;
-    virtual void SetValue(int value); 
+    virtual void SetValue(int value, bool callCallback = true);
 
     void SetListLength(int listLength) { m_EnumLength = listLength; m_Value = Clamp(m_Value); }
 
