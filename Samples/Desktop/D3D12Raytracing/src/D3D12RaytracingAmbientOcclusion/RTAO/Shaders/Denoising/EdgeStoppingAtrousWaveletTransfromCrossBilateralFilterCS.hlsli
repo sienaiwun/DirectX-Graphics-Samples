@@ -121,9 +121,9 @@ void AddFilterContribution(
         uint iTrpp = g_inTrpp[id].x;
 
         // TODO
-        // Enforce frame age of at least 1 for reprojected values.
+        // Enforce trpp of at least 1 for reprojected values.
         // This is because the denoiser will fill in invalid values with filtered 
-        // ones if it can. But it doesn't increase the frame age.
+        // ones if it can. But it doesn't increase the trpp.
         iTrpp = max(iTrpp, 1);
 
         w_fa = cb.weightByTrpp ? iTrpp : 1;

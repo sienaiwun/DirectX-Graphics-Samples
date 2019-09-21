@@ -71,7 +71,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
             // Ref: Salvi2016, Temporal Super-Sampling
             cachedValue = clamp(cachedValue, localMean - localStdDev, localMean + localStdDev);
 
-            // Scale down the frame age based on how strongly the cached value got clamped to give more weight to new samples.
+            // Scale down the trpp based on how strongly the cached value got clamped to give more weight to new samples.
             float TrppScale = saturate(cb.clampDifferenceToTrppScale * abs(cachedValue - nonClampedCachedValue));
             Trpp = lerp(Trpp, 0, TrppScale);
         }

@@ -238,9 +238,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
     if (areCacheValuesValid)
     {
         uint4 vCachedTrpp = g_inCachedTrpp.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
-        // Enforce frame age of at least 1 for reprojection for valid values.
+        // Enforce trpp of at least 1 for reprojection for valid values.
         // This is because the denoiser will fill in invalid values with filtered 
-        // ones if it can. But it doesn't increase frame age.
+        // ones if it can. But it doesn't increase trpp.
         vCachedTrpp = max(1, vCachedTrpp);
 
 
@@ -250,10 +250,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
        // g_outDebug2[DTid] = nWeights;
 
         // ToDo revisit this and potentially make it UI adjustable - weight ^ 2 ?,...
-        // Scale the frame age by the total weight. This is to keep the frame age low for 
+        // Scale the trpp by the total weight. This is to keep the trpp low for 
         // total contributions that have very low reprojection weight. While its preferred to get 
         // a weighted value even for reprojections that have low weights but still
-        // satisfy consistency tests, the frame age needs to be kept small so that the Target calculated values
+        // satisfy consistency tests, the trpp needs to be kept small so that the Target calculated values
         // are quickly filled in over a few frames. Otherwise, bad estimates from reprojections,
         // such as on disocclussions of surfaces on rotation, are kept around long enough to create 
         // visible streaks that fade away very slow.

@@ -58,7 +58,7 @@ namespace Denoiser_Args
     BoolVar TemporalSupersampling_CacheSquaredMean(L"Render/AO/RTAO/Temporal Cache/Cached SquaredMean", false);
     NumVar TemporalSupersampling_ClampCachedValues_StdDevGamma(L"Render/AO/RTAO/Temporal Cache/Clamping/Std.dev gamma", 1.0f, 0.1f, 20.f, 0.1f);
     NumVar TemporalSupersampling_ClampCachedValues_MinStdDevTolerance(L"Render/AO/RTAO/Temporal Cache/Clamping/Minimum std.dev", 0.04f, 0.0f, 1.f, 0.01f);   // ToDo finetune
-    NumVar TemporalSupersampling_ClampDifferenceToTrppScale(L"Render/AO/RTAO/Temporal Cache/Clamping/Frame Age scale", 4.00f, 0, 10.f, 0.05f);
+    NumVar TemporalSupersampling_ClampDifferenceToTrppScale(L"Render/AO/RTAO/Temporal Cache/Clamping/Trpp scale", 4.00f, 0, 10.f, 0.05f);
     NumVar TemporalSupersampling_ClampCachedValues_AbsoluteDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Absolute depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
     NumVar TemporalSupersampling_ClampCachedValues_DepthBasedDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Depth based depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
 
@@ -79,7 +79,7 @@ namespace Denoiser_Args
     BoolVar Denoising_Variance_UseDepthWeights(L"Render/AO/RTAO/Denoising_/Variance/Use normal weights", true);
     BoolVar Denoising_Variance_UseNormalWeights(L"Render/AO/RTAO/Denoising_/Variance/Use normal weights", true);
     BoolVar Denoising_ForceDenoisePass(L"Render/AO/RTAO/Denoising_/Force denoise pass", false);
-    IntVar Denoising_MinTrppToUseTemporalVariance(L"Render/AO/RTAO/Denoising_/Min Temporal Variance Frame Age", 4, 1, 40);
+    IntVar Denoising_MinTrppToUseTemporalVariance(L"Render/AO/RTAO/Denoising_/Min Temporal Variance Trpp", 4, 1, 40);
     NumVar Denoising_MinVarianceToDenoise(L"Render/AO/RTAO/Denoising_/Min Variance to denoise", 0.0f, 0.0f, 1.f, 0.01f);
     // ToDo specify which variance - local or temporal
     BoolVar Denoising_UseSmoothedVariance(L"Render/AO/RTAO/Denoising_/Use smoothed variance", false);
@@ -89,13 +89,13 @@ namespace Denoiser_Args
 
 
     // TODo This probalby should be false, otherwise the newly disoccluded samples get too biased?
-    BoolVar Denoising_FilterWeightByTrpp(L"Render/AO/RTAO/Denoising_/Filter weight by frame age", false);
+    BoolVar Denoising_FilterWeightByTrpp(L"Render/AO/RTAO/Denoising_/Filter weight by trpp", false);
 
 
 #define MIN_NUM_PASSES_LOW_TSPP 2 // THe blur writes to the initial input resource and thus must numPasses must be 2+.
 #define MAX_NUM_PASSES_LOW_TSPP 6
     BoolVar Denoising_LowTrpp(L"Render/AO/RTAO/Denoising_/Low trpp filter/enabled", true);
-    IntVar Denoising_LowTrppMaxTrpp(L"Render/AO/RTAO/Denoising_/Low trpp filter/Max frame age", 12, 0, 33);
+    IntVar Denoising_LowTrppMaxTrpp(L"Render/AO/RTAO/Denoising_/Low trpp filter/Max trpp", 12, 0, 33);
     IntVar Denoising_LowTspBlurPasses(L"Render/AO/RTAO/Denoising_/Low trpp filter/Num blur passes", 3, 2, MAX_NUM_PASSES_LOW_TSPP);
     BoolVar Denoising_LowTrppUseUAVReadWrite(L"Render/AO/RTAO/Denoising_/Low trpp filter/Use single UAV resource Read+Write", true);
     NumVar Denoising_LowTrppDecayConstant(L"Render/AO/RTAO/Denoising_/Low trpp filter/Decay constant", 1.0f, 0.1f, 32.f, 0.1f);
@@ -229,8 +229,8 @@ void Denoiser::CreateTextureResources()
             }
 
             // ToDo cleanup raytracing resolution - twice for coefficient.
-            // ToDo cleanup frame age format
-            CreateRenderTargetResource(device, DXGI_FORMAT_R8_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::Trpp], initialResourceState, L"Temporal Cache: Frame Age");
+            // ToDo cleanup trpp format
+            CreateRenderTargetResource(device, DXGI_FORMAT_R8_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::Trpp], initialResourceState, L"Temporal Cache: Trpp");
             CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::CoefficientSquaredMean], initialResourceState, L"Temporal Cache: Coefficient Squared Mean");
             CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::RayHitDistance), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalCache[i][TemporalSupersampling::RayHitDistance], initialResourceState, L"Temporal Cache: Ray Hit Distance");
             CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalAOCoefficient[i], initialResourceState, L"Render/AO Temporally Supersampled Coefficient");
@@ -241,7 +241,7 @@ void Denoiser::CreateTextureResources()
     {
         CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_temporalSupersampling_blendedAOCoefficient[i], initialResourceState, L"Temporal Supersampling: AO coefficient current frame blended with the cache.");
     }
-    CreateRenderTargetResource(device, DXGI_FORMAT_R16G16B16A16_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_cachedTrppValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"Temporal Supersampling intermediate reprojected Frame Age, Value, Squared Mean Value, Ray Hit Distance");
+    CreateRenderTargetResource(device, DXGI_FORMAT_R16G16B16A16_UINT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_cachedTrppValueSquaredValueRayHitDistance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"Temporal Supersampling intermediate reprojected Trpp, Value, Squared Mean Value, Ray Hit Distance");
 
     // Variance resources
     {

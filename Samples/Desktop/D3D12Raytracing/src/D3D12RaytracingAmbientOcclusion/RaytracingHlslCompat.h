@@ -21,7 +21,7 @@
 - Adaptive kernel size - overblur under roof edge
 - Full res - adaptive kernel size visible horizontal lines
 - finetune adaptive kernel size
-- improve the multi-blur - skip higher iter blur on higher frame age.
+- improve the multi-blur - skip higher iter blur on higher trpp.
 - depth aware variance calculation
 - Cleanup UI paths
 - Total GPU time >> sum of component gpu times??

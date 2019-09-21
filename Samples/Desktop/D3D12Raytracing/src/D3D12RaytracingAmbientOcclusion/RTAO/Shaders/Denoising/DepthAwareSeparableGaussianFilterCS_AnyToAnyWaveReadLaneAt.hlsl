@@ -82,7 +82,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
     const uint Row_BaseWaveLaneIndex = (WaveGetLaneIndex() / 16) * 16;
 
     // ToDo load 8x8 center values to cache and skip if none of the values are missing.
-    // ToDo blend low frame age values too with a falloff?
+    // ToDo blend low trpp values too with a falloff?
 
     [unroll]
     for (uint i = 0; i < NumRowsToLoadPerThread; i++)
