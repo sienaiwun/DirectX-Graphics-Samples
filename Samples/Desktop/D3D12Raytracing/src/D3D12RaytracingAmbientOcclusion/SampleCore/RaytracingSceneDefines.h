@@ -13,39 +13,15 @@
 
 #include "RayTracingHlslCompat.h"
 
-// ToDo standardize use of CS suffix
 namespace ComputeShader {   // ToDo remove this?
 	namespace Type {
 		enum Enum {
-			HemisphereSampleSetVisualization = 0,
-			ReduceSum,
 			CompositionCS,
 			Count
 		};
 	}
 
 	namespace RootSignature {
-		namespace HemisphereSampleSetVisualization {
-			namespace Slot {
-				enum Enum {
-					Output = 0,
-					SampleBuffers,
-					ConstantBuffer,
-					Count
-				};
-			}
-		}		
-
-		namespace ReduceSum {
-			namespace Slot {
-				enum Enum {
-					Output = 0,
-					Input,
-					Count
-				};
-			}
-		}
-
 		namespace CompositionCS {
 			namespace Slot {
 				enum Enum {
@@ -73,32 +49,11 @@ namespace CSRootSignature = ComputeShader::RootSignature;
 // ToDo move?
 namespace RayGenShaderType {
     enum Enum {
-        GBuffer = 0,
+        Pathtracer = 0,
         Count
     };
 }
 
-namespace DownsampleFilter {
-	enum Enum {
-		None = 0,
-		BoxFilter2x2,
-		GaussianFilter9Tap,
-		GaussianFilter25Tap,
-		Count
-	};
-}
-
-namespace GeometryType {
-    enum Enum {
-        Plane = 0,
-        Sphere,
-		SquidRoom,
-		PBRT,
-        Count
-    };
-}
-
-// ToDo update descriptions, prune redundant.
 namespace GBufferResource {
 	enum Enum {
 		Hit = 0,		// Geometry hit or not.
@@ -135,14 +90,12 @@ namespace AOVarianceResource {
 
 namespace TemporalSupersampling {
     enum Enum {
-        // ToDo rename to TRpp
         Trpp = 0,
         RayHitDistance,
         CoefficientSquaredMean,
         Count
     };
 }
-
 
 namespace SampleScene {
 	namespace Type {
@@ -187,11 +140,3 @@ namespace SceneEnums
 		enum Value { SceneGeometry = 0, Count };
 	}
 }
-
-
-
-
-// Bottom-level acceleration structures (BottomLevelASType).
-// This sample uses two BottomLevelASType, one for AABB and one for Triangle geometry.
-// Mixing of geometry types within a BLAS is not supported.
-namespace BottomLevelASType = GeometryType;

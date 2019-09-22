@@ -100,7 +100,6 @@ namespace Denoiser_Args
     BoolVar Denoising_LowTrppUseUAVReadWrite(L"Render/AO/RTAO/Denoising_/Low trpp filter/Use single UAV resource Read+Write", true);
     NumVar Denoising_LowTrppDecayConstant(L"Render/AO/RTAO/Denoising_/Low trpp filter/Decay constant", 1.0f, 0.1f, 32.f, 0.1f);
     BoolVar Denoising_LowTrppFillMissingValues(L"Render/AO/RTAO/Denoising_/Low trpp filter/Post-Temporal fill in missing values", true);
-    BoolVar Denoising_LowTrppUseNormalWeights(L"Render/AO/RTAO/Denoising_/Low trpp filter/Normal Weights/Enabled", false);  // ToDo: test & finetune
     NumVar Denoising_LowTrppMinNormalWeight(L"Render/AO/RTAO/Denoising_/Low trpp filter/Normal Weights/Min weight", 0.25f, 0.0f, 1.f, 0.05f);
     NumVar Denoising_LowTrppNormalExponent(L"Render/AO/RTAO/Denoising_/Low trpp filter/Normal Weights/Exponent", 4.0f, 1.0f, 32.f, 1.0f);
 
@@ -558,17 +557,11 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
         resourceStateTracker->TransitionResource(OutResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     }
 
-    RTAOGpuKernels::BilateralFilter::FilterType filter =
-        Denoiser_Args::Denoising_LowTrppUseNormalWeights
-        ? RTAOGpuKernels::BilateralFilter::NormalDepthAware_SeparableGaussianFilter5x5
-        : RTAOGpuKernels::BilateralFilter::DepthAware_SeparableGaussianFilter5x5;
+    RTAOGpuKernels::BilateralFilter::FilterType filter = RTAOGpuKernels::BilateralFilter::NormalDepthAware_SeparableGaussianFilter3x3;
 
     // ToDo test perf win by using 16b Depth over 32b encoded normal depth.
     GpuResource(&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
-    GpuResource* depthResource =
-        Denoiser_Args::Denoising_LowTrppUseNormalWeights
-        ? &GBufferResources[GBufferResource::SurfaceNormalDepth]
-        : &GBufferResources[GBufferResource::Depth];
+    GpuResource* depthResource = &GBufferResources[GBufferResource::Depth];
 
     UINT FilterSteps[4] = {
         1, 4, 8, 16

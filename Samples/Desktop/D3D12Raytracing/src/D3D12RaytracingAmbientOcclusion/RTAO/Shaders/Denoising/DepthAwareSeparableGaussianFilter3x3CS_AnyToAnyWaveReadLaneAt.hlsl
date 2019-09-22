@@ -24,7 +24,6 @@
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO/Shaders/RTAO.hlsli"
 
-// ToDo add this to the sahder name
 #define GAUSSIAN_KERNEL_3X3
 #include "Kernels.hlsli"
 
@@ -84,7 +83,6 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
     const uint NumRowsToLoadPerThread = 4;
     const uint Row_BaseWaveLaneIndex = (WaveGetLaneIndex() / 16) * 16;
 
-    // ToDo load 8x8 center values to cache and skip if none of the values are missing.
     // ToDo blend low trpp values too with a falloff?
 
     [unroll]

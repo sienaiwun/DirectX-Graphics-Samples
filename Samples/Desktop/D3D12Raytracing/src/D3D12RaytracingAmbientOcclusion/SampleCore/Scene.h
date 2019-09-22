@@ -90,8 +90,6 @@ private:
     UINT                                m_animatedCarInstanceIndex;
     UINT                                m_grassInstanceIndices[NumGrassPatchesX * NumGrassPatchesZ];
     UINT                                m_currentGrassPatchVBIndex = 0;
-    // ToDo remove
-    D3DBuffer                           m_nullVB;               // Null vertex Buffer - used for geometries that don't animate and don't need double buffering for motion vector calculation.
     UINT                                m_grassInstanceShaderRecordOffsets[2];
     UINT                                m_prevFrameLODs[NumGrassPatchesX * NumGrassPatchesZ];
 
@@ -99,27 +97,16 @@ private:
     std::unique_ptr<RaytracingAccelerationStructureManager> m_accelerationStructure;
     GpuResource m_grassPatchVB[UIParameters::NumGrassGeometryLODs][2];      // Two VBs: current and previous frame.
 
-    const UINT MaxNumBottomLevelInstances = 10100;           // ToDo tighten this to only what needed or add support a copy of whats used from StructuredBuffers to GPU.
+    const UINT MaxNumBottomLevelInstances = 1000;           // ToDo tighten this to only what needed or add support a copy of whats used from StructuredBuffers to GPU.
 
 
     // Motion Vector resources.
     StructuredBuffer<XMFLOAT3X4> m_prevFrameBottomLevelASInstanceTransforms;        // Bottom-Level AS Instance transforms used for previous frame. Used for Temporal Reprojection.
-
-    // ToDo remove?
-    // ToDo clean up buffer management
-    // SquidRoom buffers
-    ComPtr<ID3D12Resource> m_vertexBuffer;
-    ComPtr<ID3D12Resource> m_vertexBufferUpload;
-    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-    ComPtr<ID3D12Resource> m_indexBuffer;
-    ComPtr<ID3D12Resource> m_indexBufferUpload;
-    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-
-
+       
     struct PBRTScene
     {
         std::wstring name;
-        std::string path;    // ToDo switch to wstring 
+        std::string path;
     };
 
     // Materials & textures.

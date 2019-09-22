@@ -43,6 +43,7 @@
 
    Glitches
    - disocclussions on static geometry and camera around reflections
+   - denoise oscilations under porch railing on full res
 
 - Cleanup:
     double check all CS for out of bounds.
@@ -483,7 +484,7 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
     float depthSigma;
     float depthTolerance;
 
-    BOOL useWorldSpaceDistance;
+    BOOL useWorldSpaceDistance;     // ToDo remove
     UINT DepthNumMantissaBits;      // Number of Mantissa Bits in the floating format of the input depth resources format.
     BOOL usingBilateralDownsampledBuffers;
     BOOL perspectiveCorrectDepthInterpolation;
@@ -529,12 +530,6 @@ struct DownAndUpsampleFilterConstantBuffer
 {
     XMFLOAT2 invHiResTextureDim;
     XMFLOAT2 invLowResTextureDim;
-
-    //// ToDo remove
-    //BOOL useNormalWeights;
-    //BOOL useDepthWeights;
-    //BOOL useBilinearWeights;
-    //BOOL useDynamicDepthThreshold;
 };
 
 // Grass Geometry

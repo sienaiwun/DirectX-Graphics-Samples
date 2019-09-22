@@ -477,8 +477,7 @@ void Pathtracer::BuildShaderTables(Scene& scene)
             {
                 UINT LOD = stoi(name.data() + wcsnlen_s(L"Grass Patch LOD", 15));
 
-                // ToDo remove assert
-                assert(bottomLevelASGeometry.m_geometryInstances.size() == 1);
+                ThrowIfFalse(bottomLevelASGeometry.m_geometryInstances.size() == 1, L"The implementation assumes a single geometry instance per BLAS for dynamic/grass geometry");
                 auto& geometryInstance = bottomLevelASGeometry.m_geometryInstances[0];
 
                 LocalRootSignature::RootArguments rootArgs;
@@ -495,10 +494,11 @@ void Pathtracer::BuildShaderTables(Scene& scene)
                 // shader records for that LOD. 
                 // 
                 // The LOD selection can change from a frame to frame depending on distance
-                // to the camera. For simplicity, we assume the LOD difference from frame to frame 
+                // to the camera. For simplicity, we assume the LOD index difference from frame to frame 
                 // is no greater than 1. This can be false if camera moves fast, but in that case 
-                // temporal reprojection would fail for the most part anyway yielding diminishing returns.
-                // Consistency checks will prevent blending in from false geometry.
+                // temporal reprojection would fail for the most part anyway yielding 
+                // diminishing returns supporting that scenario.
+                // Reprojection consistency checks will prevent blending in from non-similar geometry.
                 //
                 // Given multiple LODs and LOD delta being 1 at most, we create the records as follows:
                 // 2 * 3 Shader Records per LOD
@@ -715,7 +715,7 @@ void Pathtracer::Run(Scene& scene)
     commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::Debug2, m_debugOutput[1].gpuDescriptorWriteAccess);
 	
     // Dispatch Rays.
-    DispatchRays(m_rayGenShaderTables[RayGenShaderType::GBuffer].Get());
+    DispatchRays(m_rayGenShaderTables[RayGenShaderType::Pathtracer].Get());
 
     // Transition GBuffer resources to shader resource state.
     {

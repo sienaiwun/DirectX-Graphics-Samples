@@ -12,6 +12,8 @@
 #ifndef CROSSBILATERALWEIGHTS_HLSLI
 #define CROSSBILATERALWEIGHTS_HLSLI
 
+#include "RaytracingShaderHelper.hlsli"
+
 namespace CrossBilateral
 {
     namespace Normal
@@ -55,27 +57,7 @@ namespace CrossBilateral
             float WeightCutoff;
             uint NumMantissaBits;
         };
-
-        // Remap Ddxy that was calculated for a unit pixel offset at a given depth to a new offset.
-        // ToDo rename to ddxy dxdy and standardize.
-        float2 RemapDdxy(in float depth, in float2 ddxy, in float2 newOffset)
-        {
-            // Calculate depth via interpolation with perspective correction
-            // Ref: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/visibility-problem-depth-buffer-depth-interpolation
-            // Given depth buffer interpolation for finding z at offset q along z0 to z1
-            //      z =  1 / (1 / z0 * (1 - q) + 1 / z1 * q)
-            // and z1 = z0 + ddxy, where z1 is at a unit pixel offset [1, 1]
-            // z can be calculated via ddxy as
-            //
-            //      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
-
-            float z0 = depth;
-            float2 zxy = (z0 + ddxy) / (1 + ((1 - newOffset) / z0) * ddxy);
-
-            return zxy - z0;;
-        }
-
-
+               
         float4 GetWeights(
             in float TargetDepth,
             in float2 Ddxy,
@@ -83,7 +65,6 @@ namespace CrossBilateral
             in Parameters Params)
         {
             float depthThreshold = dot(1, abs(Ddxy));
-            // ToDo pass from a cb?
             float depthFloatPrecision = FloatPrecision(TargetDepth, Params.NumMantissaBits);
 
             float depthTolerance = Params.Sigma * depthThreshold + depthFloatPrecision;

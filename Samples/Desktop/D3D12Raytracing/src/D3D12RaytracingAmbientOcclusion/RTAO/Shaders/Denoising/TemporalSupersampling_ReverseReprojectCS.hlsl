@@ -11,7 +11,7 @@
 
 // ToDo Desc
 // Desc: Sample temporal cache via reverse reprojection.
-// If no valid values have been retrieved from the cache, the Trpp is set to 0.
+// If no valid values have been retrieved from the cache, the trpp is set to 0.
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -43,7 +43,7 @@ SamplerState ClampSampler : register(s0);
 
 // ToDo
 // Optimizations:
-//  - condition to only necessary reads on Trpp 1 and/or invalid value
+//  - condition to only necessary reads on trpp 1 and/or invalid value
 //  - on 0 motion vector read in only 1 cached value
 
 // Calculates a depth threshold for surface at angle beta from camera plane
@@ -100,7 +100,6 @@ float4 BilateralResampleWeights(in float TargetDepth, in float3 TargetNormal, in
 
     float4 bilinearDepthNormalWeights;
 
-    // ToDo test perf impact and move to downsampling pass?
     if (cb.usingBilateralDownsampledBuffers)
     {
         // Account for 0.5 sample offset in bilateral downsampled partial depth derivative buffer.
@@ -130,8 +129,7 @@ float4 BilateralResampleWeights(in float TargetDepth, in float3 TargetNormal, in
             params);
     }
 
-    // ToDo can we prevent diffusion across plane?
-    float4 weights = isWithinBounds * bilinearDepthNormalWeights;    // ToDo invalidate samples too pixel offcenter? <0.1
+    float4 weights = isWithinBounds * bilinearDepthNormalWeights;
 
     return weights;
 }
@@ -145,8 +143,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
     DecodeNormalDepth(g_inReprojectedNormalDepth[DTid], _normal, _depth);
     float2 textureSpaceMotionVector = g_inTextureSpaceMotionVector[DTid];
 
-    //g_outDebug1[DTid] = float4(_normal, _depth);
-    // ToDo compare against common predefined value
     if (_depth == 0 || textureSpaceMotionVector.x > 1e2f)
     {
         g_outCachedTrpp[DTid] = 0;
@@ -159,8 +155,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
     // Find the nearest integer index smaller than the texture position.
     // The floor() ensures the that value sign is taken into consideration.
     int2 topLeftCacheFrameIndex = floor(cacheFrameTexturePos * cb.textureDim - 0.5);
-
-    // ToDo why this doesn't match cacheFrameTexturePos??
     float2 adjustedCacheFrameTexturePos = (topLeftCacheFrameIndex + 0.5) * cb.invTextureDim;
 
     float2 cachePixelOffset = cacheFrameTexturePos * cb.textureDim - 0.5 - topLeftCacheFrameIndex;
@@ -172,7 +166,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         topLeftCacheFrameIndex + srcIndexOffsets[1],
         topLeftCacheFrameIndex + srcIndexOffsets[2],
         topLeftCacheFrameIndex + srcIndexOffsets[3] };
-    // ToDo conditional loads if really needed?
+
     float3 cacheNormals[4];
     float4 vCacheDepths;
     {
@@ -188,7 +182,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
     // ToDo retest/finetune depth testing. Moving car back and forth fails. Needs world space Depth & depth sigma of 2+.
     /*
-    ToDo
     if (cb.useWorldSpaceDepth)
     {
     float  ddxy = dot(1, dxdy);
@@ -205,31 +198,14 @@ void main(uint2 DTid : SV_DispatchThreadID)
     // Invalidate weights for invalid values in the cache.
     float4 vCacheValues = g_inCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
     weights = vCacheValues != RTAO::InvalidAOCoefficientValue ? weights : 0;
-    //g_outDebug1[DTid] = weights;
     float weightSum = dot(1, weights);
     
     float cachedValue = RTAO::InvalidAOCoefficientValue;
     float cachedValueSquaredMean = 0;
     float cachedRayHitDepth = 0;
 
-#if 0
-    // ToDo dedupe with GetClipSpacePosition()...
-    float2 xy = DTid + 0.5f;                            // Center in the middle of the pixel.
-    float2 currentFrameTexturePos = xy * cb.invTextureDim;
-
-    float aspectRatio = cb.textureDim.x / cb.textureDim.y;
-    float maxScreenSpaceReprojectionDepth = 0.01;// cb.minSmoothingFactor * 0.1f; // ToDo
-    ToDo scale this based on depth ?
-        float screenSpaceReprojectionDepthAsWidthPercentage = min(1, length((currentFrameTexturePos - cacheFrameTexturePos) * float2(1, aspectRatio)));
-    //&& screenSpaceReprojectionDepthAsWidthPercentage <= maxScreenSpaceReprojectionDepth;
-
-   //TrppClamp = screenSpaceReprojectionDepthAsWidthPercentage / maxScreenSpaceReprojectionDepth;
-   //uint maxFrame
-   //Trpp = lerp(Trpp, 0, TrppClamp);
-#endif
-    uint Trpp;
-    bool areCacheValuesValid = weightSum > 1e-3f; // ToDo
-    UINT numRaysToGenerate;
+    uint trpp;
+    bool areCacheValuesValid = weightSum > 1e-3f;
     if (areCacheValuesValid)
     {
         uint4 vCachedTrpp = g_inCachedTrpp.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
@@ -253,30 +229,12 @@ void main(uint2 DTid : SV_DispatchThreadID)
         // such as on disocclussions of surfaces on rotation, are kept around long enough to create 
         // visible streaks that fade away very slow.
         // Example: rotating camera around dragon's nose up close. 
-        float TrppScale = 1;// saturate(weightSum);
+        float TrppScale = 1;// saturate(weightSum); // ToDo
 
         float cachedTrpp = TrppScale * dot(nWeights, vCachedTrpp);
-        Trpp = round(cachedTrpp);
-
-        if (Trpp >= cb.maxTrpp)
-        {
-            if (dot(1, abs(textureSpaceMotionVector * cb.textureDim)) > 0.001)
-            {
-                numRaysToGenerate = cb.numRaysToTraceAfterTemporalAtMaxTrpp;
-            }
-            else // pass-through the value in the cache
-            {
-                uint2 pixelIndex = floor(texturePos * cb.textureDim - 0.5);
-                numRaysToGenerate = g_inCachedTrpp[pixelIndex].y;
-            }
-        }
-        else
-        {
-            numRaysToGenerate = cb.maxTrpp - Trpp;
-        }
+        trpp = round(cachedTrpp);
         
-        // ToDo move this to a separate pass?
-        if (Trpp > 0)
+        if (trpp > 0)
         {
             float4 vCacheValues = g_inCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
             cachedValue = dot(nWeights, vCacheValues);
@@ -293,11 +251,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
     }
     else
     {
-        // ToDo take an average? and set Trpp low?
         // No valid values can be retrieved from the cache.
-        numRaysToGenerate = cb.maxTrpp;
-        Trpp = 0;
+        trpp = 0;
     }
-    g_outCachedTrpp[DTid] = Trpp;
-    g_outReprojectedCachedValues[DTid] = uint4(Trpp, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
+    g_outCachedTrpp[DTid] = trpp;
+    g_outReprojectedCachedValues[DTid] = uint4(trpp, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
 }

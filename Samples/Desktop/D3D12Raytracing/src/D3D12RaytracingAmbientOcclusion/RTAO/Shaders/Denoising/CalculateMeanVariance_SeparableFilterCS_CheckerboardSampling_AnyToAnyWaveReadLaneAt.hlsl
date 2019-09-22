@@ -142,7 +142,6 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
             // Store only the valid results, i.e. first GroupDim columns.
             if (GTid4x16.x < GroupDim.x)
             {
-                // ToDo offset row start by rowIndex to avoid bank conflicts on read
                 PackedRowResultCache[GTid4x16.y][GTid4x16.x] = Float2ToHalf(float2(valueSum, squaredValueSum));
                 NumValuesCache[GTid4x16.y][GTid4x16.x] = numValues;
             }

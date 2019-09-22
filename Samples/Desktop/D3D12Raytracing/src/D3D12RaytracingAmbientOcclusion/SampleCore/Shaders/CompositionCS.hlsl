@@ -22,7 +22,7 @@ ConstantBuffer<ComposeRenderPassesConstantBuffer> cb : register(b0);
 Texture2D<uint> g_texGBufferPositionHits : register(t0);
 Texture2D<uint2> g_texGBufferMaterial : register(t1);    // 16b {1x Material Id, 3x Diffuse.RGB}
 Texture2D<float4> g_texGBufferPositionRT : register(t2);
-Texture2D<NormalDepthTexFormat> g_texGBufferNormalDepth : register(t3);	// ToDo merge some GBuffers resources ?
+Texture2D<NormalDepthTexFormat> g_texGBufferNormalDepth : register(t3);
 Texture2D<float> g_texAO : register(t5);
 StructuredBuffer<PrimitiveMaterialBuffer> g_materials : register(t7);
 Texture2D<float> g_texRayHitDistance : register(t9);

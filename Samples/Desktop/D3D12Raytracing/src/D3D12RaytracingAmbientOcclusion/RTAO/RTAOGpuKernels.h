@@ -77,8 +77,8 @@ namespace RTAOGpuKernels
     {
     public:
         enum FilterType {
-            DepthAware_SeparableGaussianFilter5x5 = 0,
-            NormalDepthAware_SeparableGaussianFilter5x5,
+            DepthAware_SeparableGaussianFilter3x3 = 0,
+            NormalDepthAware_SeparableGaussianFilter3x3,
             Count
         };
 

@@ -202,20 +202,6 @@ inline Ray GenerateForwardCameraRay(in float3 cameraPosition, in float4x4 projec
     return ray;
 }
 
-// Calculate depth via interpolation with perspective correction
-// Ref: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/visibility-problem-depth-buffer-depth-interpolation
-// Given depth buffer interpolation for finding z at offset q along z0 to z1
-//      z =  1 / (1 / z0 * (1 - q) + 1 / z1 * q)
-// and z1 = z0 + ddxy, where z1 is at a unit pixel offset [1, 1]
-// z can be calculated via ddxy as
-//
-//      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
-float2 GetPerspectiveCorrectInterpolatedDdxy(in float z0, in float2 ddxy, in float2 pixelOffset)
-{
-    float2 z1 = (z0 + ddxy) / (1 + ((1 - pixelOffset) / z0) * ddxy);
-    return z1 - z0;
-
-}
 
 // Generate a ray in world space for a camera pixel corresponding to an index from the dispatched 2D grid.
 inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToView, float2 jitter = float2(0, 0))
@@ -692,8 +678,8 @@ uint GetIndexOfValueClosestToTheReference(in float refValue, in float4 vValues)
 }
 
 // Remap partial depth derivatives at z0 from [1,1] pixel offset to a new pixel offset.
-float2 RemapPartialDepthDerivatives(in float z0, in float2 ddxy, in float2 pixelOffset)
-{
+float2 RemapDdxy(in float z0, in float2 ddxy, in float2 pixelOffset)
+{    
     // Perspective correction for non-linear depth interpolation.
     // Ref: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/visibility-problem-depth-buffer-depth-interpolation
     // Given a linear depth interpolation for finding z at offset q along z0 to z1
@@ -703,24 +689,13 @@ float2 RemapPartialDepthDerivatives(in float z0, in float2 ddxy, in float2 pixel
     //
     //      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
     float2 z = (z0 + ddxy) / (1 + ((1 - pixelOffset) / z0) * ddxy);
-    
     return z - z0;
 }
 
-// Remap partial depth derivatives at z0 from [1,1] pixel offset to a new pixel offset.
 float GetDepthAtPixelOffset(in float z0, in float2 ddxy, in float2 pixelOffset)
 {
-    // Perspective correction for non-linear depth interpolation.
-    // Ref: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/visibility-problem-depth-buffer-depth-interpolation
-    // Given a linear depth interpolation for finding z at offset q along z0 to z1
-    //      z =  1 / (1 / z0 * (1 - q) + 1 / z1 * q)
-    // and z1 = z0 + ddxy, where z1 is at a unit pixel offset [1, 1]
-    // z can be calculated via ddxy as
-    //
-    //      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
-    float2 z = (z0 + ddxy) / (1 + ((1 - pixelOffset) / z0) * ddxy);
-
-    return z0 + dot(1, z - z0);
+    float2 newDdxy = RemapDdxy(z0, ddxy, pixelOffset);
+    return z0 + dot(1, newDdxy);
 }
 
 // Returns an approximate surface dimensions covered in a pixel. 

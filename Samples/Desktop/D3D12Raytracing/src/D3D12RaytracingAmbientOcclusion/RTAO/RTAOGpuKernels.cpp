@@ -25,8 +25,8 @@
 #include "CompiledShaders\TemporalSupersampling_ReverseReprojectCS.hlsl.h"
 #include "CompiledShaders\CountingSort_SortRays_64x128rayGroupCS.hlsl.h"
 #include "CompiledShaders\AORayGenCS.hlsl.h"
-#include "CompiledShaders\DepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt.hlsl.h"
-#include "CompiledShaders\NormalDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt.hlsl.h"
+#include "CompiledShaders\DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl.h"
+#include "CompiledShaders\NormalDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl.h"
 #include "CompiledShaders\FillInCheckerboard_CrossBox4TapFilterCS.hlsl.h"
 
 using namespace std;
@@ -185,11 +185,11 @@ namespace RTAOGpuKernels
             {
                 switch (i)
                 {
-                case DepthAware_SeparableGaussianFilter5x5:
-                    descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt));
+                case DepthAware_SeparableGaussianFilter3x3:
+                    descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt));
                     break;
-                case NormalDepthAware_SeparableGaussianFilter5x5:
-                    descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pNormalDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pNormalDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt));
+                case NormalDepthAware_SeparableGaussianFilter3x3:
+                    descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pNormalDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pNormalDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt));
                     break;
                 }
                 ThrowIfFailed(device->CreateComputePipelineState(&descComputePSO, IID_PPV_ARGS(&m_pipelineStateObjects[i])));

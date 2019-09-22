@@ -11,7 +11,6 @@
 
 // Atrous Wavelet Transform Cross Bilateral Filter
 // Ref: Dammertz 2010, Edge-Avoiding A-Trous Wavelet Transform for Fast Global Illumination Filtering
-// ToDo
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -36,26 +35,14 @@ RWTexture2D<float4> g_outDebug2 : register(u4);
 
 ConstantBuffer<AtrousWaveletTransformFilterConstantBuffer> cb: register(b0);
 
-// ToDO use a common one
-float DepthThreshold(float distance, float2 ddxy, float2 pixelOffset)
+float DepthThreshold(float depth, float2 ddxy, float2 pixelOffset)
 {
     float depthThreshold;
 
-    // Pespective correction for the non-linear interpolation
     if (cb.perspectiveCorrectDepthInterpolation)
     {
-        // Calculate depth with perspective correction.
-        // Ref: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/visibility-problem-depth-buffer-depth-interpolation
-        // Given depth buffer interpolation for finding z at offset q along z0 to z1
-        //      z =  1 / (1 / z0 * (1 - q) + 1 / z1 * q)
-        // and z1 = z0 + ddxy, where z1 is at a unit pixel offset [1, 1]
-        // z can be calculated via ddxy as
-        //
-        //      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
-
-        float z0 = distance;
-        float2 zxy = (z0 + ddxy) / (1 + ((1 - pixelOffset) / z0) * ddxy);
-        depthThreshold = dot(1, abs(zxy - z0)); // ToDo this should be sqrt(dot(zxy - z0, zxy - z0))
+        float2 newDdxy = RemapDdxy(depth, ddxy, pixelOffset);
+        depthThreshold = dot(1, newDdxy);
     }
     else
     {
@@ -77,11 +64,9 @@ void AddFilterContribution(
     in uint row, 
     in uint col,
     in uint2 kernelStep,
-    in uint2 DTid,
-    in uint kernelStepShift,
-    in float2 varianceSigmaScale)   // ToDo or remove
+    in uint2 DTid)
 {
-    const float valueSigma = cb.valueSigma;
+    const float valueSigma = cb.valueSigma; // ToDo scale by pixel distance?
     const float normalSigma = cb.normalSigma;
     const float depthSigma = cb.depthSigma;
  
@@ -240,18 +225,14 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
             float w = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
             weightSum = pixelWeight * w;
             weightedValueSum = weightSum * value;
-            float filterWeight1D = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
             weightedVarianceSum = w * w * variance;
             stdDeviation = sqrt(variance);
         }
 
-        // Calculate a kernel step given a ray hit distance.
-        uint2 kernelStep = 1 << cb.kernelStepShift;
-
         // Adaptive kernel size
-        // Scale the kernel span by AO ray hit distance. 
+        // Scale the kernel span based on AO ray hit distance. 
         // This helps filter out lower frequency noise, a.k.a. boiling artifacts.
-        float2 varianceSigmaScale = 1; 
+        uint2 kernelStep = 1 << cb.kernelStepShift;
         if (cb.useAdaptiveKernelSize)
         {
             float avgRayHitDistance = isValidValue ? g_inHitDistance[DTid] : 0;
@@ -268,11 +249,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
             uint2 adjustedKernelStep = cb.kernelStepShift > 0 ? lerp(1, targetKernelStep, (cb.kernelStepShift-1) / 5.0) : targetKernelStep;
 
             kernelStep = adjustedKernelStep;
-
-            varianceSigmaScale = log2(kernelStep);
         }
-
-        uint kernelStepShift = cb.kernelStepShift;
 
         if (variance >= cb.minVarianceToDenoise)
         {
@@ -294,9 +271,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
                         r, 
                         c, 
                         kernelStep, 
-                        DTid, 
-                        kernelStepShift, 
-                        varianceSigmaScale);
+                        DTid);
         }
 
         float smallValue = 1e-6f;
