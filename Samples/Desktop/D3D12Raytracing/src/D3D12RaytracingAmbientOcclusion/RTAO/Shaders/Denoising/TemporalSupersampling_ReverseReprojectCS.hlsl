@@ -42,11 +42,7 @@ ConstantBuffer<TemporalSupersampling_ReverseReprojectConstantBuffer> cb : regist
 SamplerState ClampSampler : register(s0);
 
 // ToDo
-// - Fix heavy disocclusion on min/magnifaction. Use bilateraly downsampled mip maps?
-//   - this happens only when starting to move not on smooth move.
-// standardize naming cache vs cached
 // Optimizations:
-//  - split into several passes>?
 //  - condition to only necessary reads on Trpp 1 and/or invalid value
 //  - on 0 motion vector read in only 1 cached value
 
@@ -85,7 +81,6 @@ float CalculateAdjustedDepthThreshold(
 
     return CalculateAdjustedDepthThreshold(_d, alpha, beta, rho);
 }
-
 
 
 float4 BilateralResampleWeights(in float TargetDepth, in float3 TargetNormal, in float4 SampleDepths, in float3 SampleNormals[4], in float2 TargetOffset, in uint2 TargetIndex, in int2 sampleIndices[4], in float2 Ddxy)

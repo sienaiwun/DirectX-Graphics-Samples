@@ -11,7 +11,10 @@
 
 // ToDo remove?
 
-// Desc: Filters invalid values from neighborhood via gaussian filter.
+// Desc: Filters values via a normal depth aware separable gaussian filter.
+// The input pixels are interleaved such that kernel cells are at cb.step offsets
+// and the results are scatter wrote to memory. The interleaved layout
+// allows for a separable filtering via shared memory.
 // Supports up to 9x9 kernels.
 // Requirements:
 //  - Wave lane size 16 or higher.

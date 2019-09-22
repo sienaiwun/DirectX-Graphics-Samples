@@ -380,7 +380,7 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
     // Transition all output resources to UAV state.
     {
         resourceStateTracker->TransitionResource(&m_localMeanVarianceResources[AOVarianceResource::Raw], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        resourceStateTracker->InsertUAVBarrier(&AOResources[AOResource::Coefficient]);
+        resourceStateTracker->InsertUAVBarrier(&AOResources[AOResource::AmbientCoefficient]);
     }
 
     bool isCheckerboardSamplingEnabled;
@@ -396,7 +396,7 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
             m_cbvSrvUavHeap->GetHeap(),
             m_denoisingWidth,
             m_denoisingHeight,
-            AOResources[AOResource::Coefficient].gpuDescriptorReadAccess,
+            AOResources[AOResource::AmbientCoefficient].gpuDescriptorReadAccess,
             m_localMeanVarianceResources[AOVarianceResource::Raw].gpuDescriptorWriteAccess,
             Denoiser_Args::VarianceBilateralFilterKernelWidth,
             isCheckerboardSamplingEnabled,
@@ -450,7 +450,7 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         m_denoisingWidth,
         m_denoisingHeight,
         m_cbvSrvUavHeap->GetHeap(),
-        AOResources[AOResource::Coefficient].gpuDescriptorReadAccess,
+        AOResources[AOResource::AmbientCoefficient].gpuDescriptorReadAccess,
         m_localMeanVarianceResources[AOVarianceResource::Raw].gpuDescriptorReadAccess,
         AOResources[AOResource::RayHitDistance].gpuDescriptorReadAccess,
         TemporalOutCoefficient->gpuDescriptorWriteAccess,
@@ -560,8 +560,8 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
 
     RTAOGpuKernels::BilateralFilter::FilterType filter =
         Denoiser_Args::Denoising_LowTrppUseNormalWeights
-        ? RTAOGpuKernels::BilateralFilter::NormalDepthAware_GaussianFilter5x5
-        : RTAOGpuKernels::BilateralFilter::DepthAware_GaussianFilter5x5;
+        ? RTAOGpuKernels::BilateralFilter::NormalDepthAware_SeparableGaussianFilter5x5
+        : RTAOGpuKernels::BilateralFilter::DepthAware_SeparableGaussianFilter5x5;
 
     // ToDo test perf win by using 16b Depth over 32b encoded normal depth.
     GpuResource(&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
@@ -652,8 +652,6 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
 
     GpuResource* AOResources = rtao.AOResources();
-
-    // ToDO use separate toggles for local and temporal
     GpuResource* VarianceResource = Denoiser_Args::Denoising_UseSmoothedVariance ? &m_varianceResources[AOVarianceResource::Smoothed] : &m_varianceResources[AOVarianceResource::Raw];
 
     ScopedTimer _prof(L"Denoise", commandList);

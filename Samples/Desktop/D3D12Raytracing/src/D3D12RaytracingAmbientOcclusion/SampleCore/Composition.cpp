@@ -19,7 +19,6 @@
 #include "CompiledShaders\CompositionCS.hlsl.h"
 #include "D3D12RaytracingAmbientOcclusion.h"
 
-// ToDo prune unused
 using namespace std;
 using namespace DX;
 using namespace DirectX;
@@ -165,7 +164,6 @@ void Composition::UpsampleResourcesForRenderComposePass(
 
     switch (Composition_Args::CompositionMode)
     {
-        // ToDo Cleanup
     case CompositionType::PBRShading:
     case CompositionType::AmbientOcclusionOnly_Denoised:
     case CompositionType::AmbientOcclusionOnly_TemporallySupersampled:
@@ -176,7 +174,7 @@ void Composition::UpsampleResourcesForRenderComposePass(
 
         if (Composition_Args::CompositionMode == CompositionType::AmbientOcclusionOnly_RawOneFrame)
         {
-            inputLowResValueResource = &rtao.AOResources()[AOResource::Coefficient];
+            inputLowResValueResource = &rtao.AOResources()[AOResource::AmbientCoefficient];
         }
         else
         {
@@ -309,7 +307,7 @@ void Composition::Render(
         GpuResource* AOResource = 
             Composition_Args::CompositionMode == CompositionType::AmbientOcclusionOnly_Denoised
             ? &denoiser.m_temporalAOCoefficient[denoiser.m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex]
-            : AOResource = &rtao.AOResources()[AOResource::Coefficient];
+            : AOResource = &rtao.AOResources()[AOResource::AmbientCoefficient];
         GpuResource* TrppResource = &TemporalResources[TemporalSupersampling::Trpp];
 
         if (RTAO_Args::QuarterResAO)

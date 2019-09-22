@@ -391,8 +391,7 @@ uint CreateDepthHashKey(in float rayOriginDepth, in float2 rayGroupMinMaxDepth)
     
     // Simple linear quantization within the min/max range.
     float binDepthSize = max(rayGroupDepthRange / MaxDepthHashKeyBinValue, cb.binDepthSize);
-    // ToDo: this should be relativeDepth / ... Test.
-    uint depthHashKey = min(rayOriginDepth / binDepthSize, MaxDepthHashKeyBinValue);
+    uint depthHashKey = min(relativeDepth / binDepthSize, MaxDepthHashKeyBinValue);
 
     return depthHashKey;
 }

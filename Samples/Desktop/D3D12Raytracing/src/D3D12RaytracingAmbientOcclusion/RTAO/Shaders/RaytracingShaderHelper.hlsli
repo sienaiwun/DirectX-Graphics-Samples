@@ -8,8 +8,6 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
-
-// ToDo remove unused/or not cleaned up funcs
 #ifndef RAYTRACINGSHADERHELPER_H
 #define RAYTRACINGSHADERHELPER_H
 
@@ -99,7 +97,6 @@ bool IsInRange(in uint val, in uint min, in float max)
     return (val >= min && val <= max);
 }
 
-
 bool IsInRange(in float val, in float min, in float max)
 {
     return (val >= min && val <= max);
@@ -179,59 +176,30 @@ float2 HitAttribute(float2 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
         attr.barycentrics.y * (vertexAttribute[2] - vertexAttribute[0]);
 }
 
-
-// ToDo merge with GenerateCameraRay?
-inline float3 GenerateForwardCameraRayDirection(in float4x4 projectionToWorldWithCameraEyeAtOrigin)
+// Generate camera's forward direction ray
+inline float3 GenerateForwardCameraRayDirection(in float4x4 projectionToView)
 {
 	float2 screenPos = float2(0, 0);
 	
 	// Unproject the pixel coordinate into a world positon.
-	float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraEyeAtOrigin);
+	float4 world = mul(float4(screenPos, 0, 1), projectionToView);
 	return normalize(world.xyz);
 }
 
-inline Ray GenerateForwardCameraRay(in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin)
+inline Ray GenerateForwardCameraRay(in float3 cameraPosition, in float4x4 projectionToView)
 {
     float2 screenPos = float2(0, 0);
 
     // Unproject the pixel coordinate into a world positon.
-    float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraEyeAtOrigin);
+    float4 world = mul(float4(screenPos, 0, 1), projectionToView);
 
     Ray ray;
     ray.origin = cameraPosition;
-    // Since the camera's eye was at 0,0,0 in projectionToWorldWithCameraEyeAtOrigin 
+    // Since the camera's eye was at 0,0,0 in projectionToView 
     // the world.xyz is the direction.
     ray.direction = normalize(world.xyz);
 
     return ray;
-}
-
-// Calculate a world position from a screen position on near plane.
-float3 ScreenPosToWorldPos(in uint2 index, in float4x4 projectionToWorldWithCameraEyeAtOrigin)
-{
-    float2 xy = index + 0.5f; // center in the middle of the pixel.
-    float2 screenPos = xy / DispatchRaysDimensions().xy * 2.0 - 1.0;
-
-    // Invert Y for DirectX-style coordinates.
-    screenPos.y = -screenPos.y;
-
-    // Unproject the pixel coordinate into a world positon.
-    float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraEyeAtOrigin);
-
-    return world.xyz;
-}
-
-// Calculate a world position from a screen position.
-float3 ScreenPosToWorldPos(in uint2 index, in float linearDepth, in uint2 screenDimensions, in float zNear, in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin)
-{
-    float2 xy = index + 0.5f;                               // center in the middle of the pixel.
-    float2 screenPos = xy / screenDimensions * 2.0 - 1.0;   // Convert to [-1,1]
-    screenPos.y = -screenPos.y;  // Invert Y for DirectX-style coordinates.
-        
-    // Unproject the pixel coordinate into a ray towards the pixel's world position on the near plane.
-    float4 rayDirection = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraEyeAtOrigin);
-
-    return cameraPosition + linearDepth * rayDirection.xyz; // ToDo doesn't this need to be adjusted for zNear?
 }
 
 // Calculate depth via interpolation with perspective correction
@@ -250,7 +218,7 @@ float2 GetPerspectiveCorrectInterpolatedDdxy(in float z0, in float2 ddxy, in flo
 }
 
 // Generate a ray in world space for a camera pixel corresponding to an index from the dispatched 2D grid.
-inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin, float2 jitter = float2(0, 0))
+inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToView, float2 jitter = float2(0, 0))
 {
     float2 xy = index + 0.5f; // center in the middle of the pixel.
 	xy += jitter;
@@ -260,12 +228,11 @@ inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 
     screenPos.y = -screenPos.y;
 
     // Unproject the pixel coordinate into a world positon.
-    float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraEyeAtOrigin);
-    //world.xyz /= world.w; // ToDo remove
+    float4 world = mul(float4(screenPos, 0, 1), projectionToView);
 
     Ray ray;
     ray.origin = cameraPosition;
-	// Since the camera's eye was at 0,0,0 in projectionToWorldWithCameraEyeAtOrigin 
+	// Since the camera's eye was at 0,0,0 in projectionToView 
 	// the world.xyz is the direction.
 	ray.direction = normalize(world.xyz);
 
@@ -279,11 +246,11 @@ float2 TexCoords(in float3 position)
 }
 
 // Calculate ray differentials.
-void CalculateRayDifferentials(out float2 ddx_uv, out float2 ddy_uv, in float2 uv, in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin)
+void CalculateRayDifferentials(out float2 ddx_uv, out float2 ddy_uv, in float2 uv, in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToView)
 {
     // Compute ray differentials by intersecting the tangent plane to the  surface.
-    Ray ddx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToWorldWithCameraEyeAtOrigin);
-    Ray ddy = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToWorldWithCameraEyeAtOrigin);
+    Ray ddx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToView);
+    Ray ddy = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToView);
 
     // Compute ray differentials.
     float3 ddx_pos = ddx.origin - ddx.direction * dot(ddx.origin - hitPosition, surfaceNormal) / dot(ddx.direction, surfaceNormal);
@@ -298,13 +265,13 @@ void CalculateRayDifferentials(out float2 ddx_uv, out float2 ddy_uv, in float2 u
 float CheckersGridTextureBoxFilter(in float2 uv, in float2 dpdx, in float2 dpdy, in uint ratio);
 
 // Return analytically integrated checkerboard texture (box filter).
-float AnalyticalCheckersGridTexture(in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin )
+float AnalyticalCheckersGridTexture(in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToView )
 {
     float2 ddx_uv;
     float2 ddy_uv;
     float2 uv = TexCoords(hitPosition);
 
-    CalculateRayDifferentials(ddx_uv, ddy_uv, uv, hitPosition, surfaceNormal, cameraPosition, projectionToWorldWithCameraEyeAtOrigin);
+    CalculateRayDifferentials(ddx_uv, ddy_uv, uv, hitPosition, surfaceNormal, cameraPosition, projectionToView);
     return CheckersGridTextureBoxFilter(uv, ddx_uv, ddy_uv, 50);
 }
 
@@ -651,11 +618,11 @@ void CalculateUVDerivatives(
     in float2 uv, in float3 hitPosition, in float3 triangleNormal,
     in float3 p0, in float3 p1, in float3 p2, 
     in float2 uv0, in float2 uv1, in float2 uv2,
-    in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin,
+    in float3 cameraPosition, in float4x4 projectionToView,
     out float2 ddx, out float2 ddy)
 {
-    Ray ray10 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToWorldWithCameraEyeAtOrigin);
-    Ray ray01 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToWorldWithCameraEyeAtOrigin);
+    Ray ray10 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToView);
+    Ray ray01 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToView);
 
     float3 xOffsetPoint = RayPlaneIntersection(hitPosition, triangleNormal, ray10.origin, ray10.direction);
     float3 yOffsetPoint = RayPlaneIntersection(hitPosition, triangleNormal, ray01.origin, ray01.direction);
@@ -671,7 +638,7 @@ void CalculateUVDerivatives(
     in float3 p0,                      // Current ray's intersection point with the triangle.
     in Ray rx, in Ray ry,              // Auxilary rays
     in float2 uv0, in float2 uv1, in float2 uv2,    // UV coordinates at the triangle's vertices.
-    in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin,
+    in float3 cameraPosition, in float4x4 projectionToView,
     out float2 ddx, out float2 ddy,    // UV derivatives
     out float3 px, out float3 py)      // Auxilary rays' intersection points with the triangle.)
 {
@@ -682,10 +649,10 @@ void CalculateUVDerivatives(
 }
 
 // Retrieves auxilary camera rays offset by one pixel in x and y directions in screen space. 
-void GetAuxilaryCameraRays(in float3 cameraPosition, in float4x4 projectionToWorldWithCameraEyeAtOrigin, out Ray rx, out Ray ry)
+void GetAuxilaryCameraRays(in float3 cameraPosition, in float4x4 projectionToView, out Ray rx, out Ray ry)
 {
-    rx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToWorldWithCameraEyeAtOrigin);
-    ry = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToWorldWithCameraEyeAtOrigin);
+    rx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToView);
+    ry = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToView);
 }
 
 float min4(in float4 v)
@@ -724,7 +691,6 @@ uint GetIndexOfValueClosestToTheReference(in float refValue, in float4 vValues)
     return outIndex;
 }
 
-// ToDo replace local implementations with this
 // Remap partial depth derivatives at z0 from [1,1] pixel offset to a new pixel offset.
 float2 RemapPartialDepthDerivatives(in float z0, in float2 ddxy, in float2 pixelOffset)
 {
@@ -735,7 +701,6 @@ float2 RemapPartialDepthDerivatives(in float z0, in float2 ddxy, in float2 pixel
     // and z1 = z0 + ddxy, where z1 is at a unit pixel offset [1, 1]
     // z can be calculated via ddxy as
     //
-    // ToDo ddxy vs dxdy
     //      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
     float2 z = (z0 + ddxy) / (1 + ((1 - pixelOffset) / z0) * ddxy);
     
@@ -752,7 +717,6 @@ float GetDepthAtPixelOffset(in float z0, in float2 ddxy, in float2 pixelOffset)
     // and z1 = z0 + ddxy, where z1 is at a unit pixel offset [1, 1]
     // z can be calculated via ddxy as
     //
-    // ToDo ddxy vs dxdy
     //      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
     float2 z = (z0 + ddxy) / (1 + ((1 - pixelOffset) / z0) * ddxy);
 
@@ -774,7 +738,6 @@ float2 ApproximateProjectedSurfaceDimensionsPerPixel(in float z, in float2 ddxy,
 
     return w;
 }
-
 
 // Ensure only valid samples are interpolated. 
 // Defaults to an average or an invalid value if none are valid.
@@ -802,7 +765,5 @@ float InterpolateValidValues(
 
     return dot(weights, SampleValues) / dot(weights, 1);
 }
-
-// ToDo move relevant to RTAO denoising specific header
 
 #endif // RAYTRACINGSHADERHELPER_H

@@ -185,10 +185,10 @@ namespace RTAOGpuKernels
             {
                 switch (i)
                 {
-                case DepthAware_GaussianFilter5x5:
+                case DepthAware_SeparableGaussianFilter5x5:
                     descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt));
                     break;
-                case NormalDepthAware_GaussianFilter5x5:
+                case NormalDepthAware_SeparableGaussianFilter5x5:
                     descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pNormalDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pNormalDepthAwareSeparableGaussianFilterCS_AnyToAnyWaveReadLaneAt));
                     break;
                 }

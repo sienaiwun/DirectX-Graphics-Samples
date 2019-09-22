@@ -66,6 +66,7 @@
      zero out caches on resource reset.
     Test all UI parameters, finetune and set best limits
     Test denoising quality at 60 and 100, 200+ FPS
+    Increase averaging window for CPU times
 
 Documentation
     readme
@@ -579,8 +580,8 @@ struct PrimitiveConstantBuffer
 namespace MaterialType {
     enum Type {
         Default,
-        Matte,  // Lambertian scattering
-        Mirror,   // Specular reflector that isn't modified by the Fersnel equations.
+        Matte,      // Lambertian scattering
+        Mirror,     // Specular reflector that isn't modified by the Fresnel equations.
         AnalyticalCheckerboardTexture
     };
 }
@@ -594,7 +595,7 @@ struct PrimitiveMaterialBuffer
     XMFLOAT3 opacity;
     XMFLOAT3 eta;
     float roughness;
-    BOOL hasDiffuseTexture; // ToDO use BOOL?
+    BOOL hasDiffuseTexture;
     BOOL hasNormalTexture;
     BOOL hasPerVertexTangents;
     MaterialType::Type type;

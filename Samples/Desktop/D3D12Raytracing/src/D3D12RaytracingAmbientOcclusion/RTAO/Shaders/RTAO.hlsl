@@ -28,9 +28,7 @@ Texture2D<NormalDepthTexFormat> g_texAORaysDirectionOriginDepth : register(t22);
 Texture2D<uint2> g_texAOSortedToSourceRayIndexOffset : register(t23);
 Texture2D<float4> g_texAOSurfaceAlbedo : register(t24);
 
-// ToDo remove AOcoefficient and use AO hits instead?
-//todo remove rt?
-RWTexture2D<float> g_outAOcoefficient : register(u10);
+RWTexture2D<float> g_outAOAmbientCoefficient : register(u10);
 RWTexture2D<float> g_outAORayHitDistance : register(u15);
 
 ConstantBuffer<RTAOConstantBuffer> cb : register(b0);
@@ -65,7 +63,7 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
     ShadowRayPayload shadowPayload = { TMax };
 
     UINT rayFlags =
-        // Skip transparent objects.
+        // Ignore transparent surfaces for occlusion testing.
         RAY_FLAG_CULL_NON_OPAQUE;        
 
     // ToDo remove?
@@ -74,16 +72,12 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
     bool acceptFirstHit = true;
     if (acceptFirstHit)
     {
-        // ToDo test perf impact
+        // ToDo test perf impact. Explain why its ok since ray hit distance is used.
         // Performance TIP: Accept first hit if true hit is not neeeded,
         // or has minimal to no impact (in AO). The peformance gain can
         // be substantial.
         rayFlags |= RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
     }
-
-    // ToDo test perf impact
-    // Skip closest hit shaders of tHit time is not needed.
-    // rayFlags |= RAY_FLAG_SKIP_CLOSEST_HIT_SHADER; 
 
     TraceRay(g_scene,
         rayFlags,
@@ -166,7 +160,7 @@ void RayGenShader()
         ambientCoef /= cb.rpp;
     }
 
-    g_outAOcoefficient[srcRayIndex] = ambientCoef;
+    g_outAOAmbientCoefficient[srcRayIndex] = ambientCoef;
     g_outAORayHitDistance[srcRayIndex] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalAORayHitTime;
 }
 
@@ -204,7 +198,7 @@ bool Get2DRayIndices(out uint2 sortedRayIndex2D, out uint2 srcRayIndex2D, in uin
     // Get the corresponding source index
     sortedRayIndex2D = rayGroupIndex * rayGroupDim + rayThreadIndex;
     uint2 rayGroupBase = rayGroupIndex * rayGroupDim;
-    uint2 rayGroupRayIndexOffset = g_texAOSortedToSourceRayIndexOffset[sortedRayIndex2D];   // ToDo rename to encoded
+    uint2 rayGroupRayIndexOffset = g_texAOSortedToSourceRayIndexOffset[sortedRayIndex2D];
     srcRayIndex2D = rayGroupBase + GetRawRayIndexOffset(rayGroupRayIndexOffset);
 
     return IsActiveRay(rayGroupRayIndexOffset);
@@ -246,7 +240,7 @@ void RayGenShader_sortedRays()
 
     uint2 outPixel = srcRayIndexFullRes;
 
-    g_outAOcoefficient[outPixel] = ambientCoef;
+    g_outAOAmbientCoefficient[outPixel] = ambientCoef;
     g_outAORayHitDistance[outPixel] = RTAO::HasAORayHitAnyGeometry(tHit) ? tHit : cb.maxTheoreticalAORayHitTime;
 }
 

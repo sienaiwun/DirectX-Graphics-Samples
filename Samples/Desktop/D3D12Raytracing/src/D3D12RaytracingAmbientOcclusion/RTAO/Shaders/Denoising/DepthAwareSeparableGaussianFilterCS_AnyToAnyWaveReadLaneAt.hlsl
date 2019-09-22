@@ -9,8 +9,11 @@
 //
 //*********************************************************
 
-// ToDo
-// Desc: Filters invalid values from neighborhood via gaussian filter.
+
+// Desc: Filters values via a depth aware separable gaussian filter.
+// The input pixels are interleaved such that kernel cells are at cb.step offsets
+// and the results are scatter wrote to memory. The interleaved layout
+// allows for a separable filtering via shared memory.
 // Supports up to 9x9 kernels.
 // Requirements:
 //  - Wave lane size 16 or higher.
@@ -43,9 +46,10 @@ static const uint NumValuesToLoadPerRowOrColumn =
 groupshared uint PackedValueDepthCache[NumValuesToLoadPerRowOrColumn][8];   // 16bit float value, depth.
 groupshared float FilteredResultCache[NumValuesToLoadPerRowOrColumn][8];    // 32 bit float filteredValue.
 
+
+// Find a DTID with steps in between the group threads and groups interleaved to cover all pixels.
 uint2 GetPixelIndex(in uint2 Gid, in uint2 GTid)
 {
-    // Find a DTID with steps in between the group threads and groups interleaved to cover all pixels.
     uint2 GroupDim = uint2(8, 8);
     uint2 groupBase = (Gid / cb.step) * GroupDim * cb.step + Gid % cb.step;
     uint2 groupThreadOffset = GTid * cb.step;
@@ -75,7 +79,6 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
     // Processes the thread group as row-major 4x16, where each sub group of 16 threads processes one row.
     // Each thread loads up to 4 values, with the sub groups loading rows interleaved.
     // Loads up to 4x16x4 == 256 input values.
-    // ToDo rename to 4x16
     uint2 GTid4x16_row0 = uint2(GI % 16, GI / 16);
     int2 GroupKernelBasePixel = GetPixelIndex(Gid, 0) - int(FilterKernel::Radius * cb.step);
     const uint NumRowsToLoadPerThread = 4;
