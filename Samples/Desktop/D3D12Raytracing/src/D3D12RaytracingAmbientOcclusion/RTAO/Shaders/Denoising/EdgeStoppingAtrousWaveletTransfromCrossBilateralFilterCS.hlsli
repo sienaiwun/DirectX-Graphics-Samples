@@ -99,7 +99,7 @@ void AddFilterContribution(
         DecodeNormalDepth(g_inNormalDepth[id], iNormal, iDepth);
         float iValue = g_inValue[id];
 
-        bool iIsValidValue = iValue != RTAO::InvalidAOValue;
+        bool iIsValidValue = iValue != RTAO::InvalidAOCoefficientValue;
         if (!iIsValidValue || iDepth == 0)
         {
             return;
@@ -210,7 +210,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     uint numRaysToGenerateOrDenoisePasses = TrppRaysToGenerate.y;
 
     
-    bool isValidValue = value != RTAO::InvalidAOValue;
+    bool isValidValue = value != RTAO::InvalidAOCoefficientValue;
     float filteredValue = isValidValue && value < 0 ? -value : value;
     float variance = g_inSmoothedVariance[DTid];
     float filteredVariance = variance;
@@ -310,7 +310,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         }
         else
         {
-            filteredValue = RTAO::InvalidAOValue;
+            filteredValue = RTAO::InvalidAOCoefficientValue;
             filteredVariance = 0;
         }
     }

@@ -86,7 +86,7 @@ void AddFilterContribution(
         float iDepth;
         DecodeNormalDepth(g_inNormalDepth[id], iNormal, iDepth);
 
-        bool iIsValidValue = iValue != RTAO::InvalidAOValue;
+        bool iIsValidValue = iValue != RTAO::InvalidAOCoefficientValue;
         if (!iIsValidValue || iDepth == 0)
         {
             return;

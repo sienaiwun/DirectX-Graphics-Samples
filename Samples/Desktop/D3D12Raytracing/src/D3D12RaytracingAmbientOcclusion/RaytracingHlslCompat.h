@@ -23,7 +23,7 @@
 - finetune adaptive kernel size
 - improve the multi-blur - skip higher iter blur on higher trpp.
 - depth aware variance calculation
-- Cleanup UI paths
+- Cleanup UI paths. Remove unneccasary vars. hardcode them instead
 - Total GPU time >> sum of component gpu times??
 
 - Double check
@@ -67,6 +67,7 @@
     Test all UI parameters, finetune and set best limits
     Test denoising quality at 60 and 100, 200+ FPS
     Increase averaging window for CPU times
+    move resource descriptions from root sig def, to root sig Enum and shader res in shader files
 
 Documentation
     readme

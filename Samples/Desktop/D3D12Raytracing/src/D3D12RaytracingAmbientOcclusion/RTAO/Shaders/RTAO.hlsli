@@ -12,8 +12,10 @@
 #define RTAO_HLSLI
 
 namespace RTAO {
-    static const float RayHitDistanceOnMiss = -1;// ToDo unify with DISTANCE_ON_MISS - should be 0 as we're using non-negative low precision formats
-    static const float InvalidAOValue = -2; // ToDo - can't be -1, as Temporal uses hack to negate AO so that denoiser knows which values are new and which stale.
+    static const float RayHitDistanceOnMiss = 0;
+    // Set invalid ambient coefficient value to -2 so as to be lower than the lowest valid value of -1.
+    // Temporal pass marks cached ambient coefficient value <0,1> by negating it so that denoiser knows which values are new and which stale.
+    static const float InvalidAOCoefficientValue = -2;
     bool HasAORayHitAnyGeometry(in float tHit)
     {
         return tHit != RayHitDistanceOnMiss;

@@ -20,8 +20,7 @@
 #define KEY_NUM_BITS (DEPTH_HASH_KEY_BITS + 2*RAY_DIRECTION_HASH_KEY_BITS_1D + INDEX_HASH_KEY_BITS)
 #define NUM_KEYS (1 << KEY_NUM_BITS)        // Largest key is reserved for an invalid key.
 
-// INACTIVE_RAY_KEY must be greater than the max valid hash key but fit within 16bits and valid NUM_KEYS.
-// It must be exclusive to INACTIVE_RAY_INDEX_BIT. - todo cleanup/combine them?
+// INACTIVE_RAY_KEY must be greater than the max valid hash key but has to fit within 16bits and valid NUM_KEYS.
 #define INACTIVE_RAY_KEY (NUM_KEYS - 1)     // Hash key for an invalid/disabled ray. These rays will get sorted to the end and are not to be raytraced.
 
 #define INACTIVE_RAY_INDEX_BIT 0x4000

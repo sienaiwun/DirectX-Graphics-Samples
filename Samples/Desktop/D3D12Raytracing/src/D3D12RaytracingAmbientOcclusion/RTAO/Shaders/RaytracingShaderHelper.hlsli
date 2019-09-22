@@ -745,7 +745,7 @@ float InterpolateValidValues(
     in float4 weights,
     in float4 SampleValues,
     in float minWeight = 1e-6,
-    in float invalidValue = RTAO::InvalidAOValue)
+    in float invalidValue = RTAO::InvalidAOCoefficientValue)
 {
     float4 validSamples = SampleValues != invalidValue;
     weights *= validSamples;

@@ -51,10 +51,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
         }
     }
 
-    float4 weights = inValues_4x2._11_21_31_41 != RTAO::InvalidAOValue;
+    float4 weights = inValues_4x2._11_21_31_41 != RTAO::InvalidAOCoefficientValue;
     float weightSum = dot(1, weights);
 
-    float2 filteredValue =  weightSum > 1e-3 ? mul(weights, inValues_4x2) / weightSum : RTAO::InvalidAOValue;
+    float2 filteredValue =  weightSum > 1e-3 ? mul(weights, inValues_4x2) / weightSum : RTAO::InvalidAOCoefficientValue;
 
     g_inOutValues[pixel] = filteredValue;
 }

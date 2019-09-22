@@ -31,7 +31,7 @@ namespace GlobalRootSignature {
             GBufferResources,
             GBufferResourcesIn,
             AccelerationStructure,
-            SceneConstant,
+            ConstantBuffer,
             MaterialBuffer,
             SampleBuffers,
             EnvironmentMap,
@@ -76,13 +76,12 @@ namespace LocalRootSignature {
 }
 
 // Shader entry points.
-// ToDO rename gbuffer?
-const wchar_t* Pathtracer::c_rayGenShaderNames[] = { L"MyRayGenShader_Pathtracer" };
-const wchar_t* Pathtracer::c_closestHitShaderNames[] = { L"MyClosestHitShader_Pathtracer", L"MyClosestHitShader_ShadowRay" };
-const wchar_t* Pathtracer::c_missShaderNames[] = { L"MyMissShader_Pathtracer", L"MyMissShader_ShadowRay" };
+const wchar_t* Pathtracer::c_rayGenShaderNames[] = { L"MyRayGenShader_RadianceRay" };
+const wchar_t* Pathtracer::c_closestHitShaderNames[] = { L"MyClosestHitShader_RadianceRay", L"MyClosestHitShader_ShadowRay" };
+const wchar_t* Pathtracer::c_missShaderNames[] = { L"MyMissShader_RadianceRay", L"MyMissShader_ShadowRay" };
 
 // Hit groups.
-const wchar_t* Pathtracer::c_hitGroupNames[] = { L"MyHitGroup_Triangle_Pathtracer", L"MyHitGroup_Triangle_ShadowRay" };
+const wchar_t* Pathtracer::c_hitGroupNames[] = { L"MyHitGroup_Triangle_RadianceRay", L"MyHitGroup_Triangle_ShadowRay" };
 
 // Singleton instance.
 Pathtracer* g_pPathracer = nullptr;
@@ -104,7 +103,6 @@ void OnRecreateSampleRaytracingResources(void*)
 
 namespace Pathtracer_Args
 {
-    // ToDo Reorganize UI, cleanup obsolete.
 
     // Default ambient intensity for hitPositions that don't have a calculated Ambient coefficient.
     // Calculating AO just for a single hitPosition per pixel can cause visible visual differences
@@ -118,7 +116,6 @@ namespace Pathtracer_Args
        
     BoolVar RTAOUseNormalMaps(L"Render/PathTracing/Normal maps", false);
     const WCHAR* FloatingPointFormatsRG[TextureResourceFormatRG::Count] = { L"R32G32_FLOAT", L"R16G16_FLOAT", L"R8G8_SNORM" };
-    // ToDo  ddx needs to be in normalized to use UNORM.
     EnumVar RTAO_PartialDepthDerivativesResourceFormat(L"Render/Texture Formats/PartialDepthDerivatives", TextureResourceFormatRG::R16G16_FLOAT, TextureResourceFormatRG::Count, FloatingPointFormatsRG, Sample::OnRecreateRaytracingResources);
     EnumVar RTAO_MotionVectorResourceFormat(L"Render/Texture Formats/AO/RTAO/Temporal Supersampling/Motion Vector", TextureResourceFormatRG::R16G16_FLOAT, TextureResourceFormatRG::Count, FloatingPointFormatsRG, Sample::OnRecreateRaytracingResources);
 }
@@ -170,8 +167,6 @@ void Pathtracer::CreateDeviceDependentResources(Scene& scene)
     BuildShaderTables(scene);
 }
 
-
-// ToDo rename
 void Pathtracer::CreateAuxilaryDeviceResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
@@ -235,7 +230,7 @@ void Pathtracer::CreateRootSignatures()
         rootParameters[Slot::Debug2].InitAsDescriptorTable(1, &ranges[Slot::Debug2]);
 
         rootParameters[Slot::AccelerationStructure].InitAsShaderResourceView(0);
-        rootParameters[Slot::SceneConstant].InitAsConstantBufferView(0);		// ToDo rename to ConstantBuffer
+        rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
         rootParameters[Slot::MaterialBuffer].InitAsShaderResourceView(3);
         rootParameters[Slot::SampleBuffers].InitAsShaderResourceView(4);
         rootParameters[Slot::PrevFrameBottomLevelASIstanceTransforms].InitAsShaderResourceView(15);
@@ -350,7 +345,7 @@ void Pathtracer::CreateRaytracingPipelineStateObject()
         // Shader config
         // Defines the maximum sizes in bytes for the ray rayPayload and attribute structure.
         auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-        UINT payloadSize = static_cast<UINT>(max(sizeof(ShadowRayPayload), sizeof(PathtracerRayPayload)));		// ToDo revise
+        UINT payloadSize = static_cast<UINT>(max(sizeof(ShadowRayPayload), sizeof(PathtracerRayPayload)));
 
         UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
         shaderConfig->Config(payloadSize, attributeSize);
@@ -449,10 +444,6 @@ void Pathtracer::BuildShaderTables(Scene& scene)
         m_missShaderTable = missShaderTable.GetResource();
     }
 
-    // ToDo remove
-    vector<vector<GeometryInstance>*> geometryInstancesArray;
-
-    // ToDo split shader table per unique pass?
     // Hit group shader table.
     {
         auto& bottomLevelASGeometries = scene.BottomLevelASGeometries();
@@ -708,7 +699,7 @@ void Pathtracer::Run(Scene& scene)
 
     // Bind inputs.
     commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::AccelerationStructure, scene.AccelerationStructure()->GetTopLevelASResource()->GetGPUVirtualAddress());
-    commandList->SetComputeRootConstantBufferView(GlobalRootSignature::Slot::SceneConstant, m_CB.GpuVirtualAddress(frameIndex));
+    commandList->SetComputeRootConstantBufferView(GlobalRootSignature::Slot::ConstantBuffer, m_CB.GpuVirtualAddress(frameIndex));
     commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::MaterialBuffer, scene.MaterialBuffer().GpuVirtualAddress());
     commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::EnvironmentMap, EnvironmentMap.gpuDescriptorHandle);
     commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::PrevFrameBottomLevelASIstanceTransforms, PrevFrameBottomLevelASInstanceTransforms.GpuVirtualAddress(frameIndex));

@@ -98,7 +98,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
         // Load all the contributing columns for each row.
         int2 pixel = GroupKernelBasePixel + GTid4x16 * cb.step;
-        float value = RTAO::InvalidAOValue;
+        float value = RTAO::InvalidAOCoefficientValue;
         float depth = 0;
 
         // The lane is out of bounds of the GroupDim + kernel, 
@@ -143,7 +143,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
             // Initialize the first 8 lanes to the center cell contribution of the kernel. 
             // This covers the remainder of 1 in FilterKernel::Width / 2 used in the loop below. 
-            if (GTid4x16.x < GroupDim.x && kcValue != RTAO::InvalidAOValue && kcDepth != 0)
+            if (GTid4x16.x < GroupDim.x && kcValue != RTAO::InvalidAOCoefficientValue && kcDepth != 0)
             {
                 float w_h = FilterKernel::Kernel1D[FilterKernel::Radius];
                 gaussianWeightedValueSum = w_h * kcValue;
@@ -168,7 +168,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
                 float cValue = WaveReadLaneAt(value, laneToReadFrom);
                 float cDepth = WaveReadLaneAt(depth, laneToReadFrom);
 
-                if (cValue != RTAO::InvalidAOValue && kcDepth != 0 && cDepth != 0)
+                if (cValue != RTAO::InvalidAOCoefficientValue && kcDepth != 0 && cDepth != 0)
                 {
                     float w_h = FilterKernel::Kernel1D[kernelCellIndex];
 
@@ -193,7 +193,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
             // Store only the valid results, i.e. first GroupDim columns.
             if (GTid4x16.x < GroupDim.x)
             {
-                float gaussianFilteredValue = gaussianWeightedSum > 1e-6 ? gaussianWeightedValueSum / gaussianWeightedSum : RTAO::InvalidAOValue;
+                float gaussianFilteredValue = gaussianWeightedSum > 1e-6 ? gaussianWeightedValueSum / gaussianWeightedSum : RTAO::InvalidAOCoefficientValue;
                 float filteredValue = weightSum > 1e-6 ? weightedValueSum / weightSum : gaussianFilteredValue;
 
                 FilteredResultCache[GTid4x16.y][GTid4x16.x] = filteredValue;
@@ -226,7 +226,7 @@ void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
             float rDepth = rUnpackedValueDepth.y;
             float rFilteredValue = FilteredResultCache[rowID][GTid.x];
 
-            if (rDepth != 0 && rFilteredValue != RTAO::InvalidAOValue)
+            if (rDepth != 0 && rFilteredValue != RTAO::InvalidAOCoefficientValue)
             {
                 float w_h = FilterKernel::Kernel1D[r];
                 float depthThreshold = 0.05 + cb.step * 0.001 * abs(int(FilterKernel::Radius) - int(r));
@@ -239,9 +239,9 @@ void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
                 gaussianWeightSum += w_h;
             }
         }
-        float gaussianFilteredValue = gaussianWeightSum > 1e-6 ? gaussianWeightedValueSum / gaussianWeightSum : RTAO::InvalidAOValue;
+        float gaussianFilteredValue = gaussianWeightSum > 1e-6 ? gaussianWeightedValueSum / gaussianWeightSum : RTAO::InvalidAOCoefficientValue;
         filteredValue = weightSum > 1e-6 ? weightedValueSum / weightSum : gaussianFilteredValue;
-        filteredValue = filteredValue != RTAO::InvalidAOValue ? lerp(kcValue, filteredValue, blurStrength) : filteredValue;
+        filteredValue = filteredValue != RTAO::InvalidAOCoefficientValue ? lerp(kcValue, filteredValue, blurStrength) : filteredValue;
     }
     g_outValues[DTid] = filteredValue;
 }

@@ -21,7 +21,6 @@
 
 // ToDo pix doesn't show output for AO pass
 RaytracingAccelerationStructure g_scene : register(t0);
-// ToDo switch to depth == 0 for hit/no hit?
 Texture2D<float4> g_texRayOriginPosition : register(t7);
 Texture2D<NormalDepthTexFormat> g_texRayOriginSurfaceNormalDepth : register(t8);
 Texture2D<NormalDepthTexFormat> g_texAORaysDirectionOriginDepth : register(t22);
@@ -66,9 +65,6 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
         // Ignore transparent surfaces for occlusion testing.
         RAY_FLAG_CULL_NON_OPAQUE;        
 
-    // ToDo remove?
-    // ToDo test visual impact
-    // ToDo test perf impact 1.7 -> 1.55 ms
     bool acceptFirstHit = true;
     if (acceptFirstHit)
     {
@@ -98,7 +94,7 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
 float CalculateAO(out float tHit, in uint2 srcPixelIndex, in Ray AOray, in float3 surfaceNormal)
 {
     float ambientCoef = 1;
-    const float tMax = cb.maxAORayHitTime; // ToDo make sure its FLT_10BIT_MAX or less since we use 10bit origin depth in RaySort
+    const float tMax = cb.maxAORayHitTime; 
     if (TraceAORayAndReportIfHit(tHit, AOray, tMax, surfaceNormal))
     {
         float occlusionCoef = 1;
@@ -144,10 +140,10 @@ void RayGenShader()
     float3 surfaceNormal;
     float depth;
     DecodeNormalDepth(g_texRayOriginSurfaceNormalDepth[srcRayIndex], surfaceNormal, depth);
-	bool hit = depth != 0;   // ToDo use a common func to determine
+	bool isValidHit = depth != 0;
     float tHit = RTAO::RayHitDistanceOnMiss;
-    float ambientCoef = RTAO::InvalidAOValue;
-	if (hit)
+    float ambientCoef = RTAO::InvalidAOCoefficientValue;
+	if (isValidHit)
 	{
         float3 hitPosition = g_texRayOriginPosition[srcRayIndex].xyz;
         ambientCoef = 0;
@@ -222,7 +218,7 @@ void RayGenShader_sortedRays()
     }
 
     float tHit = RTAO::RayHitDistanceOnMiss;
-    float ambientCoef = RTAO::InvalidAOValue;
+    float ambientCoef = RTAO::InvalidAOCoefficientValue;
     if (isActiveRay)
     {
         float dummy;

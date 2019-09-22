@@ -93,7 +93,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
         // Load all the contributing columns for each row.
         int2 pixel = GroupKernelBasePixel + GTid4x16 * cb.step;
-        float value = RTAO::InvalidAOValue;
+        float value = RTAO::InvalidAOCoefficientValue;
         float depth = 0;
         float3 normal = 0;
 
@@ -143,7 +143,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
             // Initialize the first 8 lanes to the center cell contribution of the kernel. 
             // This covers the remainder of 1 in FilterKernel::Width / 2 used in the loop below. 
-            if (GTid4x16.x < GroupDim.x && kcValue != RTAO::InvalidAOValue && kcDepth != 0)
+            if (GTid4x16.x < GroupDim.x && kcValue != RTAO::InvalidAOCoefficientValue && kcDepth != 0)
             {
                 float w = FilterKernel::Kernel1D[FilterKernel::Radius];
                 weightedValueSum = w * kcValue;
@@ -167,7 +167,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
                 float cDepth = WaveReadLaneAt(depth, laneToReadFrom);
                 float3 cNormal = WaveReadLaneAt(normal, laneToReadFrom);
 
-                if (cValue != RTAO::InvalidAOValue && kcDepth != 0 && cDepth != 0)
+                if (cValue != RTAO::InvalidAOCoefficientValue && kcDepth != 0 && cDepth != 0)
                 {
                     float w = FilterKernel::Kernel1D[kernelCellIndex];
 
@@ -262,10 +262,10 @@ void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
                 weightSum += w * rWeightSum;
             }
         }
-        filteredValue = weightSum > 1e-9 ? weightedValueSum / weightSum : RTAO::InvalidAOValue;
+        filteredValue = weightSum > 1e-9 ? weightedValueSum / weightSum : RTAO::InvalidAOCoefficientValue;
     }
 
-    g_outValues[DTid] = filteredValue != RTAO::InvalidAOValue ? lerp(kcValue, filteredValue, blurStrength) : RTAO::InvalidAOValue;
+    g_outValues[DTid] = filteredValue != RTAO::InvalidAOCoefficientValue ? lerp(kcValue, filteredValue, blurStrength) : RTAO::InvalidAOCoefficientValue;
 }
 
 

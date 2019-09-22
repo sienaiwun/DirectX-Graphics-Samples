@@ -127,8 +127,8 @@ namespace SMem
     }
 }
 
-#if MAX_RAYS > 8192
-The shader supports up to 8192 input rays.
+#if MAX_RAYS > 8192 || NUM_KEYS > 4096
+The shader supports up to 8192 input rays and 4096 num keys.
 #endif
 
 //********************************************************************

@@ -80,7 +80,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
         // Load all the contributing columns for each row.
         int2 pixel = GetActivePixelIndex(KernelBasePixel + GTid4x16 * int2(1, cb.pixelStepY));
-        float value = RTAO::InvalidAOValue;
+        float value = RTAO::InvalidAOCoefficientValue;
 
         // The lane is out of bounds of the GroupDim + kernel, 
         // but could be within bounds of the input texture,
@@ -103,7 +103,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
             
             // Initialize the first 8 lanes to the first cell contribution of the kernel. 
             // This covers the remainder of 1 in cb.kernelWidth / 2 used in the loop below. 
-            if (GTid4x16.x < GroupDim.x && value != RTAO::InvalidAOValue)
+            if (GTid4x16.x < GroupDim.x && value != RTAO::InvalidAOCoefficientValue)
             {
                 valueSum = value;
                 squaredValueSum = value * value;
@@ -122,7 +122,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
             {
                 uint laneToReadFrom = Row_KernelStartLaneIndex + c;
                 float cValue = WaveReadLaneAt(value, laneToReadFrom);
-                if (cValue != RTAO::InvalidAOValue)
+                if (cValue != RTAO::InvalidAOCoefficientValue)
                 {
 #if RTAO_MARK_CACHED_VALUES_NEGATIVE
                     cValue = abs(cValue);
@@ -188,7 +188,7 @@ void FilterVertically(uint2 DTid, in uint2 GTid)
 
     variance = max(0, variance);    // Ensure variance doesn't go negative due to imprecision.
 
-    g_outMeanVariance[pixel] = numValues > 0 ? float2(mean, variance) : RTAO::InvalidAOValue;
+    g_outMeanVariance[pixel] = numValues > 0 ? float2(mean, variance) : RTAO::InvalidAOCoefficientValue;
 }
 
 

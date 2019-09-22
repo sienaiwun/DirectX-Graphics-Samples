@@ -20,7 +20,7 @@
 #include "RandomNumberGenerator.hlsli"
 #include "AnalyticalTextures.hlsli"
 #include "BxDF.hlsli"
-#define HitDistanceOnMiss -1        // ToDo unify with DISTANCE_ON_MISS
+#define HitDistanceOnMiss 0
 
 //***************************************************************************
 //*****------ Shader resources bound via root signatures -------*************
@@ -252,8 +252,7 @@ bool TraceShadowRayAndReportIfHit(in float3 hitPosition, in float3 direction, in
     return TraceShadowRayAndReportIfHit(dummyTHit, visibilityRay, N, rayPayload.rayRecursionDepth, false, TMax);
 }
 
-// Trace a camera ray into the scene.
-PathtracerRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
+PathtracerRayPayload TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
 {
     PathtracerRayPayload rayPayload;
     rayPayload.rayRecursionDepth = currentRayRecursionDepth + 1;
@@ -294,35 +293,23 @@ PathtracerRayPayload TraceGBufferRay(in Ray ray, in UINT currentRayRecursionDept
 	return rayPayload;
 }
 
-
-Ray ReflectedRay(in float3 hitPosition, in float3 incidentDirection, in float3 normal)
-{
-    Ray reflectedRay;
-    float smallValue = 1e-5f;
-    reflectedRay.origin = hitPosition + normal * smallValue;
-    reflectedRay.direction = reflect(incidentDirection, normal);
-
-    return reflectedRay;
-}
-
 // Returns radiance of the traced ray.
-// ToDo standardize variable names
 float3 TraceReflectedGBufferRay(in float3 hitPosition, in float3 wi, in float3 N, in float3 objectNormal, inout PathtracerRayPayload rayPayload, in float TMax = 10000)
 {
-    
     float tOffset = 0.001f;
-    // ToDo offset in the ray direction so that the reflected ray projects to the same screen pixel. Otherwise it results in swimming in TAO. 
+    // Here we offset ray start along the ray direction instead of surface normal 
+    // so that the reflected ray projects to the same screen pixel. 
+    // Otherwise it results in swimming in temporally accumulated buffer. 
     float3 offsetAlongRay = tOffset * wi;
 
     float3 adjustedHitPosition = hitPosition + offsetAlongRay;
 
-    // ToDo offset along surface normal, and adjust tOffset subtraction below.
     Ray ray = { adjustedHitPosition,  wi };
 
-    float tMin = 0; // NEAR_PLANE ToDo
-    float tMax = TMax;  //  FAR_PLANE - RayTCurrent()
+    float tMin = 0; 
+    float tMax = TMax;
 
-    rayPayload = TraceGBufferRay(ray, rayPayload.rayRecursionDepth, tMin, tMax);
+    rayPayload = TraceRadianceRay(ray, rayPayload.rayRecursionDepth, tMin, tMax);
     if (rayPayload.AOGBuffer.tHit != HitDistanceOnMiss)
     {
         // Get the current planar mirror in the previous frame.
@@ -364,7 +351,7 @@ float3 TraceRefractedGBufferRay(in float3 hitPosition, in float3 wt, in float3 N
     // glass cockpit through a window in the house. The cockpit will be skipped in this case.
     bool cullNonOpaque = true;
 
-    rayPayload = TraceGBufferRay(ray, rayPayload.rayRecursionDepth, tMin, tMax, 0, cullNonOpaque);
+    rayPayload = TraceRadianceRay(ray, rayPayload.rayRecursionDepth, tMin, tMax, 0, cullNonOpaque);
 
     if (rayPayload.AOGBuffer.tHit != HitDistanceOnMiss)
     {
@@ -493,7 +480,7 @@ float3 Shade(
 }
 
 [shader("raygeneration")]
-void MyRayGenShader_Pathtracer()
+void MyRayGenShader_RadianceRay()
 {
     uint2 DTid = DispatchRaysIndex().xy;
 
@@ -502,19 +489,19 @@ void MyRayGenShader_Pathtracer()
 
 	// Cast a ray into the scene and retrieve GBuffer information.
 	UINT currentRayRecursionDepth = 0;
-    PathtracerRayPayload rayPayload = TraceGBufferRay(ray, currentRayRecursionDepth);
+    PathtracerRayPayload rayPayload = TraceRadianceRay(ray, currentRayRecursionDepth);
 
     // Invalidate perfect mirror reflections that missed. 
     // There is no We don't need to calculate AO for those.
     bool hasNonZeroDiffuse = rayPayload.AOGBuffer.diffuseByte3 != 0;
     rayPayload.AOGBuffer.tHit = hasNonZeroDiffuse ? rayPayload.AOGBuffer.tHit : HitDistanceOnMiss;
-    bool hasCameraRayHitGeometry = rayPayload.AOGBuffer.tHit > 0;   // ToDo use helper fcn
+    bool hasCameraRayHitGeometry = rayPayload.AOGBuffer.tHit != HitDistanceOnMiss;
 
 	// Write out GBuffer information to rendertargets.
 	g_rtGBufferCameraRayHits[DTid] = hasCameraRayHitGeometry ? 1 : 0;   // ToDo should this be 1 if we hit a perfect mirror reflecting into skybox?
     g_rtGBufferPosition[DTid] = float4(rayPayload.AOGBuffer.hitPosition, 1);
 
-    float rayLength = DISTANCE_ON_MISS; 
+    float rayLength = HitDistanceOnMiss;
     if (hasCameraRayHitGeometry)
     {
         rayLength = rayPayload.AOGBuffer.tHit;
@@ -576,7 +563,7 @@ float3 NormalMap(
 }
 
 [shader("closesthit")]
-void MyClosestHitShader_Pathtracer(inout PathtracerRayPayload rayPayload, in BuiltInTriangleIntersectionAttributes attr)
+void MyClosestHitShader_RadianceRay(inout PathtracerRayPayload rayPayload, in BuiltInTriangleIntersectionAttributes attr)
 {
     uint startIndex = PrimitiveIndex() * 3;
     const uint3 indices = { l_indices[startIndex], l_indices[startIndex + 1], l_indices[startIndex + 2] };
@@ -665,7 +652,7 @@ void MyClosestHitShader_ShadowRay(inout ShadowRayPayload rayPayload, in BuiltInT
 //***************************************************************************
 
 [shader("miss")]
-void MyMissShader_Pathtracer(inout PathtracerRayPayload rayPayload)
+void MyMissShader_RadianceRay(inout PathtracerRayPayload rayPayload)
 {
     rayPayload.radiance = g_texEnvironmentMap.SampleLevel(LinearWrapSampler, WorldRayDirection(), 0).xyz;
 }

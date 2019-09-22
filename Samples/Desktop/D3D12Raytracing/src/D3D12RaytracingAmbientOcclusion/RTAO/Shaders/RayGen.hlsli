@@ -14,7 +14,6 @@
 float3 GetRandomRayDirection(in uint2 srcRayIndex, in float3 surfaceNormal, in uint2 textureDim, in uint raySampleIndexOffset)
 {
     // Calculate coordinate system for the hemisphere.
-    // ToDo AO has square alias due to same hemisphere
     float3 u, v, w;
     w = surfaceNormal;
 

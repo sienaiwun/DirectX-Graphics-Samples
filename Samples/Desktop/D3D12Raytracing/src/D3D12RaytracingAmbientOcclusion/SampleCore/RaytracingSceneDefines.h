@@ -30,7 +30,7 @@ namespace ComputeShader {   // ToDo remove this?
 				enum Enum {
 					Output = 0,
 					SampleBuffers,
-					SceneConstant,
+					ConstantBuffer,
 					Count
 				};
 			}

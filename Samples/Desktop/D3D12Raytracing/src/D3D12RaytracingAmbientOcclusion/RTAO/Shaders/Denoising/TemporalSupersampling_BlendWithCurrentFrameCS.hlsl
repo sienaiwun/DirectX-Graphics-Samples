@@ -46,11 +46,11 @@ void main(uint2 DTid : SV_DispatchThreadID)
         isCurrentFrameRayActive = cb.areEvenPixelsActive == isEvenPixel;
     }
 
-    float value = isCurrentFrameRayActive ? g_inCurrentFrameValue[DTid] : RTAO::InvalidAOValue;
-    bool isValidValue = value != RTAO::InvalidAOValue;
-    float valueSquaredMean = isValidValue ? value * value : RTAO::InvalidAOValue;
-    float rayHitDistance = RTAO::InvalidAOValue;
-    float variance = RTAO::InvalidAOValue;
+    float value = isCurrentFrameRayActive ? g_inCurrentFrameValue[DTid] : RTAO::InvalidAOCoefficientValue;
+    bool isValidValue = value != RTAO::InvalidAOCoefficientValue;
+    float valueSquaredMean = isValidValue ? value * value : RTAO::InvalidAOCoefficientValue;
+    float rayHitDistance = RTAO::InvalidAOCoefficientValue;
+    float variance = RTAO::InvalidAOCoefficientValue;
     
     if (Trpp > 0)
     {     
