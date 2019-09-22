@@ -76,16 +76,9 @@ namespace RTAOGpuKernels
     class BilateralFilter
     {
     public:
-        enum FilterType {
-            DepthAware_SeparableGaussianFilter3x3 = 0,
-            NormalDepthAware_SeparableGaussianFilter3x3,
-            Count
-        };
-
         void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
         void Run(
             ID3D12GraphicsCommandList4* commandList,
-            FilterType type,
             UINT filterStep,
             float normalWeightExponent,
             float minNormalWeightStrength,
@@ -98,7 +91,7 @@ namespace RTAOGpuKernels
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
-        ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
+        ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
 
         ConstantBuffer<BilateralFilterConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;

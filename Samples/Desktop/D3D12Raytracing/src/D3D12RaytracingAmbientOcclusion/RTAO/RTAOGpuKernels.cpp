@@ -26,7 +26,6 @@
 #include "CompiledShaders\CountingSort_SortRays_64x128rayGroupCS.hlsl.h"
 #include "CompiledShaders\AORayGenCS.hlsl.h"
 #include "CompiledShaders\DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl.h"
-#include "CompiledShaders\NormalDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl.h"
 #include "CompiledShaders\FillInCheckerboard_CrossBox4TapFilterCS.hlsl.h"
 
 using namespace std;
@@ -180,21 +179,10 @@ namespace RTAOGpuKernels
         {
             D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
             descComputePSO.pRootSignature = m_rootSignature.Get();
+            descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt));
 
-            for (UINT i = 0; i < FilterType::Count; i++)
-            {
-                switch (i)
-                {
-                case DepthAware_SeparableGaussianFilter3x3:
-                    descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt));
-                    break;
-                case NormalDepthAware_SeparableGaussianFilter3x3:
-                    descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pNormalDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pNormalDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt));
-                    break;
-                }
-                ThrowIfFailed(device->CreateComputePipelineState(&descComputePSO, IID_PPV_ARGS(&m_pipelineStateObjects[i])));
-                m_pipelineStateObjects[i]->SetName(L"Pipeline state object: BilateralFilter");
-            }
+            ThrowIfFailed(device->CreateComputePipelineState(&descComputePSO, IID_PPV_ARGS(&m_pipelineStateObject)));
+            m_pipelineStateObject->SetName(L"Pipeline state object: BilateralFilter");
         }
 
         // Create shader resources
@@ -208,7 +196,6 @@ namespace RTAOGpuKernels
     // width, height - dimensions of the input resource.
     void BilateralFilter::Run(
         ID3D12GraphicsCommandList4* commandList,
-        FilterType type,
         UINT filterStep,
         float normalWeightExponent,
         float minNormalWeightStrength,
@@ -249,7 +236,7 @@ namespace RTAOGpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::Debug1, debugResources[0].gpuDescriptorWriteAccess);
             commandList->SetComputeRootDescriptorTable(Slot::Debug2, debugResources[1].gpuDescriptorWriteAccess);
 
-            commandList->SetPipelineState(m_pipelineStateObjects[type].Get());
+            commandList->SetPipelineState(m_pipelineStateObject.Get());
         }
 
         // Account for interleaved Group execution

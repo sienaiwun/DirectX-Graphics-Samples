@@ -557,11 +557,8 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
         resourceStateTracker->TransitionResource(OutResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     }
 
-    RTAOGpuKernels::BilateralFilter::FilterType filter = RTAOGpuKernels::BilateralFilter::NormalDepthAware_SeparableGaussianFilter3x3;
-
     // ToDo test perf win by using 16b Depth over 32b encoded normal depth.
     GpuResource(&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
-    GpuResource* depthResource = &GBufferResources[GBufferResource::Depth];
 
     UINT FilterSteps[4] = {
         1, 4, 8, 16
@@ -584,13 +581,12 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
             resourceStateTracker->FlushResourceBarriers();
             m_bilateralFilterKernel.Run(
                 commandList,
-                filter,
                 filterStep,
                 Denoiser_Args::Denoising_LowTrppNormalExponent,
                 Denoiser_Args::Denoising_LowTrppMinNormalWeight,
                 m_cbvSrvUavHeap->GetHeap(),
                 m_temporalSupersampling_blendedAOCoefficient[0].gpuDescriptorReadAccess,
-                depthResource->gpuDescriptorReadAccess,
+                GBufferResources[GBufferResource::Depth].gpuDescriptorReadAccess,
                 m_multiPassDenoisingBlurStrength.gpuDescriptorReadAccess,
                 OutResource,
                 readWriteUAV_and_skipPassthrough);
@@ -608,13 +604,12 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
             resourceStateTracker->FlushResourceBarriers();
             m_bilateralFilterKernel.Run(
                 commandList,
-                filter,
                 filterStep,
                 Denoiser_Args::Denoising_LowTrppNormalExponent,
                 Denoiser_Args::Denoising_LowTrppMinNormalWeight,
                 m_cbvSrvUavHeap->GetHeap(),
                 inResource->gpuDescriptorReadAccess,
-                GBufferResources[GBufferResource::SurfaceNormalDepth].gpuDescriptorReadAccess,
+                GBufferResources[GBufferResource::Depth].gpuDescriptorReadAccess,
                 m_multiPassDenoisingBlurStrength.gpuDescriptorReadAccess,
                 outResource,
                 readWriteUAV_and_skipPassthrough);

@@ -342,9 +342,6 @@
     <FxCompile Include="RTAO\Shaders\Denoising\CalculateMeanVariance_SeparableFilterCS.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering\Unused</Filter>
     </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\NormalDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </FxCompile>
     <FxCompile Include="RTAO\Shaders\Denoising\DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
     </FxCompile>
