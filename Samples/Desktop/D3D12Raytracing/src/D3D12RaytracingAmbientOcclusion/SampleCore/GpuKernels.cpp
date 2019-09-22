@@ -386,6 +386,8 @@ namespace GpuKernels
                     InputLowResNormal,
                     InputHiResNormal,
                     InputHiResPartialDistanceDerivative,
+                    Debug1,
+                    Debug2,
                     ConstantBuffer,
                     Count
                 };
@@ -406,6 +408,8 @@ namespace GpuKernels
             ranges[Slot::InputHiResNormal].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);  // 1 input normal high res texture
             ranges[Slot::InputHiResPartialDistanceDerivative].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);  // 1 input partial distance derivative texture
             ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
+            ranges[Slot::Debug1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1); 
+            ranges[Slot::Debug2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
 
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
             rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
@@ -413,6 +417,8 @@ namespace GpuKernels
             rootParameters[Slot::InputHiResNormal].InitAsDescriptorTable(1, &ranges[Slot::InputHiResNormal]);
             rootParameters[Slot::InputHiResPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[Slot::InputHiResPartialDistanceDerivative]);
             rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
+            rootParameters[Slot::Debug1].InitAsDescriptorTable(1, &ranges[Slot::Debug1]);
+            rootParameters[Slot::Debug2].InitAsDescriptorTable(1, &ranges[Slot::Debug2]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
             CD3DX12_STATIC_SAMPLER_DESC staticSamplers[] = {
@@ -477,8 +483,6 @@ namespace GpuKernels
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);
 
-
-
         // Set pipeline state.
         {
             commandList->SetDescriptorHeaps(1, &descriptorHeap);
@@ -489,6 +493,11 @@ namespace GpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::InputHiResPartialDistanceDerivative, inputHiResPartialDistanceDerivativeResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::Output, outputResourceHandle);
             commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
+
+            GpuResource* debugResources = Sample::g_debugOutput;
+            commandList->SetComputeRootDescriptorTable(Slot::Debug1, debugResources[0].gpuDescriptorWriteAccess);
+            commandList->SetComputeRootDescriptorTable(Slot::Debug2, debugResources[1].gpuDescriptorWriteAccess);
+
             commandList->SetPipelineState(m_pipelineStateObjects[type].Get());
         }
 

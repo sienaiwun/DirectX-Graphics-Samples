@@ -19,6 +19,8 @@ Texture2D<NormalDepthTexFormat> g_inLowResNormalDepth : register(t1);
 Texture2D<NormalDepthTexFormat> g_inHiResNormalDepth : register(t2);
 Texture2D<float2> g_inHiResPartialDepthDerivative : register(t3);
 RWTexture2D<ValueType> g_outValue : register(u0);
+RWTexture2D<float4> g_outDebug1 : register(u1);
+RWTexture2D<float4> g_outDebug2 : register(u2);
 
 ConstantBuffer<DownAndUpsampleFilterConstantBuffer> cb : register(b0);
 
@@ -72,8 +74,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
     int2 topLeftHiResIndex = (DTid << 1) + int2(-1, -1);
     int2 topLeftLowResIndex = (topLeftHiResIndex + int2(-1, -1)) >> 1;
     const uint2 srcIndexOffsets[4] = { {0, 0}, {1, 0}, {0, 1}, {1, 1} };
-
-    
+ 
     float4 vHiResDepths;
     float3 hiResNormals[4];
     float2 hiResTexturePos = (topLeftHiResIndex + 0.5) * cb.invHiResTextureDim;

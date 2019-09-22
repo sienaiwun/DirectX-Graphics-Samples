@@ -37,6 +37,7 @@ namespace RTAO_Args
     extern BoolVar Rpp_doCheckerboard;
     extern BoolVar Rpp_useGroundTruthRpp;
     extern BoolVar RTAOUseRaySorting;
+    extern NumVar MaxRayHitTime;
 }
 
 class RTAO

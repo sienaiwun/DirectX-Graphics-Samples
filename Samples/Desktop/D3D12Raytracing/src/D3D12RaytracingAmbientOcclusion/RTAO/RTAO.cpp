@@ -86,11 +86,13 @@ namespace RTAO_Args
             RTAO_Args::Rpp.SetValue(GROUND_TRUTH_RPP, false);
             RTAO_Args::Rpp_doCheckerboard.SetValue(false, false);
             RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(1, false);
+            Composition_Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_RawOneFrame, false);
         }
         else
         {
             RTAO_Args::Rpp.SetValue(1, false);
             RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, false);
+            Composition_Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_Denoised, false);
         }
 
         Sample::instance().RTAOComponent().RequestRecreateAOSamples();
@@ -129,7 +131,7 @@ namespace RTAO_Args
     EnumVar RTAO_AmbientCoefficientResourceFormat(L"Render/Texture Formats/AO/RTAO/Ambient Coefficient", TextureResourceFormatR::R16_FLOAT, TextureResourceFormatR::Count, FloatingPointFormatsR, Sample::OnRecreateRaytracingResources);
 
 
-    NumVar RTAOMaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", 2*AO_RAY_T_MAX, 0.0f, 50.0f, 0.2f);
+    NumVar MaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", AO_RAY_T_MAX, 0.0f, 50.0f, 0.2f);
     BoolVar RTAOApproximateInterreflections(L"Render/AO/RTAO/Approximate Interreflections/Enabled", true);
     NumVar RTAODiffuseReflectanceScale(L"Render/AO/RTAO/Approximate Interreflections/Diffuse Reflectance Scale", 0.5f, 0.0f, 1.0f, 0.1f);
     NumVar  minimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
@@ -154,12 +156,12 @@ DXGI_FORMAT RTAO::ResourceFormat(ResourceType resourceType)
 
 float RTAO::MaxRayHitTime()
 {
-    return RTAO_Args::RTAOMaxRayHitTime;
+    return RTAO_Args::MaxRayHitTime;
 }
 
 void RTAO::SetMaxRayHitTime(float maxRayHitTime)
 {
-    return RTAO_Args::RTAOMaxRayHitTime.SetValue(maxRayHitTime);
+    return RTAO_Args::MaxRayHitTime.SetValue(maxRayHitTime);
 }
 
 RTAO::RTAO()
@@ -526,8 +528,8 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
         // Invert occlusionFactor = exp(-lambda * t * t), where t is tHit/tMax of a ray.
         float t = sqrt(logf(occclusionCutoff) / -lambda);
 
-        m_CB->maxAORayHitTime = t * RTAO_Args::RTAOMaxRayHitTime;
-        m_CB->maxTheoreticalAORayHitTime = RTAO_Args::RTAOMaxRayHitTime;
+        m_CB->maxAORayHitTime = t * RTAO_Args::MaxRayHitTime;
+        m_CB->maxTheoreticalAORayHitTime = RTAO_Args::MaxRayHitTime;
     }
 
     m_CB.CopyStagingToGpu(frameIndex);
@@ -594,7 +596,7 @@ void RTAO::Run(
         resourceStateTracker->TransitionResource(&m_AORayDirectionOriginDepth, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->InsertUAVBarrier(&m_AORayDirectionOriginDepth);
 
-        float rayBinDepthSize = RTAO_Args::RTAORayBinDepthSizeMultiplier * RTAO_Args::RTAOMaxRayHitTime;
+        float rayBinDepthSize = RTAO_Args::RTAORayBinDepthSizeMultiplier * RTAO_Args::MaxRayHitTime;
         resourceStateTracker->FlushResourceBarriers();
         m_raySorter.Run(
             commandList,

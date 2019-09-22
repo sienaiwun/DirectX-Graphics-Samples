@@ -689,7 +689,7 @@ float2 RemapDdxy(in float z0, in float2 ddxy, in float2 pixelOffset)
     //
     //      z = (z0 + ddxy) / (1 + (1-q) / z0 * ddxy) 
     float2 z = (z0 + ddxy) / (1 + ((1 - pixelOffset) / z0) * ddxy);
-    return z - z0;
+    return sign(pixelOffset) * (z - z0);
 }
 
 float GetDepthAtPixelOffset(in float z0, in float2 ddxy, in float2 pixelOffset)

@@ -65,7 +65,7 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
         // Ignore transparent surfaces for occlusion testing.
         RAY_FLAG_CULL_NON_OPAQUE;        
 
-    bool acceptFirstHit = true;
+    bool acceptFirstHit = true;  // ToDo make this UI optionable or explain
     if (acceptFirstHit)
     {
         // ToDo test perf impact. Explain why its ok since ray hit distance is used.

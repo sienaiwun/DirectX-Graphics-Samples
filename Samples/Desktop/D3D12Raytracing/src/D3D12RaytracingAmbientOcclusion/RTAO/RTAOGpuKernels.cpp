@@ -380,13 +380,14 @@ namespace RTAOGpuKernels
         float normalSigma,
         float weightScale,
         UINT kernelStepShifts[5],
+        UINT maxKernelStepShift,
         UINT passNumberToOutputToIntermediateResource,
         UINT numFilterPasses,
         Mode filterMode,
-        bool useCalculatedVariance,
         bool perspectiveCorrectDepthInterpolation,
         bool useAdaptiveKernelSize,
-        float minHitDistanceToKernelWidthScale,
+        float rayHitDistanceToKernelWidthScale,
+        float rayHitDistanceToKernelSizeScaleExponent,
         UINT minKernelWidth,
         UINT maxKernelWidth,
         float varianceSigmaScaleOnSmallKernels,
@@ -435,30 +436,24 @@ namespace RTAOGpuKernels
             // Ref: Dammertz2010
             // Tighten value range smoothing for higher passes.
 
-            if (useCalculatedVariance)
-            {
-                m_CB->valueSigma = valueSigma;
-            }
-            else
-            {
-                m_CB->valueSigma = i > 0 ? valueSigma * powf(2.f, -float(i)) : 1;
-            }
+            m_CB->valueSigma = valueSigma;
             m_CB->depthSigma = depthSigma;
             m_CB->normalSigma = normalSigma;
             m_CB->weightScale = weightScale;
+            m_CB->weightByTrpp = weightByTrpp;
+            m_CB->rayHitDistanceToKernelSizeScaleExponent = rayHitDistanceToKernelSizeScaleExponent;
 #if RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS
             m_CB->kernelStepShift = kernelStepShifts[i];
 #else
             m_CB->kernelStepShift = i;
 #endif
+            m_CB->maxKernelStepShift = maxKernelStepShift;
             // Move vars not changing inside loop outside of it.
-            m_CB->useCalculatedVariance = filterMode == OutputFilteredValue && useCalculatedVariance;
-            m_CB->outputFilteredVariance = numFilterPasses > 1 && filterMode == OutputFilteredValue && useCalculatedVariance;
+            m_CB->outputFilteredVariance = numFilterPasses > 1 && filterMode == OutputFilteredValue;
             m_CB->outputFilteredValue = filterMode == OutputFilteredValue;
-            m_CB->outputFilterWeightSum = filterMode == OutputPerPixelFilterWeightSum;
             m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
             m_CB->useAdaptiveKernelSize = useAdaptiveKernelSize;
-            m_CB->minHitDistanceToKernelWidthScale = minHitDistanceToKernelWidthScale;
+            m_CB->rayHitDistanceToKernelWidthScale = rayHitDistanceToKernelWidthScale;
             m_CB->minKernelWidth = minKernelWidth;
             m_CB->maxKernelWidth = maxKernelWidth;
             m_CB->varianceSigmaScaleOnSmallKernels = varianceSigmaScaleOnSmallKernels;
@@ -468,7 +463,6 @@ namespace RTAOGpuKernels
             m_CB->staleNeighborWeightScale = i == 0 ? staleNeighborWeightScale : 1;  // ToDo revise
             m_CB->depthWeightCutoff = depthWeightCutoff;
             m_CB->useProjectedDepthTest = useProjectedDepthTest;
-            m_CB->forceDenoisePass = forceDenoisePass;
             m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
             m_CB.CopyStagingToGpu(m_CBinstanceID + i);
         }

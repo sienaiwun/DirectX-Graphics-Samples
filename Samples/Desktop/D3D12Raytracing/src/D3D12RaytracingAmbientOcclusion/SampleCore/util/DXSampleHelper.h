@@ -420,6 +420,22 @@ inline float lerp(float a, float b, float t)
 	return a + t * (b - a);
 }
 
+inline float clamp(float a, float _min, float _max)
+{
+    return std::max(_min, std::min(_max, a));
+}
+
+inline float saturate(float a)
+{
+    return clamp(a, 0, 1);
+}
+
+inline float relativeCoef(float a, float _min, float _max)
+{
+    float _a = clamp(a, _min, _max);
+    return (_a - _min) / (_max - _min);
+}
+
 // Returns a cycling <0 -> 1 -> 0> animation interpolant 
 inline float CalculateAnimationInterpolant(float elapsedTime, float cycleDuration)
 {

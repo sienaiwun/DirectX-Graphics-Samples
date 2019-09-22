@@ -68,6 +68,7 @@ namespace CrossBilateral
             float depthFloatPrecision = FloatPrecision(TargetDepth, Params.NumMantissaBits);
 
             float depthTolerance = Params.Sigma * depthThreshold + depthFloatPrecision;
+            // ToDo = + depthFloatPrecision?
             float4 depthWeights = min(depthTolerance / (abs(SampleDepths - TargetDepth) + FLT_EPSILON), 1);
             depthWeights *= depthWeights >= Params.WeightCutoff;
 

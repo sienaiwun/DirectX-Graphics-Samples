@@ -11,6 +11,7 @@
 
 // Atrous Wavelet Transform Cross Bilateral Filter
 // Ref: Dammertz 2010, Edge-Avoiding A-Trous Wavelet Transform for Fast Global Illumination Filtering
+// Ref: Schied 2007, Spatiotemporal Variance-Guided Filtering
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -28,7 +29,7 @@ Texture2D<float> g_inHitDistance : register(t6);
 Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);
 Texture2D<uint> g_inTrpp : register(t8);
 
-RWTexture2D<float> g_outFilteredValues : register(u0);
+RWTexture2D<float> g_outFilteredValue : register(u0);
 RWTexture2D<float> g_outFilteredVariance : register(u1);
 RWTexture2D<float4> g_outDebug1 : register(u3);
 RWTexture2D<float4> g_outDebug2 : register(u4);
@@ -42,7 +43,7 @@ float DepthThreshold(float depth, float2 ddxy, float2 pixelOffset)
     if (cb.perspectiveCorrectDepthInterpolation)
     {
         float2 newDdxy = RemapDdxy(depth, ddxy, pixelOffset);
-        depthThreshold = dot(1, newDdxy);
+        depthThreshold = dot(1, abs(newDdxy));
     }
     else
     {
@@ -66,7 +67,7 @@ void AddFilterContribution(
     in uint2 kernelStep,
     in uint2 DTid)
 {
-    const float valueSigma = cb.valueSigma; // ToDo scale by pixel distance?
+    const float valueSigma = cb.valueSigma;
     const float normalSigma = cb.normalSigma;
     const float depthSigma = cb.depthSigma;
  
@@ -100,23 +101,28 @@ void AddFilterContribution(
         }
 #endif
 
-        // 
-        // ToDo explain / remove
-        float w_fa = 1;
-        uint iTrpp = g_inTrpp[id].x;
 
-        // TODO
         // Enforce trpp of at least 1 for reprojected values.
         // This is because the denoiser will fill in invalid values with filtered 
         // ones if it can. But it doesn't increase the trpp.
+        uint iTrpp = g_inTrpp[id].x;
         iTrpp = max(iTrpp, 1);
 
-        w_fa = cb.weightByTrpp ? iTrpp : 1;
-
+        // Confidence based weight
+        // This helps prevent recently disoccluded pixels with fewer samples
+        // contribute as much as samples with higher accumulated samples,
+        // and hence lowers the visible firefly/sparkly artifacts on disocclusions on creases an such.
+        float w_c = 1;
+        w_c = cb.weightByTrpp ? iTrpp : 1;
 
         // Value based weight.
+            // Ref: Dammertz2010
+            // Tighten value range smoothing for higher passes.
+        // ToDo m_CB->valueSigma = i > 0 ? valueSigma * powf(2.f, -float(i)) : 1;
         const float errorOffset = 0.005f;
-        float e_x = -abs(value - iValue) / (valueSigma * stdDeviation + errorOffset);
+        // Lower value tolerance for the neighbors further apart.
+        float valueSigmaDistCoef = 1.0 / length(pixelOffset);
+        float e_x = -abs(value - iValue) / (valueSigmaDistCoef * valueSigma * stdDeviation + errorOffset);
         float w_x = exp(e_x);
  
         // Normal based weight.
@@ -134,24 +140,13 @@ void AddFilterContribution(
                 pixelOffsetForDepth = pixelOffset + offsetSign * float2(0.5, 0.5);
             }
 
-            float depthFloatPrecision = FloatPrecision(max(depth, iDepth), cb.DepthNumMantissaBits);
-
             // ToDo dedupe with CrossBilateralWeights.hlsli?
-            // ToDo test or remove
-            if (cb.useProjectedDepthTest)
-            {
-                float zC = GetDepthAtPixelOffset(depth, ddxy, pixelOffsetForDepth);
-                float depthThreshold = abs(zC - depth);
-                float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
-                w_d = min(depthTolerance / (abs(zC - iDepth) + FLT_EPSILON), 1);
-
-            }
-            else
-            {
-                float depthThreshold = DepthThreshold(depth, ddxy, abs(pixelOffsetForDepth));
-                float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
-                w_d = min(depthTolerance / (abs(depth - iDepth) + FLT_EPSILON), 1);
-            }
+            float depthFloatPrecision = FloatPrecision(max(depth, iDepth), cb.DepthNumMantissaBits);
+            float depthThreshold = DepthThreshold(depth, ddxy, pixelOffsetForDepth);
+            float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
+            float delta = abs(depth - iDepth);
+            delta = max(0, delta - depthFloatPrecision); // Avoid distinguising initial values up to the float precision. Gets rid of banding.
+            w_d = exp(-delta / depthTolerance);
 
             // ToDo Explain
             w_d *= w_d >= cb.depthWeightCutoff;
@@ -162,8 +157,7 @@ void AddFilterContribution(
         float w_h = FilterKernel::Kernel[row][col];
         
         // Final weight.
-        float w = w_fa * w_s * w_h * w_n * w_x * w_d;
-   
+        float w = w_c * w_s * w_h * w_n * w_x * w_d;
 
         weightedValueSum += w * iValue;
         weightSum += w;
@@ -233,22 +227,32 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         // Scale the kernel span based on AO ray hit distance. 
         // This helps filter out lower frequency noise, a.k.a. boiling artifacts.
         uint2 kernelStep = 1 << cb.kernelStepShift;
-        if (cb.useAdaptiveKernelSize)
+        if (cb.useAdaptiveKernelSize && isValidValue)
         {
-            float avgRayHitDistance = isValidValue ? g_inHitDistance[DTid] : 0;
+            float avgRayHitDistance = g_inHitDistance[DTid];
 
-            float perPixelViewAngle = (FOVY / cb.textureDim.y) * PI / 180; 
+            float perPixelViewAngle = (FOVY / cb.textureDim.y) * PI / 180.0; 
             float tan_a = tan(perPixelViewAngle);
             float2 projectedSurfaceDim = ApproximateProjectedSurfaceDimensionsPerPixel(depth, ddxy, tan_a);
 
             // Calculate kernel width as a ratio of hitDistance / projected surface dim per pixel
-            float k = cb.minHitDistanceToKernelWidthScale;
+            // Apply a non-linear factor based on relative rayHitDistance. This is because
+            // average ray hit distance grows large fast if the closeby occluders cover only part of the hemisphere.
+            // Having a smaller kernel for such cases helps preserve occlusion detail.
+            float t = min(avgRayHitDistance / 22.0, 1); // TODO: 22 was selected empirically
+            float k = cb.rayHitDistanceToKernelWidthScale * pow(t, cb.rayHitDistanceToKernelSizeScaleExponent);
             kernelStep = max(1, round(k * avgRayHitDistance / projectedSurfaceDim));
 
             uint2 targetKernelStep = clamp(kernelStep, (cb.minKernelWidth - 1) / 2, (cb.maxKernelWidth - 1) / 2);
-            uint2 adjustedKernelStep = cb.kernelStepShift > 0 ? lerp(1, targetKernelStep, (cb.kernelStepShift-1) / 5.0) : targetKernelStep;
+            float MaxTrpp = 33;// ToDo
+           // float a = min(Trpp/MaxTrpp)
+            uint2 adjustedKernelStep = cb.kernelStepShift > 0 ? lerp(1, targetKernelStep, (cb.kernelStepShift-1) / float(cb.maxKernelStepShift)) : targetKernelStep;
 
             kernelStep = adjustedKernelStep;
+
+
+            g_outDebug1[DTid] = float4(projectedSurfaceDim, kernelStep);
+            g_outDebug2[DTid] = depth;
         }
 
         if (variance >= cb.minVarianceToDenoise)
@@ -290,7 +294,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         }
     }
 
-    g_outFilteredValues[DTid] = filteredValue;
+    g_outFilteredValue[DTid] = filteredValue;
     if (cb.outputFilteredVariance)
     {
         g_outFilteredVariance[DTid] = filteredVariance;

@@ -318,10 +318,11 @@ void Scene::LoadPBRTScene()
 
 
             if (cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f &&
+                // AO Rays should reflect of perfect occluders, but that'd be more expensive to trace.
                 // WORKAROUND: to prevent perfect mirrors occluding nearby surfaces.
                 // Mark fully reflective mirrors as non opaque so that AO rays can skip them 
                 // as occluders by ignoring non-opaque geometry on TraceRay.
-                !(cb.type == MaterialType::Mirror && cb.opacity.x > 0.99f && cb.opacity.y > 0.99f && cb.opacity.z > 0.99f))
+                !(cb.type == MaterialType::Mirror && cb.Kr.x > 0.99f && cb.Kr.y > 0.99f && cb.Kr.z > 0.99f))
             {
                 geometryFlags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
             }

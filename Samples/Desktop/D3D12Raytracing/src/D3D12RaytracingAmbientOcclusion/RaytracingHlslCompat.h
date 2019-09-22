@@ -40,10 +40,16 @@
 
     - Finetune
    - Fine tune min std dev tolerance in clamping
+   - Consider N8D24 format for filtering
 
    Glitches
    - disocclussions on static geometry and camera around reflections
    - denoise oscilations under porch railing on full res
+   - upsample using 32bit depth
+
+Filter issues:
+-   Overblur on adaptive kernel - under railings
+- blur oscilation due to adaptive kernel
 
 - Cleanup:
     double check all CS for out of bounds.
@@ -69,6 +75,7 @@
     Test denoising quality at 60 and 100, 200+ FPS
     Increase averaging window for CPU times
     move resource descriptions from root sig def, to root sig Enum and shader res in shader files
+    rpp vs spp
 
 Documentation
     readme
@@ -112,7 +119,7 @@ Documentation
 
 #define DISTANCE_ON_MISS 65504  // ~FLT_MAX within 16 bit format // ToDo explain
 
-#define PRINT_OUT_CAMERA_CONFIG 0
+#define PRINT_OUT_CAMERA_CONFIG 1
 
 #ifdef HLSL
 typedef uint NormalDepthTexFormat;
@@ -205,38 +212,34 @@ struct ShadowRayPayload
 struct AtrousWaveletTransformFilterConstantBuffer
 {
     XMUINT2 textureDim;
+    BOOL useProjectedDepthTest;
+    float weightByTrpp;
+
     UINT kernelStepShift;
-    UINT kernelWidth;
+    UINT maxKernelStepShift;
+    UINT minKernelWidth;
+    UINT maxKernelWidth;
+
+    BOOL useAdaptiveKernelSize;
+    BOOL perspectiveCorrectDepthInterpolation;  // ToDO turn on/off globally
+    float rayHitDistanceToKernelWidthScale;
+    float rayHitDistanceToKernelSizeScaleExponent;
 
     float valueSigma;
     float depthSigma;
     float normalSigma;
-    UINT useCalculatedVariance;
-    
-    UINT useApproximateVariance;
+    UINT DepthNumMantissaBits;
+
     BOOL outputFilteredValue;
     BOOL outputFilteredVariance;
-    BOOL outputFilterWeightSum;
-
-    BOOL perspectiveCorrectDepthInterpolation;
-    BOOL useAdaptiveKernelSize;
-    float minHitDistanceToKernelWidthScale;
-    UINT minKernelWidth;
-
-    UINT maxKernelWidth;
     float varianceSigmaScaleOnSmallKernels;
     bool usingBilateralDownsampledBuffers;
-    UINT DepthNumMantissaBits;
 
     float minVarianceToDenoise;
     float weightScale;
     float staleNeighborWeightScale;
     float depthWeightCutoff;
 
-    BOOL useProjectedDepthTest;
-    BOOL forceDenoisePass;
-    float kernelStepScale;
-    float weightByTrpp;
 };
 
 struct CalculateVariance_BilateralFilterConstantBuffer
@@ -471,6 +474,8 @@ struct BilateralFilterConstantBuffer
     float padding[2];
 };
 
+
+// ToDo remove obsolete
 struct TemporalSupersampling_ReverseReprojectConstantBuffer
 {
     XMUINT2 textureDim;
