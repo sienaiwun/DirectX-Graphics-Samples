@@ -83,8 +83,6 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
     const uint NumRowsToLoadPerThread = 4;
     const uint Row_BaseWaveLaneIndex = (WaveGetLaneIndex() / 16) * 16;
 
-    // ToDo blend low tspp values too with a falloff?
-
     [unroll]
     for (uint i = 0; i < NumRowsToLoadPerThread; i++)
     {

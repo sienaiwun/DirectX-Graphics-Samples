@@ -218,7 +218,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
             float tan_a = tan(perPixelViewAngle);
             float2 projectedSurfaceDim = ApproximateProjectedSurfaceDimensionsPerPixel(depth, ddxy, tan_a);
 
-            // Calculate kernel width as a ratio of hitDistance / projected surface dim per pixel
+            // Calculate a kernel width as a ratio of hitDistance / projected surface dim per pixel.
             // Apply a non-linear factor based on relative rayHitDistance. This is because
             // average ray hit distance grows large fast if the closeby occluders cover only part of the hemisphere.
             // Having a smaller kernel for such cases helps preserve occlusion detail.
@@ -228,12 +228,11 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
             uint2 targetKernelStep = clamp(kernelStep, (cb.minKernelWidth - 1) / 2, (cb.maxKernelWidth - 1) / 2);
 
-            // ToDo try lerping radius instead of step
-            // ToDo compare to use same step for both X, Y. Varying step causes visible streaking.
-            // ToDo: use larger kernel on lower tspp
-            // ToDo varying cycle freq dep on kernel radius?
+            // TODO: additional options to explore
+            // - non-uniform X, Y kernel radius cause visible streaking. Use same step across both X, Y? This may overblur are at large angles
+            // - use larger kernel on lower tspp. Ref: Ray Tracing Gems (Ch 19)
+            // - use varying number of cycles, depending on the target kernel step. More cycles on larger kernels.
             uint2 adjustedKernelStep = lerp(1, targetKernelStep, cb.kernelRadiusLerfCoef); 
-
             kernelStep = adjustedKernelStep;
         }
 

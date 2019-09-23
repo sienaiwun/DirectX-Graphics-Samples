@@ -18,7 +18,6 @@
 #include "CompiledShaders\GaussianFilterRG3x3CS.hlsl.h"
 #include "CompiledShaders\EdgeStoppingAtrousWaveletTransfromCrossBilateralFilter_Gaussian3x3CS.hlsl.h"
 #include "CompiledShaders\EdgeStoppingAtrousWaveletTransfromCrossBilateralFilter_Gaussian5x5CS.hlsl.h"
-#include "CompiledShaders\CalculateMeanVariance_SeparableFilterCS.hlsl.h"
 #include "CompiledShaders\CalculateMeanVariance_SeparableFilterCS_AnyToAnyWaveReadLaneAt.hlsl.h"
 #include "CompiledShaders\CalculateMeanVariance_SeparableFilterCS_CheckerboardSampling_AnyToAnyWaveReadLaneAt.hlsl.h"
 #include "CompiledShaders\TemporalSupersampling_BlendWithCurrentFrameCS.hlsl.h"

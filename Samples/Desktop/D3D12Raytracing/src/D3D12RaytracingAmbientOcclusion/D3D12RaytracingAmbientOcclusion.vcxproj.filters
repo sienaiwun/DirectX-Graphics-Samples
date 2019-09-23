@@ -43,9 +43,6 @@
     <Filter Include="Shaders\RTAO\Denoising\Temporal">
       <UniqueIdentifier>{acb7aaa8-5a7d-4362-b42d-246b1bea7b4b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\RTAO\Denoising\Filtering\Unused">
-      <UniqueIdentifier>{00eb5d4f-1dc3-484f-8d29-098231ff2e27}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RTAO\Denoiser.h">
@@ -335,9 +332,6 @@
     </FxCompile>
     <FxCompile Include="RTAO\Shaders\Ray sorting\CountingSort_SortRays_64x128rayGroupCS.hlsl">
       <Filter>Shaders\RTAO\Ray Sorting</Filter>
-    </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\CalculateMeanVariance_SeparableFilterCS.hlsl">
-      <Filter>Shaders\RTAO\Denoising\Filtering\Unused</Filter>
     </FxCompile>
     <FxCompile Include="RTAO\Shaders\Denoising\DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>

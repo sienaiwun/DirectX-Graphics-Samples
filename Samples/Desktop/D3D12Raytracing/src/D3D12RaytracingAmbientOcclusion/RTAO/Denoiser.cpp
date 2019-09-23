@@ -68,7 +68,7 @@ namespace Denoiser_Args
     // ToDo specify which variance - local or temporal
     BoolVar UseSmoothedVariance(L"Render/AO/RTAO/Denoising/Use smoothed variance", false);
 
-    BoolVar LowerWeightForStaleSamples(L"Render/AO/RTAO/Denoising/Scale down stale samples weight", false);
+    BoolVar Checkerboard_LowerWeightForStaleSamples(L"Render/AO/RTAO/Denoising/Checkerboard support/Scale down stale samples weight", false);
     BoolVar FilterWeightByTspp(L"Render/AO/RTAO/Denoising/Filter weight by tspp", false);
 
 
@@ -623,7 +623,7 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
     resourceStateTracker->TransitionResource(OutputResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 
-    float staleNeighborWeightScale = Denoiser_Args::LowerWeightForStaleSamples ? RTAO_Args::Spp : 1.f;
+    float staleNeighborWeightScale = Denoiser_Args::Checkerboard_LowerWeightForStaleSamples && RTAO_Args::Spp_doCheckerboard ? 0.5f : 1.f;
 
     // A-trous edge-preserving wavelet tranform filter
     {

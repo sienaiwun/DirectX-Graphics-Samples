@@ -626,12 +626,8 @@ void Pathtracer::UpdateConstantBuffer(Scene& scene)
     m_CB->maxShadowRayRecursionDepth = Pathtracer_Args::MaxShadowRayRecursionDepth;
     m_CB->useNormalMaps = Pathtracer_Args::RTAOUseNormalMaps;
     m_CB->defaultAmbientIntensity = Pathtracer_Args::DefaultAmbientIntensity;
-
-
     m_CB->useDiffuseFromMaterial = Composition_Args::CompositionMode == CompositionType::Diffuse;
 
-    // ToDo move this to UpdateConstant BUffer
-    // ToDo should we use cameraAtPosition0 too and offset the world space pos vector in the shader?
     auto& prevFrameCamera = scene.PrevFrameCamera();
     XMMATRIX prevView, prevProj;
     prevFrameCamera.GetViewProj(&prevView, &prevProj, m_raytracingWidth, m_raytracingHeight);
