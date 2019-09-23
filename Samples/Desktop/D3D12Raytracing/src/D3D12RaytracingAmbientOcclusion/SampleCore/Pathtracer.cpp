@@ -601,15 +601,12 @@ void Pathtracer::DispatchRays(ID3D12Resource* rayGenShaderTable, UINT width, UIN
 
 void Pathtracer::SetCamera(const GameCore::Camera& camera)
 {
-    XMMATRIX view, proj;
+    XMMATRIX worldWithCameraEyeAtOrigin, proj;
     camera.GetProj(&proj, m_raytracingWidth, m_raytracingHeight);
 
-    // Calculate view matrix as if the camera was at (0,0,0) to avoid 
-    // precision issues when camera position is too far from (0,0,0).
-    // GenerateCameraRay takes this into consideration in the raytracing shader.
-    view = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(camera.At() - camera.Eye(), 1), camera.Up());
-    XMMATRIX viewProj = view * proj;
-    m_CB->projectionToView = XMMatrixInverse(nullptr, viewProj);
+    worldWithCameraEyeAtOrigin = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(camera.At() - camera.Eye(), 1), camera.Up());
+    XMMATRIX viewProj = worldWithCameraEyeAtOrigin * proj;
+    m_CB->projectionToWorldWithCameraAtOrigin = XMMatrixInverse(nullptr, viewProj);
     XMStoreFloat3(&m_CB->cameraPosition, camera.Eye());
     m_CB->Znear = camera.ZMin;
     m_CB->Zfar = camera.ZMax;
@@ -631,13 +628,12 @@ void Pathtracer::UpdateConstantBuffer(Scene& scene)
     auto& prevFrameCamera = scene.PrevFrameCamera();
     XMMATRIX prevView, prevProj;
     prevFrameCamera.GetViewProj(&prevView, &prevProj, m_raytracingWidth, m_raytracingHeight);
-    m_CB->prevViewProj = prevView * prevProj;
-    XMStoreFloat3(&m_CB->prevCameraPosition, prevFrameCamera.Eye());
+    m_CB->prevFrameViewProj = prevView * prevProj;
+    XMStoreFloat3(&m_CB->prevFrameCameraPosition, prevFrameCamera.Eye());
 
-    // ToDo cleanup
-    XMMATRIX prevView0 = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(prevFrameCamera.At() - prevFrameCamera.Eye(), 1), prevFrameCamera.Up());
-    XMMATRIX viewProj0 = prevView0 * prevProj;
-    m_CB->prevProjToWorldWithCameraEyeAtOrigin = XMMatrixInverse(nullptr, viewProj0);
+    XMMATRIX prevViewCameraAtOrigin = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(prevFrameCamera.At() - prevFrameCamera.Eye(), 1), prevFrameCamera.Up());
+    XMMATRIX viewProjCameraAtOrigin = prevViewCameraAtOrigin * prevProj;
+    m_CB->prevFrameProjToViewCameraAtOrigin = XMMatrixInverse(nullptr, viewProjCameraAtOrigin);
 }
 
 void Pathtracer::Run(Scene& scene)
@@ -645,7 +641,7 @@ void Pathtracer::Run(Scene& scene)
     auto device = m_deviceResources->GetD3DDevice();
     auto commandList = m_deviceResources->GetCommandList();
     auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
-    auto frameIndex = m_deviceResources->GetCurrentFrameIndex();        // ToDo rename to Backbuffer index
+    auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
 
     // ToDo move
     if (m_isRecreateRaytracingResourcesRequested)

@@ -44,7 +44,7 @@ public:
 
     // Public methods.
     void Setup(std::shared_ptr<DX::DeviceResources> deviceResources, std::shared_ptr<DX::DescriptorHeap> descriptorHeap);
-    void Run(Scene& scene, Pathtracer& pathtracer, RTAO& rtao, DenoiseStage stage = Denoise_StageAll);
+    void Run(Pathtracer& pathtracer, RTAO& rtao, DenoiseStage stage = Denoise_StageAll);
     void SetResolution(UINT width, UINT height);
         
     // Getters/Setters.
@@ -53,7 +53,7 @@ public:
     UINT DenoisingHeight() { return m_denoisingHeight; }
 
 private:
-    void TemporalSupersamplingReverseReproject(Scene& scene, Pathtracer& pathtracer);
+    void TemporalSupersamplingReverseReproject(Pathtracer& pathtracer);
     void TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao);
     void BlurDisocclusions(Pathtracer& pathtracer);
 

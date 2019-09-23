@@ -110,14 +110,11 @@ void Scene::OnUpdate()
         m_isCameraFrozen = !m_isCameraFrozen;
     }
     m_prevFrameCamera = m_camera;
-
-    m_cameraChangedIndex--;
-    m_hasCameraChanged = false;
+    
     if (!m_isCameraFrozen)
     {
-        m_hasCameraChanged = m_cameraController->Update(elapsedTime);
+        m_cameraController->Update(elapsedTime);
     }
-
     if (m_animateScene)
     {
         float animationDuration = 180.0f;
@@ -147,7 +144,6 @@ void Scene::OnUpdate()
     // Rotate the camera around Y axis.
     if (m_animateCamera)
     {
-        m_hasCameraChanged = true;
         float secondsToRotateAround = Scene_Args::CameraRotationDuration;
         float angleToRotateBy = 360.0f * (elapsedTime / secondsToRotateAround);
         XMMATRIX axisCenter = XMMatrixTranslation(5.87519f, 0, 8.52134f);

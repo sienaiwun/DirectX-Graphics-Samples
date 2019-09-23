@@ -31,7 +31,7 @@ namespace SampleScene
 			camera.boundaries.min = -XMVectorSplatInfinity();
 			camera.boundaries.max = XMVectorSplatInfinity();
 
-            // TODO remove
+            // ToDoF remove
 #if 1  // Profiling
 
             camera.position.eye = { -35.7656f, 14.7652f, -22.5312f, 1 };

@@ -484,6 +484,7 @@ namespace Sample
     }
 
 
+    // ToDo cleanup
     // Render the scene.
     void D3D12RaytracingAmbientOcclusion::OnRender()
     {
@@ -491,13 +492,6 @@ namespace Sample
         {
             return;
         }
-
-#if ENABLE_LAZY_RENDER
-        if (!(!(Args::TAO_LazyRender && m_cameraChangedIndex <= 0)))
-        {
-            return;
-        }
-#endif
 
         auto commandList = m_deviceResources->GetCommandList();
 
@@ -515,10 +509,6 @@ namespace Sample
             // ToDoF finalize UI tree
             ScopedTimer _prof(L"Dummy", commandList);
             {
-
-#if ENABLE_LAZY_RENDER
-                if (!(Args::TAO_LazyRender && m_cameraChangedIndex <= 0))
-#endif
                 {
 
                     m_scene.OnRender();
@@ -550,7 +540,7 @@ namespace Sample
                         // Denoising
                         {
                             m_sampleGpuTimes[Sample_GPUTime::AOdenoising].Start(commandList);
-                            m_denoiser.Run(m_scene, m_pathtracer, m_RTAO);
+                            m_denoiser.Run(m_pathtracer, m_RTAO);
                             m_sampleGpuTimes[Sample_GPUTime::AOdenoising].Stop(commandList);
                         }
                     }

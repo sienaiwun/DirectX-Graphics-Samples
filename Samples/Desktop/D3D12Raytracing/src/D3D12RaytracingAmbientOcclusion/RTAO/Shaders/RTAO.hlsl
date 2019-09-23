@@ -63,11 +63,11 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
         // Ignore transparent surfaces for occlusion testing.
         RAY_FLAG_CULL_NON_OPAQUE;        
 
-    bool acceptFirstHit = false;  // ToDo make this UI optionable or explain
+    bool acceptFirstHit = true;
     if (acceptFirstHit)
     {
         // Performance TIP: Accept first hit if true hit is not neeeded,
-        // or has minimal to no impact (in AO). The peformance gain can
+        // or has minimal to no impact (in AO result). The peformance gain can
         // be substantial (~10% in sample's case).
         rayFlags |= RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
     }

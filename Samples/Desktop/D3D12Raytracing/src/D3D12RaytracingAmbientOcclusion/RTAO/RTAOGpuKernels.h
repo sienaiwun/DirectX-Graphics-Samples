@@ -87,7 +87,7 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputDepthResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputBlurStrengthResourceHandle,
             GpuResource* outputResource,
-            bool writeOutOnPassthrough = true);
+            bool readWriteUAV_and_skipPassthrough = true);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
@@ -219,12 +219,9 @@ namespace RTAOGpuKernels
             float floatEpsilonDepthTolerance,
             float depthDistanceBasedDepthTolerance,
             float depthSigma,
-            bool useWorldSpaceDistance,
             bool usingBilateralDownsampledBuffers,
             bool perspectiveCorrectDepthInterpolation,
             GpuResource debugResources[2],
-            const XMMATRIX& projectionToView,
-            const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
             UINT maxTspp);
 
     private:

@@ -10,8 +10,9 @@
 //*********************************************************
 
 // Atrous Wavelet Transform Cross Bilateral Filter
-// Ref: Dammertz 2010, Edge-Avoiding A-Trous Wavelet Transform for Fast Global Illumination Filtering
+// Ref: [Dammertz2010], Edge-Avoiding A-Trous Wavelet Transform for Fast Global Illumination Filtering
 // Ref: Schied 2007, Spatiotemporal Variance-Guided Filtering
+// Ref: [RTGCH19] Ray Tracing Gems (Ch 19)
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -114,11 +115,9 @@ void AddFilterContribution(
         w_c = cb.weightByTspp ? iTspp : 1;
 
         // Value based weight.
-            // Ref: Dammertz2010
-            // Tighten value range smoothing for higher passes.
-        // ToDo m_CB->valueSigma = i > 0 ? valueSigma * powf(2.f, -float(i)) : 1;
+        // Lower value tolerance for the neighbors further apart. Prevents overbluring sharp value transitions.
+        // Ref: [Dammertz2010]
         const float errorOffset = 0.005f;
-        // Lower value tolerance for the neighbors further apart.
         float valueSigmaDistCoef = 1.0 / length(pixelOffset);
         float e_x = -abs(value - iValue) / (valueSigmaDistCoef * valueSigma * stdDeviation + errorOffset);
         float w_x = exp(e_x);
@@ -192,7 +191,6 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 #endif
 
         float2 ddxy = g_inPartialDistanceDerivatives[DTid];
-
         float weightSum = 0;
         float weightedValueSum = 0;
         float stdDeviation = 1;
@@ -209,6 +207,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         // Adaptive kernel size
         // Scale the kernel span based on AO ray hit distance. 
         // This helps filter out lower frequency noise, a.k.a. boiling artifacts.
+        // Ref: [RTGCH19]
         uint2 kernelStep = 0;
         if (cb.useAdaptiveKernelSize && isValidValue)
         {
@@ -230,7 +229,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
             // TODO: additional options to explore
             // - non-uniform X, Y kernel radius cause visible streaking. Use same step across both X, Y? This may overblur are at large angles
-            // - use larger kernel on lower tspp. Ref: Ray Tracing Gems (Ch 19)
+            // - use larger kernel on lower tspp. 
             // - use varying number of cycles, depending on the target kernel step. More cycles on larger kernels.
             uint2 adjustedKernelStep = lerp(1, targetKernelStep, cb.kernelRadiusLerfCoef); 
             kernelStep = adjustedKernelStep;

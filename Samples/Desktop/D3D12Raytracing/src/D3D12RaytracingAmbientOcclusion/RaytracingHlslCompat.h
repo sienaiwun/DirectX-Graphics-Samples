@@ -89,7 +89,6 @@ Documentation
 
 // ToDo
 #define ENABLE_PROFILING 0
-#define ENABLE_LAZY_RENDER 0
 
 #define DISTANCE_ON_MISS 65504  // ~FLT_MAX within 16 bit format // ToDo explain
 
@@ -277,7 +276,7 @@ namespace SortRays {
 
 struct PathtracerConstantBuffer
 {
-    XMMATRIX projectionToView;
+    XMMATRIX projectionToWorldWithCameraAtOrigin;
     XMFLOAT3 cameraPosition;
     BOOL     useDiffuseFromMaterial;
     XMFLOAT3 lightPosition;     
@@ -285,9 +284,9 @@ struct PathtracerConstantBuffer
     XMFLOAT3 lightColor;
     float    defaultAmbientIntensity;
 
-    XMMATRIX prevViewProj;
-    XMMATRIX prevProjToWorldWithCameraEyeAtOrigin;	// projection to world matrix with Camera at (0,0,0).
-    XMFLOAT3 prevCameraPosition;
+    XMMATRIX prevFrameViewProj;
+    XMMATRIX prevFrameProjToViewCameraAtOrigin;
+    XMFLOAT3 prevFrameCameraPosition;
     float    padding;
 
 	float Znear;
@@ -452,23 +451,19 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
     XMUINT2 textureDim;
     XMFLOAT2 invTextureDim;
 
-    XMMATRIX projectionToView;
-    XMMATRIX prevProjectionToWorldWithCameraEyeAtOrigin;
-
     BOOL useDepthWeights;
     BOOL useNormalWeights;
     float depthSigma;
     float depthTolerance;
 
-    BOOL useWorldSpaceDistance;     // ToDo remove
     UINT DepthNumMantissaBits;      // Number of Mantissa Bits in the floating format of the input depth resources format.
     BOOL usingBilateralDownsampledBuffers;
     BOOL perspectiveCorrectDepthInterpolation;
-
     float floatEpsilonDepthTolerance;
+
     float depthDistanceBasedDepthTolerance;
     UINT maxTspp;
-    float padding;
+    float padding[2];
 };
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer

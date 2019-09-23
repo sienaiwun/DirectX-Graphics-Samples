@@ -341,7 +341,6 @@ void RTAO::CreateTextureResources()
 
     // ToDo cleanup raytracing resolution - twice for coefficient.
     CreateRenderTargetResource(device,  ResourceFormat(ResourceType::AOCoefficient), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::AmbientCoefficient], initialResourceState, L"Render/AO Coefficient");
-    CreateRenderTargetResource(device,  ResourceFormat(ResourceType::AOCoefficient), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::Smoothed], initialResourceState, L"Render/AO Denoised Coefficient");
     CreateRenderTargetResource(device, ResourceFormat(ResourceType::RayHitDistance), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::RayHitDistance], initialResourceState, L"Render/AO Hit Distance");
 
     CreateRenderTargetResource(device, DXGI_FORMAT_R8G8_UINT, m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_sortedToSourceRayIndexOffset, initialResourceState, L"Sorted To Source Ray Index");

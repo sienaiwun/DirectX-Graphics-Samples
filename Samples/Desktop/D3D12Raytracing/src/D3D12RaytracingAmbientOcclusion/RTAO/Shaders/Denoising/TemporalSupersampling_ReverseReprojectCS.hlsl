@@ -43,43 +43,6 @@ SamplerState ClampSampler : register(s0);
 //  - condition to only necessary reads on tspp 1 and/or invalid value
 //  - on 0 motion vector read in only 1 cached value
 
-// Calculates a depth threshold for surface at angle beta from camera plane
-// based on threshold for a surface at angle alpha
-float CalculateAdjustedDepthThreshold(
-    float d1,       // ddxy for surface at angle alpha from camera plane
-    float alpha,    // angle in radians for surface with threshold d1 
-    float beta,     // angle in radians for target surface
-    float rho)      // view angle for the pixel
-{
-    // ToDo add derivation comment
-    return d1
-        * (sin(beta) / sin(alpha))
-        * (cos(rho + alpha) / cos(rho + beta));
-
-}
-
-float CalculateAdjustedDepthThreshold(
-    float d,            // ddxy for surface with normal
-    float z,            // Linear depth for current frame
-    float _z,           // Linear depth for prev frame
-    float3 normal,      // normal for a surface with threshold d 
-    float3 _normal)     // normal of a target surface
-{
-    float _d = d * _z / z;
-
-
-    float3 forwardRay = GenerateForwardCameraRayDirection(cb.projectionToView);
-    float3 _forwardRay = GenerateForwardCameraRayDirection(cb.prevProjectionToWorldWithCameraEyeAtOrigin);
-
-    float alpha = acos(dot(normal, forwardRay));
-    float beta = acos(dot(_normal, _forwardRay));
-
-    float rho = (FOVY * PI / 180) * cb.invTextureDim.y;
-
-    return CalculateAdjustedDepthThreshold(_d, alpha, beta, rho);
-}
-
-
 float4 BilateralResampleWeights(in float TargetDepth, in float3 TargetNormal, in float4 SampleDepths, in float3 SampleNormals[4], in float2 TargetOffset, in uint2 TargetIndex, in int2 sampleIndices[4], in float2 Ddxy)
 {
     bool4 isWithinBounds = bool4(

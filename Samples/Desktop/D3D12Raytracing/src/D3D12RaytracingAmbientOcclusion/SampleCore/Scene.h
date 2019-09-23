@@ -71,8 +71,6 @@ private:
     bool m_animateLight = false;
     bool m_animateScene = false;
     bool m_isCameraFrozen = false;
-    int m_cameraChangedIndex = 0;
-    bool m_hasCameraChanged = true;
     GameCore::Camera m_camera;
     GameCore::Camera m_prevFrameCamera;
     std::unique_ptr<GameCore::CameraController> m_cameraController;
@@ -97,7 +95,7 @@ private:
     std::unique_ptr<RaytracingAccelerationStructureManager> m_accelerationStructure;
     GpuResource m_grassPatchVB[UIParameters::NumGrassGeometryLODs][2];      // Two VBs: current and previous frame.
 
-    const UINT MaxNumBottomLevelInstances = 1000;           // ToDo tighten this to only what needed or add support a copy of whats used from StructuredBuffers to GPU.
+    const UINT MaxNumBottomLevelInstances = 1000;
 
 
     // Motion Vector resources.
@@ -117,8 +115,6 @@ private:
 
     XMVECTOR m_lightPosition;
     XMFLOAT3 m_lightColor;
-    
-    const UINT MaxGeometryTransforms = 10000;       // ToDo lower / remove?
 
     friend class Pathtracer;
     friend class Composition;

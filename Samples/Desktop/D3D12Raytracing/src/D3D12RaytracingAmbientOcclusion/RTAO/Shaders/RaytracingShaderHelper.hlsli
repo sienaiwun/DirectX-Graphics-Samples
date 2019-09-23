@@ -177,25 +177,25 @@ float2 HitAttribute(float2 vertexAttribute[3], BuiltInTriangleIntersectionAttrib
 }
 
 // Generate camera's forward direction ray
-inline float3 GenerateForwardCameraRayDirection(in float4x4 projectionToView)
+inline float3 GenerateForwardCameraRayDirection(in float4x4 projectionToWorldWithCameraAtOrigin)
 {
 	float2 screenPos = float2(0, 0);
 	
 	// Unproject the pixel coordinate into a world positon.
-	float4 world = mul(float4(screenPos, 0, 1), projectionToView);
+	float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraAtOrigin);
 	return normalize(world.xyz);
 }
 
-inline Ray GenerateForwardCameraRay(in float3 cameraPosition, in float4x4 projectionToView)
+inline Ray GenerateForwardCameraRay(in float3 cameraPosition, in float4x4 projectionToWorldWithCameraAtOrigin)
 {
     float2 screenPos = float2(0, 0);
 
     // Unproject the pixel coordinate into a world positon.
-    float4 world = mul(float4(screenPos, 0, 1), projectionToView);
+    float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraAtOrigin);
 
     Ray ray;
     ray.origin = cameraPosition;
-    // Since the camera's eye was at 0,0,0 in projectionToView 
+    // Since the camera's eye was at 0,0,0 in projectionToWorldWithCameraAtOrigin 
     // the world.xyz is the direction.
     ray.direction = normalize(world.xyz);
 
@@ -204,7 +204,7 @@ inline Ray GenerateForwardCameraRay(in float3 cameraPosition, in float4x4 projec
 
 
 // Generate a ray in world space for a camera pixel corresponding to an index from the dispatched 2D grid.
-inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToView, float2 jitter = float2(0, 0))
+inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToWorldWithCameraAtOrigin, float2 jitter = float2(0, 0))
 {
     float2 xy = index + 0.5f; // center in the middle of the pixel.
 	xy += jitter;
@@ -214,11 +214,11 @@ inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 
     screenPos.y = -screenPos.y;
 
     // Unproject the pixel coordinate into a world positon.
-    float4 world = mul(float4(screenPos, 0, 1), projectionToView);
+    float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraAtOrigin);
 
     Ray ray;
     ray.origin = cameraPosition;
-	// Since the camera's eye was at 0,0,0 in projectionToView 
+	// Since the camera's eye was at 0,0,0 in projectionToWorldWithCameraAtOrigin 
 	// the world.xyz is the direction.
 	ray.direction = normalize(world.xyz);
 
@@ -232,11 +232,11 @@ float2 TexCoords(in float3 position)
 }
 
 // Calculate ray differentials.
-void CalculateRayDifferentials(out float2 ddx_uv, out float2 ddy_uv, in float2 uv, in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToView)
+void CalculateRayDifferentials(out float2 ddx_uv, out float2 ddy_uv, in float2 uv, in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToWorldWithCameraAtOrigin)
 {
     // Compute ray differentials by intersecting the tangent plane to the  surface.
-    Ray ddx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToView);
-    Ray ddy = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToView);
+    Ray ddx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToWorldWithCameraAtOrigin);
+    Ray ddy = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToWorldWithCameraAtOrigin);
 
     // Compute ray differentials.
     float3 ddx_pos = ddx.origin - ddx.direction * dot(ddx.origin - hitPosition, surfaceNormal) / dot(ddx.direction, surfaceNormal);
@@ -251,13 +251,13 @@ void CalculateRayDifferentials(out float2 ddx_uv, out float2 ddy_uv, in float2 u
 float CheckersGridTextureBoxFilter(in float2 uv, in float2 dpdx, in float2 dpdy, in uint ratio);
 
 // Return analytically integrated checkerboard texture (box filter).
-float AnalyticalCheckersGridTexture(in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToView )
+float AnalyticalCheckersGridTexture(in float3 hitPosition, in float3 surfaceNormal, in float3 cameraPosition, in float4x4 projectionToWorldWithCameraAtOrigin )
 {
     float2 ddx_uv;
     float2 ddy_uv;
     float2 uv = TexCoords(hitPosition);
 
-    CalculateRayDifferentials(ddx_uv, ddy_uv, uv, hitPosition, surfaceNormal, cameraPosition, projectionToView);
+    CalculateRayDifferentials(ddx_uv, ddy_uv, uv, hitPosition, surfaceNormal, cameraPosition, projectionToWorldWithCameraAtOrigin);
     return CheckersGridTextureBoxFilter(uv, ddx_uv, ddy_uv, 50);
 }
 
@@ -604,11 +604,11 @@ void CalculateUVDerivatives(
     in float2 uv, in float3 hitPosition, in float3 triangleNormal,
     in float3 p0, in float3 p1, in float3 p2, 
     in float2 uv0, in float2 uv1, in float2 uv2,
-    in float3 cameraPosition, in float4x4 projectionToView,
+    in float3 cameraPosition, in float4x4 projectionToWorldWithCameraAtOrigin,
     out float2 ddx, out float2 ddy)
 {
-    Ray ray10 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToView);
-    Ray ray01 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToView);
+    Ray ray10 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToWorldWithCameraAtOrigin);
+    Ray ray01 = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToWorldWithCameraAtOrigin);
 
     float3 xOffsetPoint = RayPlaneIntersection(hitPosition, triangleNormal, ray10.origin, ray10.direction);
     float3 yOffsetPoint = RayPlaneIntersection(hitPosition, triangleNormal, ray01.origin, ray01.direction);
@@ -624,7 +624,7 @@ void CalculateUVDerivatives(
     in float3 p0,                      // Current ray's intersection point with the triangle.
     in Ray rx, in Ray ry,              // Auxilary rays
     in float2 uv0, in float2 uv1, in float2 uv2,    // UV coordinates at the triangle's vertices.
-    in float3 cameraPosition, in float4x4 projectionToView,
+    in float3 cameraPosition, in float4x4 projectionToWorldWithCameraAtOrigin,
     out float2 ddx, out float2 ddy,    // UV derivatives
     out float3 px, out float3 py)      // Auxilary rays' intersection points with the triangle.)
 {
@@ -635,10 +635,10 @@ void CalculateUVDerivatives(
 }
 
 // Retrieves auxilary camera rays offset by one pixel in x and y directions in screen space. 
-void GetAuxilaryCameraRays(in float3 cameraPosition, in float4x4 projectionToView, out Ray rx, out Ray ry)
+void GetAuxilaryCameraRays(in float3 cameraPosition, in float4x4 projectionToWorldWithCameraAtOrigin, out Ray rx, out Ray ry)
 {
-    rx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToView);
-    ry = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToView);
+    rx = GenerateCameraRay(DispatchRaysIndex().xy + uint2(1, 0), cameraPosition, projectionToWorldWithCameraAtOrigin);
+    ry = GenerateCameraRay(DispatchRaysIndex().xy + uint2(0, 1), cameraPosition, projectionToWorldWithCameraAtOrigin);
 }
 
 float min4(in float4 v)

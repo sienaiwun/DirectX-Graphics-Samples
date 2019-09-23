@@ -375,7 +375,7 @@ void MyRayGenShader_RadianceRay()
     uint2 DTid = DispatchRaysIndex().xy;
 
 	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-	Ray ray = GenerateCameraRay(DTid, g_cb.cameraPosition, g_cb.projectionToView);
+	Ray ray = GenerateCameraRay(DTid, g_cb.cameraPosition, g_cb.projectionToWorldWithCameraAtOrigin);
 
 	// Cast a ray into the scene and retrieve GBuffer information.
 	UINT currentRayRecursionDepth = 0;
@@ -403,7 +403,7 @@ void MyRayGenShader_RadianceRay()
         g_rtReprojectedNormalDepth[DTid] = EncodeNormalDepth(DecodeNormal(rayPayload.AOGBuffer._encodedNormal), _depth);
         
         // Calculate linear z-depth
-        float3 cameraDirection = GenerateForwardCameraRayDirection(g_cb.projectionToView);
+        float3 cameraDirection = GenerateForwardCameraRayDirection(g_cb.projectionToWorldWithCameraAtOrigin);
         float linearDepth = rayLength * dot(ray.direction, cameraDirection);
 
         g_rtGBufferNormalDepth[DTid] = EncodeNormalDepth(DecodeNormal(rayPayload.AOGBuffer.encodedNormal), linearDepth);

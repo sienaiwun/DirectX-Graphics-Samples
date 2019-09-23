@@ -33,7 +33,7 @@ namespace ComputeShader {   // ToDo remove this?
                     Variance,
                     LocalMeanVariance,
                     AORayHitDistance,
-                    Tspp,   // ToDo use same name as in the shader
+                    Tspp, 
                     Color,
                     AOSurfaceAlbedo,
                     Count
@@ -74,7 +74,6 @@ namespace GBufferResource {
 namespace AOResource {
 	enum Enum {
 		AmbientCoefficient = 0, 
-        Smoothed,   // ToDo remove
         RayHitDistance,
 		Count
 	};

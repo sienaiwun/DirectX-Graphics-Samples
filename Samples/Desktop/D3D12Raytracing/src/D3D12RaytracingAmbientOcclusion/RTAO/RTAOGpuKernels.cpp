@@ -191,7 +191,6 @@ namespace RTAOGpuKernels
     }
 
 
-    // Blurs input resource with a Gaussian filter.
     // width, height - dimensions of the input resource.
     void BilateralFilter::Run(
         ID3D12GraphicsCommandList4* commandList,
@@ -737,12 +736,9 @@ namespace RTAOGpuKernels
         float floatEpsilonDepthTolerance,
         float depthDistanceBasedDepthTolerance,
         float depthSigma,
-        bool useWorldSpaceDistance,
         bool usingBilateralDownsampledBuffers,
         bool perspectiveCorrectDepthInterpolation,
         GpuResource debugResources[2],
-        const XMMATRIX& projectionToView,
-        const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
         UINT maxTspp)
     {
         using namespace RootSignature::TemporalSupersampling_ReverseReproject;
@@ -758,9 +754,6 @@ namespace RTAOGpuKernels
         m_CB->floatEpsilonDepthTolerance = floatEpsilonDepthTolerance;
         m_CB->depthDistanceBasedDepthTolerance = depthDistanceBasedDepthTolerance;
         m_CB->depthSigma = depthSigma;
-        m_CB->projectionToView = XMMatrixTranspose(projectionToView);
-        m_CB->prevProjectionToWorldWithCameraEyeAtOrigin = XMMatrixTranspose(prevProjectionToWorldWithCameraEyeAtOrigin);
-        m_CB->useWorldSpaceDistance = useWorldSpaceDistance;
         m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
         m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
         m_CB->maxTspp = maxTspp;
