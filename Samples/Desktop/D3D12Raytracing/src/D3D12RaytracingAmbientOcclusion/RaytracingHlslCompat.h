@@ -13,7 +13,7 @@
 #define RAYTRACINGHLSLCOMPAT_H
 
 /*
-//ToDo
+//ToDoF
 - cleanup filter shaders, remove obsolete
  compare denoise quality from before the cleanup(video). It seems like current denoiser blurs much more on motion.
 - finetune clamping/remove ghosting (test gliding spaceship)
@@ -31,6 +31,9 @@ Clamping
   
   Glithces:
   - support neighbor sample generation for 2+ spp
+  - Temporal
+// ToDo some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
+// ToDo sharp edges fail temporal reprojection due to clamping even for static scene
 
 - Cleanup:
     double check all CS for out of bounds.
@@ -49,12 +52,14 @@ Clamping
     move resource descriptions from root sig def, to root sig Enum and shader res in shader files
     spp vs spp
     - Add device removal support or remove it being announced
+    use a struct to pass vars?
+    - cleanup this file. Split RTAO to a RTAO specific file.
 
 Documentation
-    readme
+    Review all comments
     Add descs to GPU kernels
     Add descs to GPU kernel resources next to enums
-    - cleanup this file
+    readme
 
 */
 
@@ -71,8 +76,6 @@ Documentation
 #define FOVY 45.f
 #define NEAR_PLANE 0.001f
 #define FAR_PLANE 1000.0f
-
-#define RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS 1      // ToDo cleanup
 
 #define RTAO_MARK_CACHED_VALUES_NEGATIVE  1   // ToDo cleanup
 
@@ -177,18 +180,18 @@ struct ShadowRayPayload
 struct AtrousWaveletTransformFilterConstantBuffer
 {
     XMUINT2 textureDim;
-    BOOL useProjectedDepthTest;
     float weightByTspp;
+    float weightScale;
 
-    UINT kernelStepShift;
-    UINT maxKernelStepShift;
+    BOOL useAdaptiveKernelSize;
+    float kernelRadiusLerfCoef;
     UINT minKernelWidth;
     UINT maxKernelWidth;
 
-    BOOL useAdaptiveKernelSize;
-    BOOL perspectiveCorrectDepthInterpolation;  // ToDO turn on/off globally
     float rayHitDistanceToKernelWidthScale;
     float rayHitDistanceToKernelSizeScaleExponent;
+    BOOL perspectiveCorrectDepthInterpolation;  // ToDO turn on/off globally
+    float minVarianceToDenoise;
 
     float valueSigma;
     float depthSigma;
@@ -200,10 +203,9 @@ struct AtrousWaveletTransformFilterConstantBuffer
     float varianceSigmaScaleOnSmallKernels;
     bool usingBilateralDownsampledBuffers;
 
-    float minVarianceToDenoise;
-    float weightScale;
     float staleNeighborWeightScale;
     float depthWeightCutoff;
+    float padding[2];
 
 };
 
@@ -461,8 +463,8 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
 
     float floatEpsilonDepthTolerance;
     float depthDistanceBasedDepthTolerance;
-    UINT numRaysToTraceAfterTemporalAtMaxTspp;
     UINT maxTspp;
+    float padding;
 };
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
@@ -480,14 +482,10 @@ struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
     float TsppAdjustmentDueClamping;
     float clampDifferenceToTsppScale;
 
-    UINT numFramesToDenoiseAfterLastTracedRay;
     UINT blurStrength_MaxTspp;
     float blurDecayStrength;
-    float padding;
-
     BOOL doCheckerboardSampling;
     BOOL areEvenPixelsActive;
-    float padding2[2];
 };
 
 struct CalculatePartialDerivativesConstantBuffer

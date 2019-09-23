@@ -25,7 +25,7 @@ class RTAO;
 
 namespace Denoiser_Args
 {
-    extern BoolVar Denoising_UseSmoothedVariance;
+    extern BoolVar UseSmoothedVariance;
 }
 
 class Denoiser
@@ -62,7 +62,7 @@ private:
     void CreateDeviceDependentResources();
     void CreateAuxilaryDeviceResources();
     void CreateTextureResources();
-    void ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& rtao, bool isFirstPass);
+    void ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& rtao);
     void CreateResolutionDependentResources();
 
     std::shared_ptr<DX::DeviceResources> m_deviceResources;

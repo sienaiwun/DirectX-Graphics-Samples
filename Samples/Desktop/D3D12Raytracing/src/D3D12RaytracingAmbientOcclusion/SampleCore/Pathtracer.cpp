@@ -471,7 +471,6 @@ void Pathtracer::BuildShaderTables(Scene& scene)
             UINT shaderRecordOffset = hitGroupShaderTable.GeNumShaderRecords();
             accelerationStructure.GetBottomLevelAS(bottomLevelASGeometryPair.first).SetInstanceContributionToHitGroupIndex(shaderRecordOffset);
 
-            // ToDo cleaner?
             // Grass Patch LOD shader recods
             if (name.find(L"Grass Patch LOD") != wstring::npos)
             {
@@ -618,45 +617,16 @@ void Pathtracer::SetCamera(const GameCore::Camera& camera)
 
 void Pathtracer::UpdateConstantBuffer(Scene& scene)
 {
-    // ToDo
-    if (m_isRecreateRaytracingResourcesRequested)
-    {
-        // ToDo what if scenargs change during rendering? race condition??
-        // Buffer them - create an intermediate
-        m_isRecreateRaytracingResourcesRequested = false;
-        m_deviceResources->WaitForGpu();
-
-        // ToDo split to recreate only whats needed?
-        CreateResolutionDependentResources();
-        CreateAuxilaryDeviceResources();
-    }
-
-
     XMStoreFloat3(&m_CB->lightPosition, scene.m_lightPosition);
     m_CB->lightColor = scene.m_lightColor;
 
     SetCamera(scene.Camera());
 
-    // ToDo move
     m_CB->maxRadianceRayRecursionDepth = Pathtracer_Args::MaxRadianceRayRecursionDepth;
     m_CB->maxShadowRayRecursionDepth = Pathtracer_Args::MaxShadowRayRecursionDepth;
     m_CB->useNormalMaps = Pathtracer_Args::RTAOUseNormalMaps;
     m_CB->defaultAmbientIntensity = Pathtracer_Args::DefaultAmbientIntensity;
-}
 
-void Pathtracer::Run(Scene& scene)
-{
-    auto device = m_deviceResources->GetD3DDevice();
-    auto commandList = m_deviceResources->GetCommandList();
-    auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
-    auto frameIndex = m_deviceResources->GetCurrentFrameIndex();        // ToDo rename to Backbuffer index
-
-    ScopedTimer _prof(L"Pathtracing", commandList);
-    UpdateConstantBuffer(scene);
-
-    auto& MaterialBuffer = scene.MaterialBuffer();
-    auto& EnvironmentMap = scene.EnvironmentMap();
-    auto& PrevFrameBottomLevelASInstanceTransforms = scene.PrevFrameBottomLevelASInstanceTransforms();
 
     m_CB->useDiffuseFromMaterial = Composition_Args::CompositionMode == CompositionType::Diffuse;
 
@@ -672,6 +642,34 @@ void Pathtracer::Run(Scene& scene)
     XMMATRIX prevView0 = XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 1), XMVectorSetW(prevFrameCamera.At() - prevFrameCamera.Eye(), 1), prevFrameCamera.Up());
     XMMATRIX viewProj0 = prevView0 * prevProj;
     m_CB->prevProjToWorldWithCameraEyeAtOrigin = XMMatrixInverse(nullptr, viewProj0);
+}
+
+void Pathtracer::Run(Scene& scene)
+{
+    auto device = m_deviceResources->GetD3DDevice();
+    auto commandList = m_deviceResources->GetCommandList();
+    auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
+    auto frameIndex = m_deviceResources->GetCurrentFrameIndex();        // ToDo rename to Backbuffer index
+
+    // ToDo move
+    if (m_isRecreateRaytracingResourcesRequested)
+    {
+        // ToDo what if scenargs change during rendering? race condition??
+        // Buffer them - create an intermediate
+        m_isRecreateRaytracingResourcesRequested = false;
+        m_deviceResources->WaitForGpu();
+
+        // ToDo split to recreate only whats needed?
+        CreateResolutionDependentResources();
+        CreateAuxilaryDeviceResources();
+    }
+
+    ScopedTimer _prof(L"Pathtracing", commandList);
+    UpdateConstantBuffer(scene);
+
+    auto& MaterialBuffer = scene.MaterialBuffer();
+    auto& EnvironmentMap = scene.EnvironmentMap();
+    auto& PrevFrameBottomLevelASInstanceTransforms = scene.PrevFrameBottomLevelASInstanceTransforms();
 
     commandList->SetDescriptorHeaps(1, m_cbvSrvUavHeap->GetAddressOf());
     commandList->SetComputeRootSignature(m_raytracingGlobalRootSignature.Get());
@@ -681,7 +679,6 @@ void Pathtracer::Run(Scene& scene)
         m_CB.CopyStagingToGpu(frameIndex);
     }
 
-    // ToDo move this/part(AO,..) of transitions out?
     // Transition all output resources to UAV state.
     {
         resourceStateTracker->TransitionResource(&m_GBufferResources[GBufferResource::Hit], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -770,7 +767,7 @@ void Pathtracer::CreateTextureResources()
     auto device = m_deviceResources->GetD3DDevice();
     auto backbufferFormat = m_deviceResources->GetBackBufferFormat();
 
-    DXGI_FORMAT hitPositionFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;// DXGI_FORMAT_R16G16B16A16_FLOAT; // ToDo change to 16bit? or encode as 64bits
+    DXGI_FORMAT hitPositionFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
     DXGI_FORMAT debugFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
@@ -839,6 +836,7 @@ void Pathtracer::DownsampleGBuffer()
 {
     auto commandList = m_deviceResources->GetCommandList();
     auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
+    ScopedTimer _prof(L"DownsampleGBuffer", commandList);
 
     // Transition all output resources to UAV state.
     {
@@ -853,9 +851,7 @@ void Pathtracer::DownsampleGBuffer()
         
     }
 
-    ScopedTimer _prof(L"DownsampleGBuffer", commandList);
     resourceStateTracker->FlushResourceBarriers();
-    // ToDo split into per resource downsamples?
     m_downsampleGBufferBilateralFilterKernel.Run(
         commandList,
         m_raytracingWidth,

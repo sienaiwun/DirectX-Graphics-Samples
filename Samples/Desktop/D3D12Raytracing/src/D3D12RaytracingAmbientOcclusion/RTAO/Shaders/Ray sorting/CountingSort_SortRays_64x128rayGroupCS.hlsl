@@ -9,8 +9,6 @@
 //
 //*********************************************************
 
-// ToDo cleanup, review comments.
-
 // Desc: Counting Sort of rays based on their origin depth and direction.
 // Supports:
 // - Up to 8K rays per ray group + 12 bit hash key

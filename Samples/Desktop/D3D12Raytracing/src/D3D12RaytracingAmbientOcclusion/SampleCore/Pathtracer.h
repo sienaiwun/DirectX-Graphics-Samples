@@ -63,7 +63,7 @@ private:
     std::shared_ptr<DX::DeviceResources> m_deviceResources;
     std::shared_ptr<DX::DescriptorHeap> m_cbvSrvUavHeap;
 
-    UINT m_raytracingWidth;        // ToDo rename
+    UINT m_raytracingWidth; 
     UINT m_raytracingHeight;
     UINT m_quarterResWidth;
     UINT m_quarterResHeight;
@@ -92,13 +92,13 @@ private:
     // Raytracing resources.
     ConstantBuffer<PathtracerConstantBuffer> m_CB;
     GpuResource m_GBufferResources[GBufferResource::Count];
-    GpuResource m_GBufferQuarterResResources[GBufferResource::Count]; // ToDo remove unused
+    GpuResource m_GBufferQuarterResResources[GBufferResource::Count];
     GpuResource m_debugOutput[2];
 
     D3D12_GPU_DESCRIPTOR_HANDLE m_nullVertexBufferGPUhandle;
 
     GpuKernels::CalculatePartialDerivatives  m_calculatePartialDerivativesKernel;
-    GpuKernels::DownsampleGBufferDataBilateralFilter m_downsampleGBufferBilateralFilterKernel; //ToDo rename?
+    GpuKernels::DownsampleGBufferDataBilateralFilter m_downsampleGBufferBilateralFilterKernel;
 
     bool m_isRecreateRaytracingResourcesRequested = false;
 };

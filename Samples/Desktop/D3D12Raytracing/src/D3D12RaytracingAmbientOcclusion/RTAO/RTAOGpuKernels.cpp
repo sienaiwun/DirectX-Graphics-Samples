@@ -379,13 +379,12 @@ namespace RTAOGpuKernels
         float depthSigma,
         float normalSigma,
         float weightScale,
-        UINT kernelStepShifts[5],
-        UINT maxKernelStepShift,
         UINT passNumberToOutputToIntermediateResource,
         UINT numFilterPasses,
         Mode filterMode,
         bool perspectiveCorrectDepthInterpolation,
         bool useAdaptiveKernelSize,
+        float kernelRadiusLerfCoef,
         float rayHitDistanceToKernelWidthScale,
         float rayHitDistanceToKernelSizeScaleExponent,
         UINT minKernelWidth,
@@ -395,7 +394,6 @@ namespace RTAOGpuKernels
         float minVarianceToDenoise,
         float staleNeighborWeightScale,
         float depthWeightCutoff,
-        bool useProjectedDepthTest,
         bool forceDenoisePass,
         bool weightByTspp)
     {
@@ -442,12 +440,7 @@ namespace RTAOGpuKernels
             m_CB->weightScale = weightScale;
             m_CB->weightByTspp = weightByTspp;
             m_CB->rayHitDistanceToKernelSizeScaleExponent = rayHitDistanceToKernelSizeScaleExponent;
-#if RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS
-            m_CB->kernelStepShift = kernelStepShifts[i];
-#else
-            m_CB->kernelStepShift = i;
-#endif
-            m_CB->maxKernelStepShift = maxKernelStepShift;
+            m_CB->kernelRadiusLerfCoef = kernelRadiusLerfCoef;
             // Move vars not changing inside loop outside of it.
             m_CB->outputFilteredVariance = numFilterPasses > 1 && filterMode == OutputFilteredValue;
             m_CB->outputFilteredValue = filterMode == OutputFilteredValue;
@@ -462,7 +455,6 @@ namespace RTAOGpuKernels
             m_CB->minVarianceToDenoise = minVarianceToDenoise;
             m_CB->staleNeighborWeightScale = i == 0 ? staleNeighborWeightScale : 1;  // ToDo revise
             m_CB->depthWeightCutoff = depthWeightCutoff;
-            m_CB->useProjectedDepthTest = useProjectedDepthTest;
             m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
             m_CB.CopyStagingToGpu(m_CBinstanceID + i);
         }
@@ -864,8 +856,7 @@ namespace RTAOGpuKernels
         GpuResource debugResources[2],
         const XMMATRIX& projectionToView,
         const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
-        UINT maxTspp,
-        UINT numRaysToTraceSinceTemporalMovement)
+        UINT maxTspp)
     {
         using namespace RootSignature::TemporalSupersampling_ReverseReproject;
         using namespace DefaultComputeShaderParams;
@@ -885,7 +876,6 @@ namespace RTAOGpuKernels
         m_CB->useWorldSpaceDistance = useWorldSpaceDistance;
         m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
         m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
-        m_CB->numRaysToTraceAfterTemporalAtMaxTspp = numRaysToTraceSinceTemporalMovement;
         m_CB->maxTspp = maxTspp;
         m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
@@ -1020,7 +1010,6 @@ namespace RTAOGpuKernels
         UINT minTsppToUseTemporalVariance,
         float clampDifferenceToTsppScale,
         GpuResource debugResources[2],
-        UINT numFramesToDenoiseAfterLastTracedRay,
         UINT lowTsppBlurStrengthMaxTspp,
         float lowTsppBlurStrengthDecayConstant,
         bool doCheckerboardSampling,
@@ -1040,7 +1029,6 @@ namespace RTAOGpuKernels
         m_CB->minStdDevTolerance = clampMinStdDevTolerance;
         m_CB->minTsppToUseTemporalVariance = minTsppToUseTemporalVariance;
         m_CB->clampDifferenceToTsppScale = clampDifferenceToTsppScale;
-        m_CB->numFramesToDenoiseAfterLastTracedRay = numFramesToDenoiseAfterLastTracedRay;
         m_CB->blurStrength_MaxTspp = lowTsppBlurStrengthMaxTspp;
         m_CB->blurDecayStrength = lowTsppBlurStrengthDecayConstant;
         m_CB->doCheckerboardSampling = doCheckerboardSampling;

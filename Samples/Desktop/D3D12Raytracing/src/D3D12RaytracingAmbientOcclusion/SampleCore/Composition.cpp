@@ -192,7 +192,7 @@ void Composition::UpsampleResourcesForRenderComposePass(
     case CompositionType::AmbientOcclusionVariance:
     {
         passName = L"Upsample AO variance";
-        inputLowResValueResource = Denoiser_Args::Denoising_UseSmoothedVariance ? &denoiser.m_varianceResources[AOVarianceResource::Smoothed] : &denoiser.m_varianceResources[AOVarianceResource::Raw];
+        inputLowResValueResource = Denoiser_Args::UseSmoothedVariance ? &denoiser.m_varianceResources[AOVarianceResource::Smoothed] : &denoiser.m_varianceResources[AOVarianceResource::Raw];
         outputHiResValueResource = &m_upsampledVarianceResource;
         break;
     }
@@ -200,7 +200,7 @@ void Composition::UpsampleResourcesForRenderComposePass(
     {
         passName = L"Upsample AO local variance";
         filterType = GpuKernels::UpsampleBilateralFilter::Filter2x2RG;
-        inputLowResValueResource = Denoiser_Args::Denoising_UseSmoothedVariance ? &denoiser.m_localMeanVarianceResources[AOVarianceResource::Smoothed] : &denoiser.m_localMeanVarianceResources[AOVarianceResource::Raw];
+        inputLowResValueResource = Denoiser_Args::UseSmoothedVariance ? &denoiser.m_localMeanVarianceResources[AOVarianceResource::Smoothed] : &denoiser.m_localMeanVarianceResources[AOVarianceResource::Raw];
         outputHiResValueResource = &m_upsampledLocalMeanVarianceResource;
         break;
     }
@@ -300,7 +300,7 @@ void Composition::Render(
         using namespace ComputeShader::RootSignature::CompositionCS;
 
         GpuResource* TemporalResources = denoiser.m_temporalCache[denoiser.m_temporalCacheCurrentFrameResourceIndex];
-        GpuResource* VarianceResource = Denoiser_Args::Denoising_UseSmoothedVariance ? &denoiser.m_varianceResources[AOVarianceResource::Smoothed] : &denoiser.m_varianceResources[AOVarianceResource::Raw];
+        GpuResource* VarianceResource = Denoiser_Args::UseSmoothedVariance ? &denoiser.m_varianceResources[AOVarianceResource::Smoothed] : &denoiser.m_varianceResources[AOVarianceResource::Raw];
         GpuResource* LocalMeanVarianceResource = &denoiser.m_localMeanVarianceResources[AOVarianceResource::Raw];
         GpuResource* AORayHitDistance = &denoiser.m_temporalCache[denoiser.m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance];
 

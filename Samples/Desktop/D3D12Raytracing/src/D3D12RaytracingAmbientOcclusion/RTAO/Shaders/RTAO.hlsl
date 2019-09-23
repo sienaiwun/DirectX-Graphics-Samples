@@ -19,7 +19,6 @@
 #include "Ray Sorting/RaySorting.hlsli"
 #include "RTAO.hlsli"
 
-// ToDo pix doesn't show output for AO pass
 RaytracingAccelerationStructure g_scene : register(t0);
 Texture2D<float4> g_texRayOriginPosition : register(t7);
 Texture2D<NormalDepthTexFormat> g_texRayOriginSurfaceNormalDepth : register(t8);
@@ -35,7 +34,6 @@ StructuredBuffer<AlignedHemisphereSample3D> g_sampleSets : register(t4);
 
 // Delay the include so that resource references resolve.
 #include "RayGen.hlsli"
-
 
 //***************************************************************************
 //*********************------ TraceRay wrappers. -------*********************
@@ -65,13 +63,12 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
         // Ignore transparent surfaces for occlusion testing.
         RAY_FLAG_CULL_NON_OPAQUE;        
 
-    bool acceptFirstHit = true;  // ToDo make this UI optionable or explain
+    bool acceptFirstHit = false;  // ToDo make this UI optionable or explain
     if (acceptFirstHit)
     {
-        // ToDo test perf impact. Explain why its ok since ray hit distance is used.
         // Performance TIP: Accept first hit if true hit is not neeeded,
         // or has minimal to no impact (in AO). The peformance gain can
-        // be substantial.
+        // be substantial (~10% in sample's case).
         rayFlags |= RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
     }
 

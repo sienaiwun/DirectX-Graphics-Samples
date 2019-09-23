@@ -9,7 +9,6 @@
 //
 //*********************************************************
 
-// ToDo Desc
 // Desc: Sample temporal cache via reverse reprojection.
 // If no valid values have been retrieved from the cache, the tspp is set to 0.
 
@@ -19,8 +18,6 @@
 #include "RTAO\Shaders\RTAO.hlsli"
 #include "CrossBilateralWeights.hlsli"
 
-// ToDo some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
-// ToDo sharp edges fail temporal reprojection due to clamping even for static scene
 Texture2D<NormalDepthTexFormat> g_inCurrentFrameNormalDepth : register(t0);
 Texture2D<float2> g_inCurrentFrameLinearDepthDerivative : register(t1);
 Texture2D<NormalDepthTexFormat> g_inReprojectedNormalDepth : register(t2); 
@@ -204,9 +201,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 
         float4 nWeights = weights / weightSum;   // Normalize the weights.
-
-       // g_outDebug1[DTid] = float4(weights.xyz, weightSum);
-       // g_outDebug2[DTid] = nWeights;
 
         // ToDo revisit this and potentially make it UI adjustable - weight ^ 2 ?,...
         // Scale the tspp by the total weight. This is to keep the tspp low for 

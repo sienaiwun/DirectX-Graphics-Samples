@@ -252,9 +252,6 @@
     <None Include="RTAO\Shaders\Denoising\EdgeStoppingAtrousWaveletTransfromCrossBilateralFilterCS.hlsli">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
     </None>
-    <None Include="RTAO\Shaders\Denoising\EdgeStoppingFilterCS.hlsli">
-      <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
-    </None>
     <None Include="RTAO\Shaders\Denoising\Kernels.hlsli">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
     </None>

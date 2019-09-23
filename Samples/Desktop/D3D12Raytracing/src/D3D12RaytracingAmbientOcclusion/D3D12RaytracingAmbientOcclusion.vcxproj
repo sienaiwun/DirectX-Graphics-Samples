@@ -687,7 +687,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="RTAO\Shaders\Denoising\EdgeStoppingAtrousWaveletTransfromCrossBilateralFilterCS.hlsli" />
-    <None Include="RTAO\Shaders\Denoising\EdgeStoppingFilterCS.hlsli" />
     <None Include="RTAO\Shaders\Denoising\Kernels.hlsli" />
     <None Include="RTAO\Shaders\RandomNumberGenerator.hlsli" />
     <None Include="readme.md" />

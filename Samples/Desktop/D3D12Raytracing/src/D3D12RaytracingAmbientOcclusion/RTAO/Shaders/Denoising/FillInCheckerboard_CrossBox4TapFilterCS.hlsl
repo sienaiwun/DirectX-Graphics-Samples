@@ -40,7 +40,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 {
     int2 pixel = GetInactivePixelIndex(int2(DTid.x, DTid.y * 2));
 
-    // ToDo invalidate out of bounds pixels
     const int2 srcIndexOffsets[4] = { {-1, 0}, {0, -1}, {1, 0}, {0, 1} };
     float4x2 inValues_4x2;
     {

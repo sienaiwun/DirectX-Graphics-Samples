@@ -14,7 +14,6 @@
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO\Shaders\RTAO.hlsli"
 
-// ToDo remove tex
 Texture2D<float> g_inCurrentFrameValue : register(t0);
 Texture2D<float2> g_inCurrentFrameLocalMeanVariance : register(t1);
 Texture2D<float> g_inCurrentFrameRayHitDistance : register(t2);
@@ -81,7 +80,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         a = min(a, MaxSmoothingFactor);
 
         // TODO: use average weighting instead of exponential for the first few samples 
-        //  to even out the weights for the noisy start instead of weighting first samples much more than the rest.
+        //  to even out the weights for the noisy start instead of giving first samples much more weight than the rest.
         //  Ref: Koskela2019, Blockwise Multi-Order Feature Regression for Real-Time Path-Tracing Reconstruction
 
         // Value.
@@ -98,7 +97,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
         variance = max(0.1, variance);
 
         // RayHitDistance.
-        rayHitDistance = isValidValue ? g_inCurrentFrameRayHitDistance[DTid] : 0; // ToDO use a common const.
+        rayHitDistance = isValidValue ? g_inCurrentFrameRayHitDistance[DTid] : 0;
         float cachedRayHitDistance = cachedValues.w;
         rayHitDistance = isValidValue ? lerp(cachedRayHitDistance, rayHitDistance, a) : cachedRayHitDistance;
 

@@ -136,13 +136,12 @@ namespace RTAOGpuKernels
             float depthSigma,
             float normalSigma,
             float weightScale,
-            UINT kernelStepShifts[5],
-            UINT maxKernelStepShift,
             UINT passNumberToOutputToIntermediateResource = 1,
-            UINT numFilterPasses = 5,
+            UINT numFilterPasses = 5,   // ToDo remove
             Mode filterMode = OutputFilteredValue,
             bool perspectiveCorrectDepthInterpolation = false,
             bool useAdaptiveKernelSize = false,
+            float kernelRadiusLerfCoef = 0.f,
             float rayHitDistanceToKernelWidthScale = 1.f,
             float rayHitDistanceToKernelSizeScaleExponent = 2.f,
             UINT minKernelWidth = 3,
@@ -152,7 +151,6 @@ namespace RTAOGpuKernels
             float minVarianceToDenoise = 0,
             float staleNeighborWeightScale = 1,
             float depthWeightCutoff = 0.5f,
-            bool useProjectedDepthTest = false,
             bool forceDenoisePass = false,
             bool weightByTspp = false);
 
@@ -243,8 +241,7 @@ namespace RTAOGpuKernels
             GpuResource debugResources[2],
             const XMMATRIX& projectionToView,
             const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
-            UINT maxTspp,
-            UINT numRaysToTraceSinceTemporalMovement);
+            UINT maxTspp);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
@@ -283,7 +280,6 @@ namespace RTAOGpuKernels
             UINT minTsppToUseTemporalVariance,
             float clampDifferenceToTsppScale,   // ToDo remove?
             GpuResource debugResources[2],
-            UINT numFramesToDenoiseAfterLastTracedRay,
             UINT lowTsppBlurStrengthMaxTspp,
             float lowTsppBlurStrengthDecayConstant,
             bool doCheckerboardSampling = false,

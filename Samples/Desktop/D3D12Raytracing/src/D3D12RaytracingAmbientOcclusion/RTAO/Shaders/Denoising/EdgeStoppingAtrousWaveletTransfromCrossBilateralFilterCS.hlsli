@@ -148,10 +148,9 @@ void AddFilterContribution(
             delta = max(0, delta - depthFloatPrecision); // Avoid distinguising initial values up to the float precision. Gets rid of banding.
             w_d = exp(-delta / depthTolerance);
 
-            // ToDo Explain
+            // Allows scaling contributions beyond tolerance, but disables contribution from samples too far away altogether.
             w_d *= w_d >= cb.depthWeightCutoff;
         }
-
 
         // Filter kernel weight.
         float w_h = FilterKernel::Kernel[row][col];
@@ -162,8 +161,7 @@ void AddFilterContribution(
         weightedValueSum += w * iValue;
         weightSum += w;
 
-        // ToDo standardize cb naming
-        if (cb.outputFilteredVariance)
+        if (cb.outputFilteredVariance) // ToDo remove
         {
             float iVariance = g_inVariance[id];
             weightedVarianceSum += w * w * iVariance;   // ToDo rename to sqWeight...
@@ -226,7 +224,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         // Adaptive kernel size
         // Scale the kernel span based on AO ray hit distance. 
         // This helps filter out lower frequency noise, a.k.a. boiling artifacts.
-        uint2 kernelStep = 1 << cb.kernelStepShift;
+        uint2 kernelStep = 0;
         if (cb.useAdaptiveKernelSize && isValidValue)
         {
             float avgRayHitDistance = g_inHitDistance[DTid];
@@ -244,15 +242,14 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
             kernelStep = max(1, round(k * avgRayHitDistance / projectedSurfaceDim));
 
             uint2 targetKernelStep = clamp(kernelStep, (cb.minKernelWidth - 1) / 2, (cb.maxKernelWidth - 1) / 2);
-            float MaxTspp = 33;// ToDo
-           // float a = min(Tspp/MaxTspp)
-            uint2 adjustedKernelStep = cb.kernelStepShift > 0 ? lerp(1, targetKernelStep, (cb.kernelStepShift-1) / float(cb.maxKernelStepShift)) : targetKernelStep;
+
+            // ToDo try lerping radius instead of step
+            // ToDo compare to use same step for both X, Y. Varying step causes visible streaking.
+            // ToDo: use larger kernel on lower tspp
+            // ToDo varying cycle freq dep on kernel radius?
+            uint2 adjustedKernelStep = lerp(1, targetKernelStep, cb.kernelRadiusLerfCoef); 
 
             kernelStep = adjustedKernelStep;
-
-
-            g_outDebug1[DTid] = float4(projectedSurfaceDim, kernelStep);
-            g_outDebug2[DTid] = depth;
         }
 
         if (variance >= cb.minVarianceToDenoise)
