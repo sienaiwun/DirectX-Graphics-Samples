@@ -98,10 +98,6 @@ namespace RTAO_Args
         Sample::instance().RTAOComponent().RequestRecreateAOSamples();
     }
 
-    // ToDo:
-    // - no perf difference on checkerboard. Add checkerboard support when not using ray sorting.
-    // - support checkerboard + 2+ spp
-    // - visible random clamping on checkerboard.
     void OnToggleSppCheckerboard(void*)
     {
         if (RTAO_Args::Spp_doCheckerboard)
@@ -117,7 +113,7 @@ namespace RTAO_Args
     BoolVar RaySorting_Enabled(L"Render/AO/RTAO/Ray Sorting/Enabled", false);
     NumVar RaySorting_DepthBinSizeMultiplier(L"Render/AO/RTAO/Ray Sorting/Ray bin depth size (multiplier of MaxRayHitTime)", 0.1f, 0.01f, 10.f, 0.01f);
 
-    IntVar Spp(L"Render/AO/RTAO/Spp/Rays per pixel", 1, 1, 1024, 1, OnSppSampleSetChange); // ToDo Support spatial distribtuons for 2+ spp
+    IntVar Spp(L"Render/AO/RTAO/Spp/Rays per pixel", 1, 1, 1024, 1, OnSppSampleSetChange);
     IntVar Spp_AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, 1, 8, 1, OnSppSampleSetChange);
     BoolVar Spp_doCheckerboard(L"Render/AO/RTAO/Spp/Overrides/Do checkerboard 0.5 spp", false, OnToggleSppCheckerboard);
     BoolVar Spp_useGroundTruthSpp(L"Render/AO/RTAO/Spp/Overrides/Do ground truth spp: " STRINGIZE(GROUND_TRUTH_RPP), false, OnToggleSppGroundTruth);
@@ -129,12 +125,14 @@ namespace RTAO_Args
 
 
     NumVar MaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", AO_RAY_T_MAX, 0.0f, 50.0f, 0.2f);
+    NumVar  MinimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
+
     BoolVar ApproximateInterreflections_Enabled(L"Render/AO/RTAO/Approximate Interreflections/Enabled", true);
     NumVar ApproximateInterreflections_DiffuseReflectanceScale(L"Render/AO/RTAO/Approximate Interreflections/Diffuse Reflectance Scale", 0.5f, 0.0f, 1.0f, 0.1f);
-    NumVar  MinimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
-    BoolVar ExponentialFalloff_Enabled(L"Render/AO/RTAO/Exponential Falloff", true);
-    NumVar ExponentialFalloff_DecayConstant(L"Render/AO/RTAO/Exponential Falloff Decay Constant", 2.f, 0.0f, 20.f, 0.25f);
-    NumVar ExponentialFalloff_MinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);       // ToDo Finetune document perf.
+    
+    BoolVar ExponentialFalloff_Enabled(L"Render/AO/RTAO/Exponential Falloff/Enabled", true);
+    NumVar ExponentialFalloff_DecayConstant(L"Render/AO/RTAO/Exponential Falloff/Decay Constant", 2.f, 0.0f, 20.f, 0.25f);
+    NumVar ExponentialFalloff_MinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff/Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);       // ToDo Finetune document perf.
     
     BoolVar QuarterResAO(L"Render/AO/RTAO/Quarter res", true, Sample::OnRecreateRaytracingResources, nullptr);
 }
@@ -255,7 +253,7 @@ void RTAO::CreateRootSignatures()
         rootParameters[Slot::AOSurfaceAlbedo].InitAsDescriptorTable(1, &ranges[Slot::AOSurfaceAlbedo]);
 
         rootParameters[Slot::AccelerationStructure].InitAsShaderResourceView(0);
-        rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);		// ToDo rename to ConstantBuffer
+        rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
         rootParameters[Slot::SampleBuffers].InitAsShaderResourceView(4);
 
         CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
@@ -617,6 +615,7 @@ void RTAO::Run(
         commandList->SetComputeRootSignature(m_raytracingGlobalRootSignature.Get());
 
         // Bind inputs.
+        commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::AccelerationStructure, accelerationStructure);
         commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::RayOriginPosition, rayOriginSurfaceHitPositionResource);
         commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::RayOriginSurfaceNormalDepth, rayOriginSurfaceNormalDepthResource);
         commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::SampleBuffers, m_hemisphereSamplesGPUBuffer.GpuVirtualAddress(frameIndex));
@@ -629,9 +628,6 @@ void RTAO::Run(
         commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::AOAmbientCoefficient, m_AOResources[AOResource::AmbientCoefficient].gpuDescriptorWriteAccess);
         commandList->SetComputeRootDescriptorTable(GlobalRootSignature::Slot::AORayHitDistance, m_AOResources[AOResource::RayHitDistance].gpuDescriptorWriteAccess);
 
-        // Bind the heaps, acceleration structure and dispatch rays. 
-        // ToDo dedupe calls
-        commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::AccelerationStructure, accelerationStructure);
 
         if (RTAO_Args::RaySorting_Enabled)
         {

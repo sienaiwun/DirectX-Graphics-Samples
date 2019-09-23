@@ -254,7 +254,6 @@ namespace RTAOGpuKernels
             namespace Slot {
                 enum Enum {
                     Output = 0,
-                    VarianceOutput,
                     Input,
                     Normals,
                     Variance,
@@ -271,7 +270,7 @@ namespace RTAOGpuKernels
         }
     }
 
-    void AtrousWaveletTransformCrossBilateralFilter::Initialize(ID3D12Device5* device, UINT frameCount, UINT maxFilterPasses, UINT numCallsPerFrame)
+    void AtrousWaveletTransformCrossBilateralFilter::Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame)
     {
         // Create root signature.
         {
@@ -286,7 +285,6 @@ namespace RTAOGpuKernels
             ranges[Slot::PartialDistanceDerivatives].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
             ranges[Slot::Tspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
             ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-            ranges[Slot::VarianceOutput].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
             ranges[Slot::Debug1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
             ranges[Slot::Debug2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
 
@@ -297,7 +295,6 @@ namespace RTAOGpuKernels
             rootParameters[Slot::Variance].InitAsDescriptorTable(1, &ranges[Slot::Variance]);
             rootParameters[Slot::SmoothedVariance].InitAsDescriptorTable(1, &ranges[Slot::SmoothedVariance]);
             rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
-            rootParameters[Slot::VarianceOutput].InitAsDescriptorTable(1, &ranges[Slot::VarianceOutput]);
             rootParameters[Slot::RayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::RayHitDistance]);
             rootParameters[Slot::PartialDistanceDerivatives].InitAsDescriptorTable(1, &ranges[Slot::PartialDistanceDerivatives]);
             rootParameters[Slot::Tspp].InitAsDescriptorTable(1, &ranges[Slot::Tspp]);
@@ -333,29 +330,7 @@ namespace RTAOGpuKernels
 
         // Create shader resources.
         {
-            m_maxFilterPasses = maxFilterPasses;
-            UINT numInstancesPerFrame = maxFilterPasses * numCallsPerFrame;
-            m_CB.Create(device, frameCount * numInstancesPerFrame, L"Constant Buffer: AtrousWaveletTransformCrossBilateralFilter");
-        }
-    }
-
-    void AtrousWaveletTransformCrossBilateralFilter::CreateInputResourceSizeDependentResources(
-        ID3D12Device5* device,
-        DX::DescriptorHeap* descriptorHeap,
-        UINT width,
-        UINT height,
-        DXGI_FORMAT format)
-    {
-        // Create shader resources
-        {
-            CreateRenderTargetResource(device, format, width, height, descriptorHeap,
-                &m_intermediateValueOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"UAV texture: AtrousWaveletTransformCrossBilateralFilter intermediate value output");
-
-            CreateRenderTargetResource(device, format, width, height, descriptorHeap,
-                &m_intermediateVarianceOutputs[0], D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"UAV texture: AtrousWaveletTransformCrossBilateralFilter intermediate variance output 0");
-
-            CreateRenderTargetResource(device, format, width, height, descriptorHeap,
-                &m_intermediateVarianceOutputs[1], D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"UAV texture: AtrousWaveletTransformCrossBilateralFilter intermediate variance output 1");
+            m_CB.Create(device, frameCount * numCallsPerFrame, L"Constant Buffer: AtrousWaveletTransformCrossBilateralFilter");
         }
     }
 
@@ -372,15 +347,11 @@ namespace RTAOGpuKernels
         D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputTsppResourceHandle,
         GpuResource* outputResource,
-        GpuResource* outputIntermediateResource,
-        GpuResource* outputDebug1Resource,
-        GpuResource* outputDebug2Resource,
         float valueSigma,
         float depthSigma,
         float normalSigma,
         float weightScale,
         UINT passNumberToOutputToIntermediateResource,
-        UINT numFilterPasses,
         Mode filterMode,
         bool perspectiveCorrectDepthInterpolation,
         bool useAdaptiveKernelSize,
@@ -394,7 +365,6 @@ namespace RTAOGpuKernels
         float minVarianceToDenoise,
         float staleNeighborWeightScale,
         float depthWeightCutoff,
-        bool forceDenoisePass,
         bool weightByTspp)
     {
 
@@ -407,7 +377,35 @@ namespace RTAOGpuKernels
 
         ScopedTimer _prof(L"AtrousWaveletTransformCrossBilateralFilter", commandList);
 
-        m_CBinstanceID = ((m_CBinstanceID + 1) * m_maxFilterPasses) % m_CB.NumInstances();
+
+        auto resourceDesc = outputResource->resource.Get()->GetDesc();
+        XMUINT2 resourceDim(static_cast<UINT>(resourceDesc.Width), static_cast<UINT>(resourceDesc.Height));
+
+        // Update the Constant Buffers.
+        {
+            m_CB->valueSigma = valueSigma;
+            m_CB->depthSigma = depthSigma;
+            m_CB->normalSigma = normalSigma;
+            m_CB->weightScale = weightScale;
+            m_CB->weightByTspp = weightByTspp;
+            m_CB->rayHitDistanceToKernelSizeScaleExponent = rayHitDistanceToKernelSizeScaleExponent;
+            m_CB->kernelRadiusLerfCoef = kernelRadiusLerfCoef;
+            m_CB->outputFilteredValue = filterMode == OutputFilteredValue;
+            m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
+            m_CB->useAdaptiveKernelSize = useAdaptiveKernelSize;
+            m_CB->rayHitDistanceToKernelWidthScale = rayHitDistanceToKernelWidthScale;
+            m_CB->minKernelWidth = minKernelWidth;
+            m_CB->maxKernelWidth = maxKernelWidth;
+            m_CB->varianceSigmaScaleOnSmallKernels = varianceSigmaScaleOnSmallKernels;
+            m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
+            m_CB->textureDim = resourceDim;
+            m_CB->minVarianceToDenoise = minVarianceToDenoise;
+            m_CB->staleNeighborWeightScale = staleNeighborWeightScale;
+            m_CB->depthWeightCutoff = depthWeightCutoff;
+            m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
+            m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
+            m_CB.CopyStagingToGpu(m_CBinstanceID);
+        }
 
         // Set pipeline state.
         {
@@ -421,128 +419,18 @@ namespace RTAOGpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::RayHitDistance, inputHitDistanceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::PartialDistanceDerivatives, inputPartialDistanceDerivativesResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::Tspp, inputTsppResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::Debug1, outputDebug1Resource->gpuDescriptorWriteAccess);
-            commandList->SetComputeRootDescriptorTable(Slot::Debug2, outputDebug2Resource->gpuDescriptorWriteAccess);
-        }
-
-        auto resourceDesc = outputResource->resource.Get()->GetDesc();
-        XMUINT2 resourceDim(static_cast<UINT>(resourceDesc.Width), static_cast<UINT>(resourceDesc.Height));
-
-        // Update the Constant Buffers.
-        for (UINT i = 0; i < numFilterPasses; i++)
-        {
-            // Ref: Dammertz2010
-            // Tighten value range smoothing for higher passes.
-
-            m_CB->valueSigma = valueSigma;
-            m_CB->depthSigma = depthSigma;
-            m_CB->normalSigma = normalSigma;
-            m_CB->weightScale = weightScale;
-            m_CB->weightByTspp = weightByTspp;
-            m_CB->rayHitDistanceToKernelSizeScaleExponent = rayHitDistanceToKernelSizeScaleExponent;
-            m_CB->kernelRadiusLerfCoef = kernelRadiusLerfCoef;
-            // Move vars not changing inside loop outside of it.
-            m_CB->outputFilteredVariance = numFilterPasses > 1 && filterMode == OutputFilteredValue;
-            m_CB->outputFilteredValue = filterMode == OutputFilteredValue;
-            m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
-            m_CB->useAdaptiveKernelSize = useAdaptiveKernelSize;
-            m_CB->rayHitDistanceToKernelWidthScale = rayHitDistanceToKernelWidthScale;
-            m_CB->minKernelWidth = minKernelWidth;
-            m_CB->maxKernelWidth = maxKernelWidth;
-            m_CB->varianceSigmaScaleOnSmallKernels = varianceSigmaScaleOnSmallKernels;
-            m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
-            m_CB->textureDim = resourceDim;
-            m_CB->minVarianceToDenoise = minVarianceToDenoise;
-            m_CB->staleNeighborWeightScale = i == 0 ? staleNeighborWeightScale : 1;  // ToDo revise
-            m_CB->depthWeightCutoff = depthWeightCutoff;
-            m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
-            m_CB.CopyStagingToGpu(m_CBinstanceID + i);
-        }
-
-        //
-        // Iterative filter
-        //
-        {
-            XMUINT2 groupSize(CeilDivide(resourceDim.x, ThreadGroup::Width), CeilDivide(resourceDim.y, ThreadGroup::Height));
-
-            // Order the resources such that the final pass writes to outputResource.
-            GpuResource* outValueResources[2] =
-            {
-                numFilterPasses % 2 == 1 ? outputResource : &m_intermediateValueOutput,
-                numFilterPasses % 2 == 1 ? &m_intermediateValueOutput : outputResource,
-            };
-
-
-            if (numFilterPasses == 1 && outputIntermediateResource && 0 == passNumberToOutputToIntermediateResource)
-            {
-                outValueResources[0] = outputIntermediateResource;
-            }
-
-            // First iteration reads from input resource.		
             commandList->SetComputeRootDescriptorTable(Slot::Input, inputValuesResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::Output, outValueResources[0]->gpuDescriptorWriteAccess);
-            commandList->SetComputeRootDescriptorTable(Slot::VarianceOutput, m_intermediateVarianceOutputs[0].gpuDescriptorWriteAccess);
+            commandList->SetComputeRootDescriptorTable(Slot::Output, outputResource->gpuDescriptorWriteAccess);
+            commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
 
-            for (UINT i = 0; i < numFilterPasses; i++)
-            {
-                commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID + i));
-
-                // Dispatch.
-                commandList->Dispatch(groupSize.x, groupSize.y, 1);
-
-                // ToDo remove the copy, write directly to the resource instead.
-                if (i > 0 && outputIntermediateResource && i == passNumberToOutputToIntermediateResource)
-                {
-                    commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(outValueResources[i % 2]->resource.Get()));
-
-                    CopyTextureRegion(
-                        commandList,
-                        outValueResources[i % 2]->resource.Get(),
-                        outputIntermediateResource->resource.Get(),
-                        &CD3DX12_BOX(0, 0, resourceDim.x, resourceDim.y),
-                        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-                        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-                }
-
-                // Transition and bind resources for the next pass.
-                // Flip input/output. 
-                if (i < numFilterPasses - 1)
-                {
-                    // Ping-pong input/output resources across passes.
-                    UINT inputID = i % 2;
-                    UINT outputID = (i + 1) % 2;
-
-                    D3D12_RESOURCE_BARRIER barriers[4] = {
-                        CD3DX12_RESOURCE_BARRIER::Transition(m_intermediateVarianceOutputs[inputID].resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-                        CD3DX12_RESOURCE_BARRIER::Transition(outValueResources[inputID]->resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-
-                        CD3DX12_RESOURCE_BARRIER::Transition(m_intermediateVarianceOutputs[outputID].resource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS),
-                        CD3DX12_RESOURCE_BARRIER::Transition(outValueResources[outputID]->resource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-                    };
-                    // Only flip outputs from pass 0 as the caller passed in resources were used as input.
-                    commandList->ResourceBarrier(i == 0 ? 2 : ARRAYSIZE(barriers), barriers);
-
-                    // Flip input, output resources.
-                    commandList->SetComputeRootDescriptorTable(Slot::Input, outValueResources[inputID]->gpuDescriptorReadAccess);
-                    commandList->SetComputeRootDescriptorTable(Slot::Output, outValueResources[outputID]->gpuDescriptorWriteAccess);
-                    commandList->SetComputeRootDescriptorTable(Slot::Variance, m_intermediateVarianceOutputs[inputID].gpuDescriptorReadAccess);
-                    commandList->SetComputeRootDescriptorTable(Slot::SmoothedVariance, m_intermediateVarianceOutputs[inputID].gpuDescriptorReadAccess);
-                    commandList->SetComputeRootDescriptorTable(Slot::VarianceOutput, m_intermediateVarianceOutputs[outputID].gpuDescriptorWriteAccess);
-                }
-            }
-
-            // Transition the intermediate output resource back.
-            if (numFilterPasses > 1)
-            {
-                bool isVar0ResourceInUAVState = ((numFilterPasses - 1) % 2) == 0;
-                D3D12_RESOURCE_BARRIER barriers[] = {
-                    CD3DX12_RESOURCE_BARRIER::Transition(m_intermediateValueOutput.resource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS),
-                    CD3DX12_RESOURCE_BARRIER::Transition(m_intermediateVarianceOutputs[isVar0ResourceInUAVState ? 1 : 0].resource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-                };
-                // Transition variance resources back only if they're not in their default state.
-                commandList->ResourceBarrier(ARRAYSIZE(barriers), barriers);
-            }
+            GpuResource* debugResources = Sample::g_debugOutput;
+            commandList->SetComputeRootDescriptorTable(Slot::Debug1, debugResources[0].gpuDescriptorWriteAccess);
+            commandList->SetComputeRootDescriptorTable(Slot::Debug2, debugResources[1].gpuDescriptorWriteAccess);
         }
+
+        // Dispatch.
+        XMUINT2 groupSize(CeilDivide(resourceDim.x, ThreadGroup::Width), CeilDivide(resourceDim.y, ThreadGroup::Height));
+        commandList->Dispatch(groupSize.x, groupSize.y, 1);
     }
 
 
@@ -701,7 +589,7 @@ namespace RTAOGpuKernels
         }
     }
 
-    // Expects, and returns, outputResource in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state.
+    // Expects, and returns, inputOutputResourceHandle in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state.
     void FillInCheckerboard::Run(
         ID3D12GraphicsCommandList4* commandList,
         ID3D12DescriptorHeap* descriptorHeap,

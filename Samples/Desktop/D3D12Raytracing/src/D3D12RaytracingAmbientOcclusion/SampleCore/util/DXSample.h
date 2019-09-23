@@ -71,7 +71,6 @@ protected:
     // Window bounds
     RECT m_windowBounds;
     
-    // ToDo double check this is still needed
     // Override to be able to start without Dx11on12 UI for PIX. PIX doesn't support 11 on 12. 
     bool m_enableUI;
 

@@ -63,7 +63,6 @@ namespace Denoiser_Args
     NumVar AdaptiveKernelSize_RayHitDistanceScaleExponent(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Hit distance scale exponent", 2.0f, 1.0f, 5.0f, 0.1f);
     BoolVar Variance_UseDepthWeights(L"Render/AO/RTAO/Denoising/Variance/Use normal weights", true);
     BoolVar Variance_UseNormalWeights(L"Render/AO/RTAO/Denoising/Variance/Use normal weights", true);
-    BoolVar ForceDenoisePass(L"Render/AO/RTAO/Denoising/Force denoise pass", false);
     IntVar MinTsppToUseTemporalVariance(L"Render/AO/RTAO/Denoising/Min Temporal Variance Tspp", 4, 1, 40);
     NumVar MinVarianceToDenoise(L"Render/AO/RTAO/Denoising/Min Variance to denoise", 0.0f, 0.0f, 1.f, 0.01f);
     // ToDo specify which variance - local or temporal
@@ -86,7 +85,6 @@ namespace Denoiser_Args
 
     const WCHAR* Modes[RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::FilterType::Count] = { L"EdgeStoppingGaussian3x3", L"EdgeStoppingGaussian5x5" };
     EnumVar Mode(L"Render/AO/RTAO/Denoising/Mode", RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::FilterType::EdgeStoppingGaussian3x3, RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::FilterType::Count, Modes);
-    IntVar AtrousFilterPasses(L"Render/AO/RTAO/Denoising/Num passes", 1, 1, Denoiser::c_MaxAtrousDesnoisePasses, 1);
     NumVar AODenoiseValueSigma(L"Render/AO/RTAO/Denoising/Value Sigma", 1.0f, 0.0f, 30.0f, 0.1f);
 
     // ToDo remove
@@ -129,8 +127,8 @@ void Denoiser::CreateAuxilaryDeviceResources()
     m_gaussianSmoothingKernel.Initialize(device, Sample::FrameCount);
     m_temporalCacheReverseReprojectKernel.Initialize(device, Sample::FrameCount);
     m_temporalCacheBlendWithCurrentFrameKernel.Initialize(device, Sample::FrameCount);
-    m_atrousWaveletTransformFilter.Initialize(device, c_MaxAtrousDesnoisePasses, Sample::FrameCount);
-    m_calculateMeanVarianceKernel.Initialize(device, Sample::FrameCount, 5 * MaxCalculateVarianceKernelInvocationsPerFrame); // ToDo revise the ount
+    m_atrousWaveletTransformFilter.Initialize(device, Sample::FrameCount);
+    m_calculateMeanVarianceKernel.Initialize(device, Sample::FrameCount); 
     m_bilateralFilterKernel.Initialize(device, Sample::FrameCount, MAX_NUM_PASSES_LOW_TSPP);
 }
 
@@ -164,9 +162,6 @@ void Denoiser::Run(Scene& scene, Pathtracer& pathtracer, RTAO& rtao, DenoiseStag
 
 void Denoiser::CreateResolutionDependentResources()
 {
-    auto device = m_deviceResources->GetD3DDevice();
-
-    m_atrousWaveletTransformFilter.CreateInputResourceSizeDependentResources(device, m_cbvSrvUavHeap.get(), m_denoisingWidth, m_denoisingHeight, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient));
     CreateTextureResources();
 }
 
@@ -214,12 +209,10 @@ void Denoiser::CreateTextureResources()
 
     // Variance resources
     {
+        for (UINT i = 0; i < AOVarianceResource::Count; i++)
         {
-            for (UINT i = 0; i < AOVarianceResource::Count; i++)
-            {
-                CreateRenderTargetResource(device, ResourceFormat(ResourceType::Variance), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_varianceResources[i], initialResourceState, L"Post Temporal Reprojection Variance");
-                CreateRenderTargetResource(device, ResourceFormat(ResourceType::LocalMeanVariance), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_localMeanVarianceResources[i], initialResourceState, L"Local Mean Variance");
-            }
+            CreateRenderTargetResource(device, ResourceFormat(ResourceType::Variance), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_varianceResources[i], initialResourceState, L"Post Temporal Reprojection Variance");
+            CreateRenderTargetResource(device, ResourceFormat(ResourceType::LocalMeanVariance), m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_localMeanVarianceResources[i], initialResourceState, L"Local Mean Variance");
         }
     }
 
@@ -603,8 +596,8 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
 {
     auto commandList = m_deviceResources->GetCommandList();
     auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
-
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
+    ScopedTimer _prof(L"AtrousWaveletTransformFilter", commandList);
 
     GpuResource* AOResources = rtao.AOResources();
     GpuResource* VarianceResource = Denoiser_Args::UseSmoothedVariance ? &m_varianceResources[AOVarianceResource::Smoothed] : &m_varianceResources[AOVarianceResource::Raw];
@@ -621,54 +614,25 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
         kernelRadiusLerfCoef = i / static_cast<float>(Denoiser_Args::KernelRadius_RotateKernel_NumCycles);
     }
 
-    float ValueSigma;
-    float NormalSigma;
-    float DepthSigma;
-        ValueSigma = Denoiser_Args::AODenoiseValueSigma;
-        NormalSigma = Denoiser_Args::AODenoiseNormalSigma;
-        DepthSigma = Denoiser_Args::AODenoiseDepthSigma;
-
-
-    UINT numFilterPasses = Denoiser_Args::AtrousFilterPasses;
-
-    bool cacheIntermediateDenoiseOutput =
-        Denoiser_Args::TemporalSupersampling_CacheDenoisedOutput &&
-        static_cast<UINT>(Denoiser_Args::TemporalSupersampling_CacheDenoisedOutputPassNumber) < numFilterPasses;
-
     GpuResource(&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
     GpuResource* InputAOCoefficientResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
-    GpuResource* OutputIntermediateResource = nullptr;
-    if (cacheIntermediateDenoiseOutput)
-    {
-        // ToDo clean this up so that its clear.
-        m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex = (m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex + 1) % 2;
-        OutputIntermediateResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
-    }
 
-    if (OutputIntermediateResource)
-    {
-        resourceStateTracker->TransitionResource(OutputIntermediateResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    }
+    // ToDo clean this up so that its clear.
+    m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex = (m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex + 1) % 2;
+    GpuResource* OutputResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
+    resourceStateTracker->TransitionResource(OutputResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 
     float staleNeighborWeightScale = Denoiser_Args::LowerWeightForStaleSamples ? RTAO_Args::Spp : 1.f;
-    bool forceDenoisePass = Denoiser_Args::ForceDenoisePass;
 
-    if (forceDenoisePass)
-    {
-        Denoiser_Args::ForceDenoisePass.Bang();
-    }
     // A-trous edge-preserving wavelet tranform filter
-    if (numFilterPasses > 0) // ToDo remove
     {
         // Adjust factors that change based on max ray hit distance.
         // Values were empirically found.
         float RayHitDistanceScaleFactor = 22 / RTAO_Args::MaxRayHitTime * Denoiser_Args::AdaptiveKernelSize_RayHitDistanceScaleFactor;
         float RayHitDistanceScaleExponent = lerp(1, Denoiser_Args::AdaptiveKernelSize_RayHitDistanceScaleExponent, relativeCoef(RTAO_Args::MaxRayHitTime, 4, 22));
 
-        ScopedTimer _prof(L"AtrousWaveletTransformFilter", commandList);
         resourceStateTracker->FlushResourceBarriers();
-        // ToDo trim obsolete
         m_atrousWaveletTransformFilter.Run(
             commandList,
             m_cbvSrvUavHeap->GetHeap(),
@@ -679,16 +643,12 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance].gpuDescriptorReadAccess,
             GBufferResources[GBufferResource::PartialDepthDerivatives].gpuDescriptorReadAccess,
             m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Tspp].gpuDescriptorReadAccess,
-            &AOResources[AOResource::Smoothed],
-            OutputIntermediateResource,
-            &Sample::g_debugOutput[0],
-            &Sample::g_debugOutput[1],
-            ValueSigma,
-            DepthSigma,
-            NormalSigma,
+            OutputResource,
+            Denoiser_Args::AODenoiseValueSigma,
+            Denoiser_Args::AODenoiseDepthSigma,
+            Denoiser_Args::AODenoiseNormalSigma,
             Denoiser_Args::WeightScale,
             static_cast<UINT>(Denoiser_Args::TemporalSupersampling_CacheDenoisedOutputPassNumber),
-            numFilterPasses,
             RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::Mode::OutputFilteredValue,
             Denoiser_Args::PerspectiveCorrectDepthInterpolation,
             Denoiser_Args::UseAdaptiveKernelSize,
@@ -702,10 +662,8 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             Denoiser_Args::MinVarianceToDenoise,
             staleNeighborWeightScale,
             Denoiser_Args::AODenoiseDepthWeightCutoff,
-            forceDenoisePass,
             Denoiser_Args::FilterWeightByTspp);
     }
-
     resourceStateTracker->TransitionResource(&AOResources[AOResource::Smoothed], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    resourceStateTracker->TransitionResource(OutputIntermediateResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    resourceStateTracker->TransitionResource(OutputResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }

@@ -68,12 +68,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
     g_outDepth[DTid] = vDepths[selectedOffset];
     g_outNormalDepth[DTid] = g_inNormalDepth[selectedDTid];
 
-    // ToDo use perspective correct depth interpolation or better adjust when on use?
     // Since we're reducing the resolution by 2, multiple the partial derivatives by 2. 
     // Either that or the multiplier should be applied when calculating weights.
-    // ToDo it would be cleaner to apply that multiplier at weights calculation. 
-    // Or recompute the partial derivatives on downsample?
-    // ToDo: use perspective correct ddxy interpolation.
+    // TODO: use perspective correct ddxy interpolation? Or apply the scaling on use?
     g_outPartialDistanceDerivatives[DTid] = 2 * g_inPartialDistanceDerivatives[selectedDTid];
 
     g_outMotionVector[DTid] = g_inMotionVector[selectedDTid];

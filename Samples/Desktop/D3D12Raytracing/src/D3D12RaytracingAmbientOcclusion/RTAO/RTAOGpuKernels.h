@@ -111,13 +111,7 @@ namespace RTAOGpuKernels
             Count
         };
 
-        void Initialize(ID3D12Device5* device, UINT maxFilterPasses, UINT frameCount, UINT numCallsPerFrame = 1);
-        void CreateInputResourceSizeDependentResources(
-            ID3D12Device5* device,
-            DX::DescriptorHeap* descriptorHeap, // ToDo pass the same heap type in all inputs?
-            UINT width,
-            UINT height,
-            DXGI_FORMAT format);
+        void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
         void Run(
             ID3D12GraphicsCommandList4* commandList,
             ID3D12DescriptorHeap* descriptorHeap,
@@ -129,15 +123,11 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputTsppResourceHandle,
             GpuResource* outputResource,
-            GpuResource* outputIntermediateResource,
-            GpuResource* outputDebug1ResourceHandle,
-            GpuResource* outputDebug2ResourceHandle,
             float valueSigma,
             float depthSigma,
             float normalSigma,
             float weightScale,
             UINT passNumberToOutputToIntermediateResource = 1,
-            UINT numFilterPasses = 5,   // ToDo remove
             Mode filterMode = OutputFilteredValue,
             bool perspectiveCorrectDepthInterpolation = false,
             bool useAdaptiveKernelSize = false,
@@ -151,19 +141,13 @@ namespace RTAOGpuKernels
             float minVarianceToDenoise = 0,
             float staleNeighborWeightScale = 1,
             float depthWeightCutoff = 0.5f,
-            bool forceDenoisePass = false,
             bool weightByTspp = false);
-
-        GpuResource& VarianceOutputResource() { return m_intermediateVarianceOutputs[0]; }
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
         ComPtr<ID3D12PipelineState>         m_pipelineStateObjects[FilterType::Count];
-        GpuResource			                m_intermediateValueOutput;
-        GpuResource			                m_intermediateVarianceOutputs[2];
         ConstantBuffer<AtrousWaveletTransformFilterConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
-        UINT                                m_maxFilterPasses = 0;
     };
 
     class FillInCheckerboard

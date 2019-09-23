@@ -72,7 +72,7 @@ Texture2D<float3> l_texNormalMap : register(t4, space1);
 //***************************************************************************
 
 // Trace a shadow ray and return true if it hits any geometry.
-bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in UINT currentRayRecursionDepth, in bool retrieveTHit = true, in float TMax = 10000, in bool acceptFirstHit = false)
+bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in UINT currentRayRecursionDepth, in bool retrieveTHit = true, in float TMax = 10000)
 {
     if (currentRayRecursionDepth >= g_cb.maxShadowRayRecursionDepth)
     {
@@ -95,13 +95,12 @@ bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in UINT currentRay
     ShadowRayPayload shadowPayload = { TMax };
 
     UINT rayFlags = RAY_FLAG_CULL_NON_OPAQUE;             // ~skip transparent objects
-    
-    if (acceptFirstHit || !retrieveTHit)
+    bool acceptFirstHit = !retrieveTHit;
+    if (acceptFirstHit)
     {
         // Performance TIP: Accept first hit if true hit is not neeeded,
         // or has minimal to no impact. The peformance gain can
         // be substantial.
-        // ToDo test perf impact
         rayFlags |= RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
     }
 

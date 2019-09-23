@@ -34,8 +34,14 @@ Clamping
   - Temporal
 // ToDo some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
 // ToDo sharp edges fail temporal reprojection due to clamping even for static scene
+    Checkerboard
+    // - no perf difference on checkerboard. Add checkerboard support when not using ray sorting.
+    // - support checkerboard + 2+ spp
+    // - visible random clamping on checkerboard.
+
 
 - Cleanup:
+    FlushResourceBarriers before GpuKernel calls
     double check all CS for out of bounds.
     clean up scoped timer names.
     - Add/revise comments. Incl file decs
@@ -199,14 +205,12 @@ struct AtrousWaveletTransformFilterConstantBuffer
     UINT DepthNumMantissaBits;
 
     BOOL outputFilteredValue;
-    BOOL outputFilteredVariance;
     float varianceSigmaScaleOnSmallKernels;
     bool usingBilateralDownsampledBuffers;
-
     float staleNeighborWeightScale;
-    float depthWeightCutoff;
-    float padding[2];
 
+    float depthWeightCutoff;
+    float padding[3];
 };
 
 struct CalculateVariance_BilateralFilterConstantBuffer

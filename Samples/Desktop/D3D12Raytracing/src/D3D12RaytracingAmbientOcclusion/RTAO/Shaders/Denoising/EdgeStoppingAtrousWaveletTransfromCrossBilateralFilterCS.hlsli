@@ -30,7 +30,6 @@ Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);
 Texture2D<uint> g_inTspp : register(t8);
 
 RWTexture2D<float> g_outFilteredValue : register(u0);
-RWTexture2D<float> g_outFilteredVariance : register(u1);
 RWTexture2D<float4> g_outDebug1 : register(u3);
 RWTexture2D<float4> g_outDebug2 : register(u4);
 
@@ -55,7 +54,6 @@ float DepthThreshold(float depth, float2 ddxy, float2 pixelOffset)
 
 void AddFilterContribution(
     inout float weightedValueSum, 
-    inout float weightedVarianceSum, 
     inout float weightSum, 
     in float value, 
     in float stdDeviation,
@@ -145,10 +143,10 @@ void AddFilterContribution(
             float depthThreshold = DepthThreshold(depth, ddxy, pixelOffsetForDepth);
             float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
             float delta = abs(depth - iDepth);
-            delta = max(0, delta - depthFloatPrecision); // Avoid distinguising initial values up to the float precision. Gets rid of banding.
+            delta = max(0, delta - depthFloatPrecision); // Avoid distinguising initial values up to the float precision. Gets rid of banding due to low depth precision format.
             w_d = exp(-delta / depthTolerance);
 
-            // Allows scaling contributions beyond tolerance, but disables contribution from samples too far away altogether.
+            // Scale down contributions for samples beyond tolerance, but completely disable contribution for samples too far away.
             w_d *= w_d >= cb.depthWeightCutoff;
         }
 
@@ -160,12 +158,6 @@ void AddFilterContribution(
 
         weightedValueSum += w * iValue;
         weightSum += w;
-
-        if (cb.outputFilteredVariance) // ToDo remove
-        {
-            float iVariance = g_inVariance[id];
-            weightedVarianceSum += w * w * iVariance;   // ToDo rename to sqWeight...
-        }
     }
 }
 
@@ -182,15 +174,10 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     float3 normal;
     float depth;
     DecodeNormalDepth(g_inNormalDepth[DTid], normal, depth);
-    uint2 TsppRaysToGenerate = g_inTspp[DTid];
-    uint Tspp = TsppRaysToGenerate.x;
-    uint numRaysToGenerateOrDenoisePasses = TsppRaysToGenerate.y;
-
     
     bool isValidValue = value != RTAO::InvalidAOCoefficientValue;
     float filteredValue = isValidValue && value < 0 ? -value : value;
     float variance = g_inSmoothedVariance[DTid];
-    float filteredVariance = variance;
 
     if (depth != 0)
     {
@@ -208,16 +195,14 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
         float weightSum = 0;
         float weightedValueSum = 0;
-        float weightedVarianceSum = 0;
         float stdDeviation = 1;
 
         if (isValidValue)
         {
-            float pixelWeight = cb.weightByTspp ? Tspp : 1;
+            float pixelWeight = cb.weightByTspp ? g_inTspp[DTid] : 1;
             float w = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
             weightSum = pixelWeight * w;
             weightedValueSum = weightSum * value;
-            weightedVarianceSum = w * w * variance;
             stdDeviation = sqrt(variance);
         }
 
@@ -237,7 +222,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
             // Apply a non-linear factor based on relative rayHitDistance. This is because
             // average ray hit distance grows large fast if the closeby occluders cover only part of the hemisphere.
             // Having a smaller kernel for such cases helps preserve occlusion detail.
-            float t = min(avgRayHitDistance / 22.0, 1); // TODO: 22 was selected empirically
+            float t = min(avgRayHitDistance / 22.0, 1); // 22 was selected empirically
             float k = cb.rayHitDistanceToKernelWidthScale * pow(t, cb.rayHitDistanceToKernelSizeScaleExponent);
             kernelStep = max(1, round(k * avgRayHitDistance / projectedSurfaceDim));
 
@@ -262,7 +247,6 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
                 if (r != FilterKernel::Radius || c != FilterKernel::Radius)
                     AddFilterContribution(
                         weightedValueSum, 
-                        weightedVarianceSum, 
                         weightSum, 
                         value, 
                         stdDeviation, 
@@ -279,21 +263,12 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
         if (weightSum > smallValue)
         {
             filteredValue = weightedValueSum / weightSum;
-            if (cb.outputFilteredVariance)
-            {
-                filteredVariance = weightedVarianceSum / (weightSum * weightSum);
-            }
         }
         else
         {
             filteredValue = RTAO::InvalidAOCoefficientValue;
-            filteredVariance = 0;
         }
     }
 
     g_outFilteredValue[DTid] = filteredValue;
-    if (cb.outputFilteredVariance)
-    {
-        g_outFilteredVariance[DTid] = filteredVariance;
-    }
 }

@@ -191,7 +191,7 @@ struct D3DGeometry
     struct Buffer
     {
         D3DBuffer buffer;
-        ComPtr<ID3D12Resource> upload;	// ToDo realease after initialization
+        ComPtr<ID3D12Resource> upload;	// TODO: release after initialization
     };
 
     Buffer vb;
@@ -201,7 +201,7 @@ struct D3DGeometry
 struct D3DTexture
 {
     ComPtr<ID3D12Resource> resource;
-    ComPtr<ID3D12Resource> upload;      // ToDo realease after initialization
+    ComPtr<ID3D12Resource> upload;      // TODO: release after initialization
     D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptorHandle;
     D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptorHandle;
     UINT heapIndex = UINT_MAX;
@@ -286,7 +286,7 @@ public:
     }
 
     // Accessors
-    // Align staging object on 16B boundary to faster mempcy to the memory returned by Map()
+    // Align staging object on 16B boundary for faster mempcy to the memory returned by Map()
     alignas(16) T staging;
     T* operator->() { return &staging; }
     UINT NumInstances() { return m_numInstances; }

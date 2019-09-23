@@ -52,8 +52,6 @@ public:
     UINT DenoisingWidth() { return m_denoisingWidth; }
     UINT DenoisingHeight() { return m_denoisingHeight; }
 
-    static const UINT c_MaxAtrousDesnoisePasses = 5;
-
 private:
     void TemporalSupersamplingReverseReproject(Scene& scene, Pathtracer& pathtracer);
     void TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao);
@@ -78,7 +76,6 @@ private:
     GpuResource m_temporalSupersampling_blendedAOCoefficient[2];
     GpuResource m_cachedTsppValueSquaredValueRayHitDistance;
 
-    // ToDo use a common ping-pong index? 
     // ToDo cleanup readId should be for input to TAO, confusing.
     UINT          m_temporalCacheCurrentFrameResourceIndex = 0;
     UINT          m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex = 0;
@@ -95,11 +92,7 @@ private:
     RTAOGpuKernels::TemporalSupersampling_BlendWithCurrentFrame m_temporalCacheBlendWithCurrentFrameKernel;
     RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter m_atrousWaveletTransformFilter;
     RTAOGpuKernels::CalculateMeanVariance   m_calculateMeanVarianceKernel;
-    const UINT                          MaxCalculateVarianceKernelInvocationsPerFrame =
-        1
-        + 1; // Temporal Super-Sampling.
     RTAOGpuKernels::BilateralFilter m_bilateralFilterKernel;
 
-    // ToDo remove
     friend class Composition;
 };
