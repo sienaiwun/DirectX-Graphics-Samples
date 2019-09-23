@@ -33,7 +33,7 @@ namespace ComputeShader {   // ToDo remove this?
                     Variance,
                     LocalMeanVariance,
                     AORayHitDistance,
-                    Trpp,   // ToDo use same name as in the shader
+                    Tspp,   // ToDo use same name as in the shader
                     Color,
                     AOSurfaceAlbedo,
                     Count
@@ -90,7 +90,7 @@ namespace AOVarianceResource {
 
 namespace TemporalSupersampling {
     enum Enum {
-        Trpp = 0,
+        Tspp = 0,
         RayHitDistance,
         CoefficientSquaredMean,
         Count

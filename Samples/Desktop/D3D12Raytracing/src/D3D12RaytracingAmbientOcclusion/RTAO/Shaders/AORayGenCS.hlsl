@@ -10,9 +10,9 @@
 //*********************************************************
 
 // Desc: Generates AO rays for each pixel
-// Supports 1 rays per pixel (rpp) and 0.5 rpp (via checkerboard distribution).
-// 0.5 rpp:
-//  - generates 1 rpp for every other pixel in a checkerboard distribution.
+// Supports 1 rays per pixel (spp) and 0.5 spp (via checkerboard distribution).
+// 0.5 spp:
+//  - generates 1 spp for every other pixel in a checkerboard distribution.
 
 #define HLSL
 #include "RaytracingHlslCompat.h"

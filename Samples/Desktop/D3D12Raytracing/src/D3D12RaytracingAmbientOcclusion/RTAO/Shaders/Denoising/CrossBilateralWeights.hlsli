@@ -85,40 +85,6 @@ namespace CrossBilateral
             float2 remappedDdxy = RemapDdxy(TargetDepth, Ddxy, SampleOffset);
             return GetWeights(TargetDepth, remappedDdxy, SampleDepths, Params);
         }
-
-    /*
-        ToDo 
-        // Calculate expected depths at sample pixels given current depth, dxdy and an offset to the sample pixels.
-        float4 vExpectedDepths;
-        [unroll]
-        for (uint i = 0; i < 4; i++)
-            vExpectedDepths[i] = GetDepthAtPixelOffset(TargetDepth, dxdy, samplePixelOffsets[i]);
-
-        float4 vDepthThresholds = abs(vExpectedDepths - TargetDepth);
-        float depthFloatPrecision = FloatPrecision(TargetDepth, cb.DepthNumMantissaBits);
-        float4 vDepthTolerances = cb.depthSigma * vDepthThresholds + depthFloatPrecision;
-
-        float fEpsilon = 1e-6 * TargetDepth;
-        depthWeights = min(vDepthTolerances / (abs(SampleDepths - vExpectedDepths) + fEpsilon), 1);
-        //g_outputDebug2[TargetIndex] = depthWeights;
-        // ToDo Should there be a Depth falloff with a cutoff below 1?
-        // ToDo revise the coefficient
-        depthWeights *= depthWeights >= 0.5;   // ToDo revise - this is same as comparing to depth tolerance
-
-        
-        if (cb.useProjectedDepthTest)
-        {
-            float zC = GetDepthAtPixelOffset(depth, ddxy, pixelOffsetForDepth);
-            float depthThreshold = abs(zC - depth);
-            float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
-            w_d = min(depthTolerance / (abs(zC - iDepth) + FLT_EPSILON), 1);
-
-            if (pixelOffset.x == 0 && pixelOffset.y - 1)
-            {
-                //g_outDebug1[DTid] = float4(zC, depthThreshold, depthTolerance, w_d);
-            }
-        }
-        */
     }
 
     namespace Bilinear

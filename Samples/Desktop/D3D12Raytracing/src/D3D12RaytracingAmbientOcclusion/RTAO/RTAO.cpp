@@ -62,36 +62,36 @@ const wchar_t* RTAO::c_hitGroupName = L"HitGroup_Triangle";
        
 namespace RTAO_Args
 {
-    void OnRppSampleSetChange(void*)
+    void OnSppSampleSetChange(void*)
     {
-        RTAO_Args::Rpp_useGroundTruthRpp.SetValue(false, false);
+        RTAO_Args::Spp_useGroundTruthSpp.SetValue(false, false);
 
-        if (RTAO_Args::Rpp > 1)
+        if (RTAO_Args::Spp > 1)
         {
-            // GetRandomRayDirection() supports sample set distribution only for 1 rpp.
+            // GetRandomRayDirection() supports sample set distribution only for 1 spp.
             // ToDO fix that
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(1, false);
+            RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels.SetValue(1, false);
 
-            // Only non-ray sorted path supports > 1rpp.
-            RTAO_Args::RTAOUseRaySorting.SetValue(false, false);
+            // Only non-ray sorted path supports > 1spp.
+            RTAO_Args::RaySorting_Enabled.SetValue(false, false);
         }
 
         Sample::instance().RTAOComponent().RequestRecreateAOSamples();
     }
     
-    void OnToggleRppGroundTruth(void*)
+    void OnToggleSppGroundTruth(void*)
     {
-        if (RTAO_Args::Rpp_useGroundTruthRpp)
+        if (RTAO_Args::Spp_useGroundTruthSpp)
         {
-            RTAO_Args::Rpp.SetValue(GROUND_TRUTH_RPP, false);
-            RTAO_Args::Rpp_doCheckerboard.SetValue(false, false);
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(1, false);
+            RTAO_Args::Spp.SetValue(GROUND_TRUTH_RPP, false);
+            RTAO_Args::Spp_doCheckerboard.SetValue(false, false);
+            RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels.SetValue(1, false);
             Composition_Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_RawOneFrame, false);
         }
         else
         {
-            RTAO_Args::Rpp.SetValue(1, false);
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, false);
+            RTAO_Args::Spp.SetValue(1, false);
+            RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, false);
             Composition_Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_Denoised, false);
         }
 
@@ -100,44 +100,41 @@ namespace RTAO_Args
 
     // ToDo:
     // - no perf difference on checkerboard. Add checkerboard support when not using ray sorting.
-    // - support checkerboard + 2+ rpp
+    // - support checkerboard + 2+ spp
     // - visible random clamping on checkerboard.
-    void OnToggleRppCheckerboard(void*)
+    void OnToggleSppCheckerboard(void*)
     {
-        if (RTAO_Args::Rpp_doCheckerboard)
+        if (RTAO_Args::Spp_doCheckerboard)
         {
-            RTAO_Args::Rpp.SetValue(1, false);
-            RTAO_Args::Rpp_useGroundTruthRpp.SetValue(false, false);
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, false);
+            RTAO_Args::Spp.SetValue(1, false);
+            RTAO_Args::Spp_useGroundTruthSpp.SetValue(false, false);
+            RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels.SetValue(RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, false);
         }
         
         Sample::instance().RTAOComponent().RequestRecreateAOSamples();
     }
 
-    IntVar AOTileX(L"Render/AO/Tile X", 1, 1, 128, 1);
-    IntVar AOTileY(L"Render/AO/Tile Y", 1, 1, 128, 1);
+    BoolVar RaySorting_Enabled(L"Render/AO/RTAO/Ray Sorting/Enabled", false);
+    NumVar RaySorting_DepthBinSizeMultiplier(L"Render/AO/RTAO/Ray Sorting/Ray bin depth size (multiplier of MaxRayHitTime)", 0.1f, 0.01f, 10.f, 0.01f);
 
-    BoolVar RTAOUseRaySorting(L"Render/AO/RTAO/Ray Sorting/Enabled", false);
-    NumVar RTAORayBinDepthSizeMultiplier(L"Render/AO/RTAO/Ray Sorting/Ray bin depth size (multiplier of MaxRayHitTime)", 0.1f, 0.01f, 10.f, 0.01f);
+    IntVar Spp(L"Render/AO/RTAO/Spp/Rays per pixel", 1, 1, 1024, 1, OnSppSampleSetChange); // ToDo Support spatial distribtuons for 2+ spp
+    IntVar Spp_AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, 1, 8, 1, OnSppSampleSetChange);
+    BoolVar Spp_doCheckerboard(L"Render/AO/RTAO/Spp/Overrides/Do checkerboard 0.5 spp", false, OnToggleSppCheckerboard);
+    BoolVar Spp_useGroundTruthSpp(L"Render/AO/RTAO/Spp/Overrides/Do ground truth spp: " STRINGIZE(GROUND_TRUTH_RPP), false, OnToggleSppGroundTruth);
 
-    IntVar Rpp(L"Render/AO/RTAO/Rpp/Rays per pixel", 1, 1, 1024, 1, OnRppSampleSetChange); // ToDo breaks on 1->2. Support spatial distribtuons for 2+ rpp
-    IntVar Rpp_AOSampleSetDistributedAcrossPixels(L"Render/AO/RTAO/Sample set distribution across NxN pixels ", RPP_SAMPLSETDISTRIBUTIONACROSSPIXELS1D, 1, 8, 1, OnRppSampleSetChange);
-    BoolVar Rpp_doCheckerboard(L"Render/AO/RTAO/Rpp/Overrides/Do checkerboard 0.5 rpp", false, OnToggleRppCheckerboard);
-    BoolVar Rpp_useGroundTruthRpp(L"Render/AO/RTAO/Rpp/Overrides/Do ground truth rpp: " STRINGIZE(GROUND_TRUTH_RPP), false, OnToggleRppGroundTruth);
-
-    BoolVar RTAORandomFrameSeed(L"Render/AO/RTAO/Random per-frame seed", true);
+    BoolVar RayGen_RandomFrameSeed(L"Render/AO/RTAO/Random per-frame seed", true);
 
     const WCHAR* FloatingPointFormatsR[TextureResourceFormatR::Count] = { L"R32_FLOAT", L"R16_FLOAT", L"R8_SNORM" };
-    EnumVar RTAO_AmbientCoefficientResourceFormat(L"Render/Texture Formats/AO/RTAO/Ambient Coefficient", TextureResourceFormatR::R16_FLOAT, TextureResourceFormatR::Count, FloatingPointFormatsR, Sample::OnRecreateRaytracingResources);
+    EnumVar AmbientCoefficientResourceFormat(L"Render/Texture Formats/AO/RTAO/Ambient Coefficient", TextureResourceFormatR::R16_FLOAT, TextureResourceFormatR::Count, FloatingPointFormatsR, Sample::OnRecreateRaytracingResources);
 
 
     NumVar MaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", AO_RAY_T_MAX, 0.0f, 50.0f, 0.2f);
-    BoolVar RTAOApproximateInterreflections(L"Render/AO/RTAO/Approximate Interreflections/Enabled", true);
-    NumVar RTAODiffuseReflectanceScale(L"Render/AO/RTAO/Approximate Interreflections/Diffuse Reflectance Scale", 0.5f, 0.0f, 1.0f, 0.1f);
-    NumVar  minimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
-    BoolVar RTAOIsExponentialFalloffEnabled(L"Render/AO/RTAO/Exponential Falloff", true);
-    NumVar RTAO_ExponentialFalloffDecayConstant(L"Render/AO/RTAO/Exponential Falloff Decay Constant", 2.f, 0.0f, 20.f, 0.25f);
-    NumVar RTAO_ExponentialFalloffMinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);       // ToDo Finetune document perf.
+    BoolVar ApproximateInterreflections_Enabled(L"Render/AO/RTAO/Approximate Interreflections/Enabled", true);
+    NumVar ApproximateInterreflections_DiffuseReflectanceScale(L"Render/AO/RTAO/Approximate Interreflections/Diffuse Reflectance Scale", 0.5f, 0.0f, 1.0f, 0.1f);
+    NumVar  MinimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
+    BoolVar ExponentialFalloff_Enabled(L"Render/AO/RTAO/Exponential Falloff", true);
+    NumVar ExponentialFalloff_DecayConstant(L"Render/AO/RTAO/Exponential Falloff Decay Constant", 2.f, 0.0f, 20.f, 0.25f);
+    NumVar ExponentialFalloff_MinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);       // ToDo Finetune document perf.
     
     BoolVar QuarterResAO(L"Render/AO/RTAO/Quarter res", true, Sample::OnRecreateRaytracingResources, nullptr);
 }
@@ -147,7 +144,7 @@ DXGI_FORMAT RTAO::ResourceFormat(ResourceType resourceType)
 {
     switch (resourceType)
     {
-    case ResourceType::AOCoefficient: return  TextureResourceFormatR::ToDXGIFormat(RTAO_Args::RTAO_AmbientCoefficientResourceFormat);
+    case ResourceType::AOCoefficient: return  TextureResourceFormatR::ToDXGIFormat(RTAO_Args::AmbientCoefficientResourceFormat);
     case ResourceType::RayHitDistance: return DXGI_FORMAT_R16_FLOAT;
     }
 
@@ -212,8 +209,8 @@ void RTAO::CreateAuxilaryDeviceResources()
 
     // Random sample buffers
     {
-        UINT maxPixelsInSampleSet1D = RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels.MaxValue();
-        UINT maxSamplesPerSet = RTAO_Args::Rpp.MaxValue() * maxPixelsInSampleSet1D * maxPixelsInSampleSet1D;
+        UINT maxPixelsInSampleSet1D = RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels.MaxValue();
+        UINT maxSamplesPerSet = RTAO_Args::Spp.MaxValue() * maxPixelsInSampleSet1D * maxPixelsInSampleSet1D;
 
         m_samplesGPUBuffer.Create(device, maxSamplesPerSet * c_NumSampleSets, FrameCount, L"GPU buffer: Random unit square samples");
         m_hemisphereSamplesGPUBuffer.Create(device, maxSamplesPerSet * c_NumSampleSets, FrameCount, L"GPU buffer: Random hemisphere samples");
@@ -444,8 +441,8 @@ void RTAO::BuildShaderTables(Scene& scene)
 
 void RTAO::CreateSamplesRNG()
 {
-    UINT pixelsInSampleSet1D = RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels;
-    UINT samplesPerSet = RTAO_Args::Rpp * pixelsInSampleSet1D * pixelsInSampleSet1D;
+    UINT pixelsInSampleSet1D = RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels;
+    UINT samplesPerSet = RTAO_Args::Spp * pixelsInSampleSet1D * pixelsInSampleSet1D;
     m_randomSampler.Reset(samplesPerSet, c_NumSampleSets, Samplers::HemisphereDistribution::Cosine);
 
     UINT numSamples = m_randomSampler.NumSamples() * m_randomSampler.NumSampleSets();
@@ -460,7 +457,7 @@ void RTAO::CreateSamplesRNG()
 
 void RTAO::GetRayGenParameters(bool* isCheckerboardSamplingEnabled, bool* checkerboardLoadEvenPixels)
 {
-    *isCheckerboardSamplingEnabled = RTAO_Args::Rpp_doCheckerboard;
+    *isCheckerboardSamplingEnabled = RTAO_Args::Spp_doCheckerboard;
     *checkerboardLoadEvenPixels = m_checkerboardGenerateRaysForEvenPixels;
 }
 
@@ -494,26 +491,26 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
 {
     uniform_int_distribution<UINT> seedDistribution(0, UINT_MAX);
 
-    m_CB->seed = RTAO_Args::RTAORandomFrameSeed ? seedDistribution(m_generatorURNG) : 1879;
+    m_CB->seed = RTAO_Args::RayGen_RandomFrameSeed ? seedDistribution(m_generatorURNG) : 1879;
     m_CB->numSamplesPerSet = m_randomSampler.NumSamples();
     m_CB->numSampleSets = m_randomSampler.NumSampleSets();
-    m_CB->numPixelsPerDimPerSet = RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels;
+    m_CB->numPixelsPerDimPerSet = RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels;
 
-    m_CB->RTAO_UseSortedRays = RTAO_Args::RTAOUseRaySorting;
+    m_CB->useSortedRays = RTAO_Args::RaySorting_Enabled;
 
-    bool doCheckerboardRayGeneration = RTAO_Args::Rpp_doCheckerboard;
+    bool doCheckerboardRayGeneration = RTAO_Args::Spp_doCheckerboard;
     m_checkerboardGenerateRaysForEvenPixels = !m_checkerboardGenerateRaysForEvenPixels;
     m_CB->doCheckerboardSampling = doCheckerboardRayGeneration;
     m_CB->areEvenPixelsActive = m_checkerboardGenerateRaysForEvenPixels;
     UINT pixelStepX = doCheckerboardRayGeneration ? 2 : 1;
     m_CB->raytracingDim = XMUINT2(CeilDivide(m_raytracingWidth, pixelStepX), m_raytracingHeight);
-    m_CB->rpp = RTAO_Args::Rpp;
+    m_CB->spp = RTAO_Args::Spp;
 
-    m_CB->approximateInterreflections = RTAO_Args::RTAOApproximateInterreflections;
-    m_CB->diffuseReflectanceScale = RTAO_Args::RTAODiffuseReflectanceScale;
-    m_CB->minimumAmbientIllumination = RTAO_Args::minimumAmbientIllumination;
-    m_CB->applyExponentialFalloff = RTAO_Args::RTAOIsExponentialFalloffEnabled;
-    m_CB->exponentialFalloffDecayConstant = RTAO_Args::RTAO_ExponentialFalloffDecayConstant;
+    m_CB->approximateInterreflections = RTAO_Args::ApproximateInterreflections_Enabled;
+    m_CB->diffuseReflectanceScale = RTAO_Args::ApproximateInterreflections_DiffuseReflectanceScale;
+    m_CB->minimumAmbientIllumination = RTAO_Args::MinimumAmbientIllumination;
+    m_CB->applyExponentialFalloff = RTAO_Args::ExponentialFalloff_Enabled;
+    m_CB->exponentialFalloffDecayConstant = RTAO_Args::ExponentialFalloff_DecayConstant;
 
     // Calculate a theoretical max ray distance to be used in occlusion factor computation.
     // Occlusion factor of a ray hit is computed based of its ray hit time, falloff exponent and a max ray hit time.
@@ -522,8 +519,8 @@ void RTAO::UpdateConstantBuffer(UINT frameIndex)
     // Therefore the sample discerns between true maxRayHitTime, used in TraceRay, 
     // and a theoretical one used in calculating the occlusion factor on a hit.
     {
-        float occclusionCutoff = RTAO_Args::RTAO_ExponentialFalloffMinOcclusionCutoff;
-        float lambda = RTAO_Args::RTAO_ExponentialFalloffDecayConstant;
+        float occclusionCutoff = RTAO_Args::ExponentialFalloff_MinOcclusionCutoff;
+        float lambda = RTAO_Args::ExponentialFalloff_DecayConstant;
 
         // Invert occlusionFactor = exp(-lambda * t * t), where t is tHit/tMax of a ray.
         float t = sqrt(logf(occclusionCutoff) / -lambda);
@@ -563,13 +560,13 @@ void RTAO::Run(
     resourceStateTracker->TransitionResource(&m_AOResources[AOResource::AmbientCoefficient], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     resourceStateTracker->TransitionResource(&m_AOResources[AOResource::RayHitDistance], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     
-    if (RTAO_Args::RTAOUseRaySorting)
+    if (RTAO_Args::RaySorting_Enabled)
     {
         resourceStateTracker->TransitionResource(&m_sortedToSourceRayIndexOffset, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&Sample::g_debugOutput[0], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&m_AORayDirectionOriginDepth, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-        bool doCheckerboardRayGeneration = RTAO_Args::Rpp_doCheckerboard;
+        bool doCheckerboardRayGeneration = RTAO_Args::Spp_doCheckerboard;
 
         // Todo verify odd width resolutions when using cb
         UINT activeRaytracingWidth =
@@ -584,7 +581,7 @@ void RTAO::Run(
             m_CB->seed,
             m_randomSampler.NumSamples(),
             m_randomSampler.NumSampleSets(),
-            RTAO_Args::Rpp_AOSampleSetDistributedAcrossPixels,
+            RTAO_Args::Spp_AOSampleSetDistributedAcrossPixels,
             doCheckerboardRayGeneration,
             m_checkerboardGenerateRaysForEvenPixels,
             m_cbvSrvUavHeap->GetHeap(),
@@ -596,7 +593,7 @@ void RTAO::Run(
         resourceStateTracker->TransitionResource(&m_AORayDirectionOriginDepth, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->InsertUAVBarrier(&m_AORayDirectionOriginDepth);
 
-        float rayBinDepthSize = RTAO_Args::RTAORayBinDepthSizeMultiplier * RTAO_Args::MaxRayHitTime;
+        float rayBinDepthSize = RTAO_Args::RaySorting_DepthBinSizeMultiplier * RTAO_Args::MaxRayHitTime;
         resourceStateTracker->FlushResourceBarriers();
         m_raySorter.Run(
             commandList,
@@ -636,9 +633,9 @@ void RTAO::Run(
         // ToDo dedupe calls
         commandList->SetComputeRootShaderResourceView(GlobalRootSignature::Slot::AccelerationStructure, accelerationStructure);
 
-        if (RTAO_Args::RTAOUseRaySorting)
+        if (RTAO_Args::RaySorting_Enabled)
         {
-            bool doCheckerboardRayGeneration = RTAO_Args::Rpp_doCheckerboard;
+            bool doCheckerboardRayGeneration = RTAO_Args::Spp_doCheckerboard;
             UINT activeRaytracingWidth =
                 doCheckerboardRayGeneration
                 ? CeilDivide(m_raytracingWidth, 2)

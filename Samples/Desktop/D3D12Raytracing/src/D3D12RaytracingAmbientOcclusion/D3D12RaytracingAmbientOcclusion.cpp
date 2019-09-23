@@ -382,7 +382,7 @@ namespace Sample
                         L"RenderPass_TemporalSupersamplingBlendWithCurrentFrame",
                         L"DenoiseAO",
                         L"Upsample AO",
-                        L"Low-Trpp Multi-pass blur"
+                        L"Low-Tspp Multi-pass blur"
                 };
 
                 wstring line;

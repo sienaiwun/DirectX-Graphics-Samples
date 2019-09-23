@@ -11,7 +11,7 @@
 
 // ToDo Desc
 // Desc: Sample temporal cache via reverse reprojection.
-// If no valid values have been retrieved from the cache, the trpp is set to 0.
+// If no valid values have been retrieved from the cache, the tspp is set to 0.
 
 #define HLSL
 #include "RaytracingHlslCompat.h"
@@ -27,12 +27,12 @@ Texture2D<NormalDepthTexFormat> g_inReprojectedNormalDepth : register(t2);
 Texture2D<float2> g_inTextureSpaceMotionVector : register(t3);
 Texture2D<NormalDepthTexFormat> g_inCachedNormalDepth : register(t4);
 Texture2D<float> g_inCachedValue : register(t5);
-Texture2D<uint2> g_inCachedTrpp : register(t6);
+Texture2D<uint2> g_inCachedTspp : register(t6);
 Texture2D<float> g_inCachedValueSquaredMean : register(t7);
 Texture2D<float> g_inCachedRayHitDepth : register(t8);
 
 
-RWTexture2D<uint> g_outCachedTrpp : register(u0);
+RWTexture2D<uint> g_outCachedTspp : register(u0);
 RWTexture2D<uint4> g_outReprojectedCachedValues : register(u1);
 
 RWTexture2D<float4> g_outDebug1 : register(u10);
@@ -43,7 +43,7 @@ SamplerState ClampSampler : register(s0);
 
 // ToDo
 // Optimizations:
-//  - condition to only necessary reads on trpp 1 and/or invalid value
+//  - condition to only necessary reads on tspp 1 and/or invalid value
 //  - on 0 motion vector read in only 1 cached value
 
 // Calculates a depth threshold for surface at angle beta from camera plane
@@ -145,7 +145,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
     if (_depth == 0 || textureSpaceMotionVector.x > 1e2f)
     {
-        g_outCachedTrpp[DTid] = 0;
+        g_outCachedTspp[DTid] = 0;
         return;
     }
 
@@ -178,22 +178,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
         }
     }
 
-    float2 dxdy = g_inCurrentFrameLinearDepthDerivative[DTid];
-
-    // ToDo retest/finetune depth testing. Moving car back and forth fails. Needs world space Depth & depth sigma of 2+.
-    /*
-    if (cb.useWorldSpaceDepth)
-    {
-    float  ddxy = dot(1, dxdy);
-        float3 normal;
-        float depth;
-        DecodeNormalDepth(g_inCurrentFrameNormalDepth[DTid], normal, depth);
-        cacheDdxy = CalculateAdjustedDepthThreshold(ddxy, depth, _depth, normal, _normal);
-    }
-    */
-
+    float2 ddxy = g_inCurrentFrameLinearDepthDerivative[DTid];
+    
     float4 weights;
-    weights = BilateralResampleWeights(_depth, _normal, vCacheDepths, cacheNormals, cachePixelOffset, DTid, cacheIndices, dxdy);
+    weights = BilateralResampleWeights(_depth, _normal, vCacheDepths, cacheNormals, cachePixelOffset, DTid, cacheIndices, ddxy);
     
     // Invalidate weights for invalid values in the cache.
     float4 vCacheValues = g_inCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
@@ -204,15 +192,15 @@ void main(uint2 DTid : SV_DispatchThreadID)
     float cachedValueSquaredMean = 0;
     float cachedRayHitDepth = 0;
 
-    uint trpp;
+    uint tspp;
     bool areCacheValuesValid = weightSum > 1e-3f;
     if (areCacheValuesValid)
     {
-        uint4 vCachedTrpp = g_inCachedTrpp.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
-        // Enforce trpp of at least 1 for reprojection for valid values.
+        uint4 vCachedTspp = g_inCachedTspp.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
+        // Enforce tspp of at least 1 for reprojection for valid values.
         // This is because the denoiser will fill in invalid values with filtered 
-        // ones if it can. But it doesn't increase trpp.
-        vCachedTrpp = max(1, vCachedTrpp);
+        // ones if it can. But it doesn't increase tspp.
+        vCachedTspp = max(1, vCachedTspp);
 
 
         float4 nWeights = weights / weightSum;   // Normalize the weights.
@@ -221,20 +209,20 @@ void main(uint2 DTid : SV_DispatchThreadID)
        // g_outDebug2[DTid] = nWeights;
 
         // ToDo revisit this and potentially make it UI adjustable - weight ^ 2 ?,...
-        // Scale the trpp by the total weight. This is to keep the trpp low for 
+        // Scale the tspp by the total weight. This is to keep the tspp low for 
         // total contributions that have very low reprojection weight. While its preferred to get 
         // a weighted value even for reprojections that have low weights but still
-        // satisfy consistency tests, the trpp needs to be kept small so that the Target calculated values
+        // satisfy consistency tests, the tspp needs to be kept small so that the Target calculated values
         // are quickly filled in over a few frames. Otherwise, bad estimates from reprojections,
         // such as on disocclussions of surfaces on rotation, are kept around long enough to create 
         // visible streaks that fade away very slow.
         // Example: rotating camera around dragon's nose up close. 
-        float TrppScale = 1;// saturate(weightSum); // ToDo
+        float TsppScale = 1;// saturate(weightSum); // ToDo
 
-        float cachedTrpp = TrppScale * dot(nWeights, vCachedTrpp);
-        trpp = round(cachedTrpp);
+        float cachedTspp = TsppScale * dot(nWeights, vCachedTspp);
+        tspp = round(cachedTspp);
         
-        if (trpp > 0)
+        if (tspp > 0)
         {
             float4 vCacheValues = g_inCachedValue.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
             cachedValue = dot(nWeights, vCacheValues);
@@ -252,8 +240,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
     else
     {
         // No valid values can be retrieved from the cache.
-        trpp = 0;
+        tspp = 0;
     }
-    g_outCachedTrpp[DTid] = trpp;
-    g_outReprojectedCachedValues[DTid] = uint4(trpp, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
+    g_outCachedTspp[DTid] = tspp;
+    g_outReprojectedCachedValues[DTid] = uint4(tspp, f32tof16(float3(cachedValue, cachedValueSquaredMean, cachedRayHitDepth)));
 }

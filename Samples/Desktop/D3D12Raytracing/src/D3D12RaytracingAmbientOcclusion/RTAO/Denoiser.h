@@ -76,7 +76,7 @@ private:
 
     GpuResource m_temporalAOCoefficient[2];    // ToDo why is this not part of m_temporalCache?
     GpuResource m_temporalSupersampling_blendedAOCoefficient[2];
-    GpuResource m_cachedTrppValueSquaredValueRayHitDistance;
+    GpuResource m_cachedTsppValueSquaredValueRayHitDistance;
 
     // ToDo use a common ping-pong index? 
     // ToDo cleanup readId should be for input to TAO, confusing.

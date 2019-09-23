@@ -147,13 +147,13 @@ void RayGenShader()
 	{
         float3 hitPosition = g_texRayOriginPosition[srcRayIndex].xyz;
         ambientCoef = 0;
-        for (uint r = 0; r < cb.rpp; r++)
+        for (uint r = 0; r < cb.spp; r++)
         {
             float3 rayDirection = GetRandomRayDirection(srcRayIndex, surfaceNormal, cb.raytracingDim, r);
             Ray AORay = { hitPosition, rayDirection };
             ambientCoef += CalculateAO(tHit, srcRayIndex, AORay, surfaceNormal);
         }
-        ambientCoef /= cb.rpp;
+        ambientCoef /= cb.spp;
     }
 
     g_outAOAmbientCoefficient[srcRayIndex] = ambientCoef;

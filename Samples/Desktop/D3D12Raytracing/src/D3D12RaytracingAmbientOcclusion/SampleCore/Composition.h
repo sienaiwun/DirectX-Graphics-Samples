@@ -72,7 +72,7 @@ private:
     UINT m_renderingHeight = 0;
 
     GpuResource m_upsampledAOValueResource;
-    GpuResource m_upsampledTrppResource;
+    GpuResource m_upsampledTsppResource;
     GpuResource m_upsampledAORayHitDistanceResource;
     GpuResource m_upsampledVarianceResource;
     GpuResource m_upsampledLocalMeanVarianceResource;

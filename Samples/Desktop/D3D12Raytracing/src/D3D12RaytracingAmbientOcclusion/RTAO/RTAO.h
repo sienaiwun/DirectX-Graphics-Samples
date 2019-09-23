@@ -32,11 +32,11 @@ namespace RTAORayGenShaderType {
 namespace RTAO_Args
 {
     extern BoolVar QuarterResAO;
-    extern IntVar Rpp;
-    extern IntVar Rpp_AOSampleSetDistributedAcrossPixels;
-    extern BoolVar Rpp_doCheckerboard;
-    extern BoolVar Rpp_useGroundTruthRpp;
-    extern BoolVar RTAOUseRaySorting;
+    extern IntVar Spp;
+    extern IntVar Spp_AOSampleSetDistributedAcrossPixels;
+    extern BoolVar Spp_doCheckerboard;
+    extern BoolVar Spp_useGroundTruthSpp;
+    extern BoolVar RaySorting_Enabled;
     extern NumVar MaxRayHitTime;
 }
 

@@ -16,80 +16,45 @@
 //ToDo
 - cleanup filter shaders, remove obsolete
  compare denoise quality from before the cleanup(video). It seems like current denoiser blurs much more on motion.
-
 - finetune clamping/remove ghosting (test gliding spaceship)
-- Adaptive kernel size - overblur under roof edge
 - Full res - adaptive kernel size visible horizontal lines
-- finetune adaptive kernel size
-- improve the multi-blur - skip higher iter blur on higher trpp.
-- depth aware variance calculation
 - Cleanup UI paths. Remove unneccasary vars. hardcode them instead
 - Total GPU time >> sum of component gpu times??
 
-- Double check
-- Double check that passes either check whether a pixel value is valid from previous pass/frame or the value gets ignored.
-- fix the temporal variance shimmer on boundaries with skybox.
-- map local variance to only valid AO values
-- TAO fails on dragons surface on small rotaions
-    - clean up PIX /GPU validation warnings on Debug
-    - Debug break on FS on 1080 display resolution.
-    - White halo under tiers.
-    - Upsampling artifacts on 1080(540p)
-    - RTAO invisible wall inside kitchen on long rays
-    PIX shows empty rows (~as many as valid rows) in between entries in multi frame cb.
-
-    - Finetune
+Clamping
+-   Fix up under car ghosting. Or add to known issues
    - Fine tune min std dev tolerance in clamping
-   - Consider N8D24 format for filtering
 
-   Glitches
+- Double check
+- TAO fails on dragons surface on small rotaions
    - disocclussions on static geometry and camera around reflections
-   - denoise oscilations under porch railing on full res
-   - upsample using 32bit depth
-
-Filter issues:
--   Overblur on adaptive kernel - under railings
-- blur oscilation due to adaptive kernel
+  
+  Glithces:
+  - support neighbor sample generation for 2+ spp
 
 - Cleanup:
     double check all CS for out of bounds.
     clean up scoped timer names.
     - Add/revise comments. Incl file decs
     - Move global defines in RaytracingSceneDefines.h locally for RTAO and Denoiser.
-    - Build with higher warning bar and cleanup
-    - move shader dependencies to components?
-    standarddize ddxy vs dxdy
     // make sure no shaders are writing to debug resources
     remove obsolete filtering hlsl kernels
-    cleanup CBs, remove obsolete entries
     remove obsolete GPukernel vars
-    remove RTAO_ from names in RTAO component
     remove obsolete composition modes
-    rename maxTrpp to trpp
-    RTAOGpuKernels use helper structs to pass the data in
-    split gpu kernel file
-    add UAV barriers
     prune redundant using namespace ...
      zero out caches on resource reset.
     Test all UI parameters, finetune and set best limits
     Test denoising quality at 60 and 100, 200+ FPS
     Increase averaging window for CPU times
     move resource descriptions from root sig def, to root sig Enum and shader res in shader files
-    rpp vs spp
+    spp vs spp
+    - Add device removal support or remove it being announced
 
 Documentation
     readme
     Add descs to GPU kernels
     Add descs to GPU kernel resources next to enums
     - cleanup this file
-
-- Sample generic
-    - Add device removal support or remove it being announced
-
-    Readme:
-    -   Open issues/that can be improved:
-        - Variable rate ray tracing
-        - Improve disocclusion detection (trailing below car AO)
 
 */
 
@@ -213,7 +178,7 @@ struct AtrousWaveletTransformFilterConstantBuffer
 {
     XMUINT2 textureDim;
     BOOL useProjectedDepthTest;
-    float weightByTrpp;
+    float weightByTspp;
 
     UINT kernelStepShift;
     UINT maxKernelStepShift;
@@ -340,7 +305,7 @@ struct RTAOConstantBuffer
 
     float maxTheoreticalAORayHitTime;  // Max AO ray hit time used in falloff computation accounting for
                                        // exponentialFalloffMinOcclusionCutoff and maxAORayHitTime.    
-    BOOL RTAO_UseSortedRays;
+    BOOL useSortedRays;
     XMUINT2 raytracingDim;
 
     BOOL applyExponentialFalloff;     // Apply exponential falloff to AO coefficient based on ray hit distance.    
@@ -348,7 +313,7 @@ struct RTAOConstantBuffer
     BOOL doCheckerboardSampling;
     BOOL areEvenPixelsActive;
 
-    UINT rpp;
+    UINT spp;
     float padding[3];
 };
 
@@ -496,8 +461,8 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
 
     float floatEpsilonDepthTolerance;
     float depthDistanceBasedDepthTolerance;
-    UINT numRaysToTraceAfterTemporalAtMaxTrpp;
-    UINT maxTrpp;
+    UINT numRaysToTraceAfterTemporalAtMaxTspp;
+    UINT maxTspp;
 };
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
@@ -510,13 +475,13 @@ struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
     float minSmoothingFactor;
     float stdDevGamma;
 
-    UINT minTrppToUseTemporalVariance;
+    UINT minTsppToUseTemporalVariance;
     float minStdDevTolerance;
-    float TrppAdjustmentDueClamping;
-    float clampDifferenceToTrppScale;
+    float TsppAdjustmentDueClamping;
+    float clampDifferenceToTsppScale;
 
     UINT numFramesToDenoiseAfterLastTracedRay;
-    UINT blurStrength_MaxTrpp;
+    UINT blurStrength_MaxTspp;
     float blurDecayStrength;
     float padding;
 

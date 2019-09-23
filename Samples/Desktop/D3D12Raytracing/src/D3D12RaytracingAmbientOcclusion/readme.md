@@ -2,7 +2,7 @@
 ![D3D12 Ambient Occlusion GUI](Screenshot.png)
 ToDo video link
 
-This sample implements a real-time denoising of 1 ray per pixel (rpp) raytraced Ambient Occlusion. The sample assumes familiarity with Dx12 programming and DirectX Raytracing concepts introduced in the [D3D12 Raytracing Procedural Geometry sample](../D3D12RaytracingDProceduralGeometry/readme.md). 
+This sample implements a real-time denoising of 1 ray per pixel (spp) raytraced Ambient Occlusion. The sample assumes familiarity with Dx12 programming and DirectX Raytracing concepts introduced in the [D3D12 Raytracing Procedural Geometry sample](../D3D12RaytracingDProceduralGeometry/readme.md). 
 
  ToDo give a brief overview of the readme's contents.
  The sample layout (files + project) is partitioned into RTAO (raytracing + denoising) and the rest of the sample. This makes it easy for copy&pasting RTAO code out into your projects and integrate it.
@@ -109,7 +109,7 @@ Temporal reprojection needs to be able to find vertices of a triangle that was h
 There are multiple opportunities to improve the denoiser further both quality and performance wise
 Quality:
 * RTAO
-** Variable rate sampling. For example, adjust sampling depending on trpp of a pixel. Temporal reprojection can be run before current's frame AO raytracing and thus provide per pixel trpp.
+** Variable rate sampling. For example, adjust sampling depending on tspp of a pixel. Temporal reprojection can be run before current's frame AO raytracing and thus provide per pixel tspp.
 ** Use a better sampler that suffers less from sample clunking that's visible at raw visualition. For example [Correlated Multi-Jittered Sampling](http://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf)
 *** There's a potential to detect undersampled parts of the hemisphere in accumulated samples over time and improve coverage, and use a progressive sampling technique for better aggregated sample coverage. This could be extended in the spatial domain as well. 
 * Denoiser

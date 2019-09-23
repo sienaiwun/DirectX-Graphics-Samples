@@ -261,7 +261,7 @@ namespace RTAOGpuKernels
                     SmoothedVariance,
                     RayHitDistance,
                     PartialDistanceDerivatives,
-                    Trpp,
+                    Tspp,
                     ConstantBuffer,
                     Debug1,
                     Debug2,
@@ -284,7 +284,7 @@ namespace RTAOGpuKernels
             ranges[Slot::SmoothedVariance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
             ranges[Slot::RayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
             ranges[Slot::PartialDistanceDerivatives].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
-            ranges[Slot::Trpp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
+            ranges[Slot::Tspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
             ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
             ranges[Slot::VarianceOutput].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
             ranges[Slot::Debug1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
@@ -300,7 +300,7 @@ namespace RTAOGpuKernels
             rootParameters[Slot::VarianceOutput].InitAsDescriptorTable(1, &ranges[Slot::VarianceOutput]);
             rootParameters[Slot::RayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::RayHitDistance]);
             rootParameters[Slot::PartialDistanceDerivatives].InitAsDescriptorTable(1, &ranges[Slot::PartialDistanceDerivatives]);
-            rootParameters[Slot::Trpp].InitAsDescriptorTable(1, &ranges[Slot::Trpp]);
+            rootParameters[Slot::Tspp].InitAsDescriptorTable(1, &ranges[Slot::Tspp]);
             rootParameters[Slot::Debug1].InitAsDescriptorTable(1, &ranges[Slot::Debug1]);
             rootParameters[Slot::Debug2].InitAsDescriptorTable(1, &ranges[Slot::Debug2]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
@@ -370,7 +370,7 @@ namespace RTAOGpuKernels
         D3D12_GPU_DESCRIPTOR_HANDLE inputVarianceResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputHitDistanceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputTrppResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputTsppResourceHandle,
         GpuResource* outputResource,
         GpuResource* outputIntermediateResource,
         GpuResource* outputDebug1Resource,
@@ -397,7 +397,7 @@ namespace RTAOGpuKernels
         float depthWeightCutoff,
         bool useProjectedDepthTest,
         bool forceDenoisePass,
-        bool weightByTrpp)
+        bool weightByTspp)
     {
 
         // ToDo: cleanup use of variance
@@ -422,7 +422,7 @@ namespace RTAOGpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::SmoothedVariance, inputVarianceResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::RayHitDistance, inputHitDistanceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::PartialDistanceDerivatives, inputPartialDistanceDerivativesResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::Trpp, inputTrppResourceHandle);
+            commandList->SetComputeRootDescriptorTable(Slot::Tspp, inputTsppResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::Debug1, outputDebug1Resource->gpuDescriptorWriteAccess);
             commandList->SetComputeRootDescriptorTable(Slot::Debug2, outputDebug2Resource->gpuDescriptorWriteAccess);
         }
@@ -440,7 +440,7 @@ namespace RTAOGpuKernels
             m_CB->depthSigma = depthSigma;
             m_CB->normalSigma = normalSigma;
             m_CB->weightScale = weightScale;
-            m_CB->weightByTrpp = weightByTrpp;
+            m_CB->weightByTspp = weightByTspp;
             m_CB->rayHitDistanceToKernelSizeScaleExponent = rayHitDistanceToKernelSizeScaleExponent;
 #if RAYTRACING_MANUAL_KERNEL_STEP_SHIFTS
             m_CB->kernelStepShift = kernelStepShifts[i];
@@ -752,7 +752,7 @@ namespace RTAOGpuKernels
         namespace TemporalSupersampling_ReverseReproject {
             namespace Slot {
                 enum Enum {
-                    OutputCacheTrpp = 0,
+                    OutputCacheTspp = 0,
                     OutputReprojectedCacheValues,
                     InputCurrentFrameNormalDepth,
                     InputCurrentFrameLinearDepthDerivative,
@@ -760,7 +760,7 @@ namespace RTAOGpuKernels
                     InputTextureSpaceMotionVector,      // Texture space motion vector from the previous to the current frame.
                     InputCachedValue,
                     InputCachedNormalDepth,
-                    InputCachedTrpp,
+                    InputCachedTspp,
                     InputCachedSquaredMeanValue,
                     InputCachedRayHitDistance,
                     OutputDebug1,
@@ -785,11 +785,11 @@ namespace RTAOGpuKernels
             ranges[Slot::InputTextureSpaceMotionVector].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
             ranges[Slot::InputCachedNormalDepth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
             ranges[Slot::InputCachedValue].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
-            ranges[Slot::InputCachedTrpp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
+            ranges[Slot::InputCachedTspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
             ranges[Slot::InputCachedSquaredMeanValue].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
             ranges[Slot::InputCachedRayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
 
-            ranges[Slot::OutputCacheTrpp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+            ranges[Slot::OutputCacheTspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
             ranges[Slot::OutputReprojectedCacheValues].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
 
             ranges[Slot::OutputDebug1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 10);
@@ -802,10 +802,10 @@ namespace RTAOGpuKernels
             rootParameters[Slot::InputTextureSpaceMotionVector].InitAsDescriptorTable(1, &ranges[Slot::InputTextureSpaceMotionVector]);
             rootParameters[Slot::InputCachedValue].InitAsDescriptorTable(1, &ranges[Slot::InputCachedValue]);
             rootParameters[Slot::InputCachedNormalDepth].InitAsDescriptorTable(1, &ranges[Slot::InputCachedNormalDepth]);
-            rootParameters[Slot::InputCachedTrpp].InitAsDescriptorTable(1, &ranges[Slot::InputCachedTrpp]);
+            rootParameters[Slot::InputCachedTspp].InitAsDescriptorTable(1, &ranges[Slot::InputCachedTspp]);
             rootParameters[Slot::InputCachedSquaredMeanValue].InitAsDescriptorTable(1, &ranges[Slot::InputCachedSquaredMeanValue]);
             rootParameters[Slot::InputCachedRayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::InputCachedRayHitDistance]);
-            rootParameters[Slot::OutputCacheTrpp].InitAsDescriptorTable(1, &ranges[Slot::OutputCacheTrpp]);
+            rootParameters[Slot::OutputCacheTspp].InitAsDescriptorTable(1, &ranges[Slot::OutputCacheTspp]);
             rootParameters[Slot::OutputReprojectedCacheValues].InitAsDescriptorTable(1, &ranges[Slot::OutputReprojectedCacheValues]);
             rootParameters[Slot::OutputDebug1].InitAsDescriptorTable(1, &ranges[Slot::OutputDebug1]);
             rootParameters[Slot::OutputDebug2].InitAsDescriptorTable(1, &ranges[Slot::OutputDebug2]);
@@ -846,10 +846,10 @@ namespace RTAOGpuKernels
         D3D12_GPU_DESCRIPTOR_HANDLE inputTextureSpaceMotionVectorResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputCachedValueResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputCachedNormalDepthResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedTrppResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputCachedTsppResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputCachedSquaredMeanValue,
         D3D12_GPU_DESCRIPTOR_HANDLE inputCachedRayHitDistanceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheTrppResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheTsppResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheValuesResourceHandle,
         float minSmoothingFactor,
         float depthTolerance,
@@ -864,7 +864,7 @@ namespace RTAOGpuKernels
         GpuResource debugResources[2],
         const XMMATRIX& projectionToView,
         const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
-        UINT maxTrpp,
+        UINT maxTspp,
         UINT numRaysToTraceSinceTemporalMovement)
     {
         using namespace RootSignature::TemporalSupersampling_ReverseReproject;
@@ -885,8 +885,8 @@ namespace RTAOGpuKernels
         m_CB->useWorldSpaceDistance = useWorldSpaceDistance;
         m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
         m_CB->perspectiveCorrectDepthInterpolation = perspectiveCorrectDepthInterpolation;
-        m_CB->numRaysToTraceAfterTemporalAtMaxTrpp = numRaysToTraceSinceTemporalMovement;
-        m_CB->maxTrpp = maxTrpp;
+        m_CB->numRaysToTraceAfterTemporalAtMaxTspp = numRaysToTraceSinceTemporalMovement;
+        m_CB->maxTspp = maxTspp;
         m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);
@@ -901,10 +901,10 @@ namespace RTAOGpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::InputTextureSpaceMotionVector, inputTextureSpaceMotionVectorResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputCachedValue, inputCachedValueResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputCachedNormalDepth, inputCachedNormalDepthResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::InputCachedTrpp, inputCachedTrppResourceHandle);
+            commandList->SetComputeRootDescriptorTable(Slot::InputCachedTspp, inputCachedTsppResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputCachedSquaredMeanValue, inputCachedSquaredMeanValue);
             commandList->SetComputeRootDescriptorTable(Slot::InputCachedRayHitDistance, inputCachedRayHitDistanceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::OutputCacheTrpp, outputReprojectedCacheTrppResourceHandle);
+            commandList->SetComputeRootDescriptorTable(Slot::OutputCacheTspp, outputReprojectedCacheTsppResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputReprojectedCacheValues, outputReprojectedCacheValuesResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputDebug1, debugResources[0].gpuDescriptorWriteAccess);
             commandList->SetComputeRootDescriptorTable(Slot::OutputDebug2, debugResources[1].gpuDescriptorWriteAccess);
@@ -923,7 +923,7 @@ namespace RTAOGpuKernels
             namespace Slot {
                 enum Enum {
                     InputOutputValue = 0,
-                    InputOutputTrpp,
+                    InputOutputTspp,
                     InputOutputSquaredMeanValue,
                     InputOutputRayHitDistance,
                     OutputVariance,
@@ -953,7 +953,7 @@ namespace RTAOGpuKernels
             ranges[Slot::InputCurrentFrameRayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
             ranges[Slot::InputReprojectedCacheValues].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
             ranges[Slot::InputOutputValue].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-            ranges[Slot::InputOutputTrpp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
+            ranges[Slot::InputOutputTspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
             ranges[Slot::InputOutputSquaredMeanValue].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
             ranges[Slot::InputOutputRayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
             ranges[Slot::OutputVariance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
@@ -967,7 +967,7 @@ namespace RTAOGpuKernels
             rootParameters[Slot::InputCurrentFrameRayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::InputCurrentFrameRayHitDistance]);
             rootParameters[Slot::InputReprojectedCacheValues].InitAsDescriptorTable(1, &ranges[Slot::InputReprojectedCacheValues]);
             rootParameters[Slot::InputOutputValue].InitAsDescriptorTable(1, &ranges[Slot::InputOutputValue]);
-            rootParameters[Slot::InputOutputTrpp].InitAsDescriptorTable(1, &ranges[Slot::InputOutputTrpp]);
+            rootParameters[Slot::InputOutputTspp].InitAsDescriptorTable(1, &ranges[Slot::InputOutputTspp]);
             rootParameters[Slot::InputOutputSquaredMeanValue].InitAsDescriptorTable(1, &ranges[Slot::InputOutputSquaredMeanValue]);
             rootParameters[Slot::InputOutputRayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::InputOutputRayHitDistance]);
             rootParameters[Slot::OutputVariance].InitAsDescriptorTable(1, &ranges[Slot::OutputVariance]);
@@ -1006,7 +1006,7 @@ namespace RTAOGpuKernels
         D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameLocalMeanVarianceResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameRayHitDistanceResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputOutputValueResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputOutputTrppResourceHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE inputOutputTsppResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputOutputSquaredMeanValueResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputOutputRayHitDistanceResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedCacheValuesResourceHandle,
@@ -1017,12 +1017,12 @@ namespace RTAOGpuKernels
         bool clampCachedValues,
         float clampStdDevGamma,
         float clampMinStdDevTolerance,
-        UINT minTrppToUseTemporalVariance,
-        float clampDifferenceToTrppScale,
+        UINT minTsppToUseTemporalVariance,
+        float clampDifferenceToTsppScale,
         GpuResource debugResources[2],
         UINT numFramesToDenoiseAfterLastTracedRay,
-        UINT lowTrppBlurStrengthMaxTrpp,
-        float lowTrppBlurStrengthDecayConstant,
+        UINT lowTsppBlurStrengthMaxTspp,
+        float lowTsppBlurStrengthDecayConstant,
         bool doCheckerboardSampling,
         bool checkerboardLoadEvenPixels)
     {
@@ -1038,11 +1038,11 @@ namespace RTAOGpuKernels
         m_CB->clampCachedValues = clampCachedValues;
         m_CB->stdDevGamma = clampStdDevGamma;
         m_CB->minStdDevTolerance = clampMinStdDevTolerance;
-        m_CB->minTrppToUseTemporalVariance = minTrppToUseTemporalVariance;
-        m_CB->clampDifferenceToTrppScale = clampDifferenceToTrppScale;
+        m_CB->minTsppToUseTemporalVariance = minTsppToUseTemporalVariance;
+        m_CB->clampDifferenceToTsppScale = clampDifferenceToTsppScale;
         m_CB->numFramesToDenoiseAfterLastTracedRay = numFramesToDenoiseAfterLastTracedRay;
-        m_CB->blurStrength_MaxTrpp = lowTrppBlurStrengthMaxTrpp;
-        m_CB->blurDecayStrength = lowTrppBlurStrengthDecayConstant;
+        m_CB->blurStrength_MaxTspp = lowTsppBlurStrengthMaxTspp;
+        m_CB->blurDecayStrength = lowTsppBlurStrengthDecayConstant;
         m_CB->doCheckerboardSampling = doCheckerboardSampling;
         m_CB->areEvenPixelsActive = checkerboardLoadEvenPixels;
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
@@ -1056,7 +1056,7 @@ namespace RTAOGpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::InputCurrentFrameLocalMeanVariance, inputCurrentFrameLocalMeanVarianceResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputCurrentFrameRayHitDistance, inputCurrentFrameRayHitDistanceResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputOutputValue, inputOutputValueResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::InputOutputTrpp, inputOutputTrppResourceHandle);
+            commandList->SetComputeRootDescriptorTable(Slot::InputOutputTspp, inputOutputTsppResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputOutputSquaredMeanValue, inputOutputSquaredMeanValueResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputOutputRayHitDistance, inputOutputRayHitDistanceResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputReprojectedCacheValues, inputReprojectedCacheValuesResourceHandle);

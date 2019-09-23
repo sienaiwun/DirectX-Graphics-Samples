@@ -27,7 +27,7 @@ Texture2D<float> g_inVariance : register(t4);
 Texture2D<float> g_inSmoothedVariance : register(t5); 
 Texture2D<float> g_inHitDistance : register(t6);
 Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);
-Texture2D<uint> g_inTrpp : register(t8);
+Texture2D<uint> g_inTspp : register(t8);
 
 RWTexture2D<float> g_outFilteredValue : register(u0);
 RWTexture2D<float> g_outFilteredVariance : register(u1);
@@ -102,18 +102,18 @@ void AddFilterContribution(
 #endif
 
 
-        // Enforce trpp of at least 1 for reprojected values.
+        // Enforce tspp of at least 1 for reprojected values.
         // This is because the denoiser will fill in invalid values with filtered 
-        // ones if it can. But it doesn't increase the trpp.
-        uint iTrpp = g_inTrpp[id].x;
-        iTrpp = max(iTrpp, 1);
+        // ones if it can. But it doesn't increase the tspp.
+        uint iTspp = g_inTspp[id].x;
+        iTspp = max(iTspp, 1);
 
         // Confidence based weight
         // This helps prevent recently disoccluded pixels with fewer samples
         // contribute as much as samples with higher accumulated samples,
         // and hence lowers the visible firefly/sparkly artifacts on disocclusions on creases an such.
         float w_c = 1;
-        w_c = cb.weightByTrpp ? iTrpp : 1;
+        w_c = cb.weightByTspp ? iTspp : 1;
 
         // Value based weight.
             // Ref: Dammertz2010
@@ -184,9 +184,9 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     float3 normal;
     float depth;
     DecodeNormalDepth(g_inNormalDepth[DTid], normal, depth);
-    uint2 TrppRaysToGenerate = g_inTrpp[DTid];
-    uint Trpp = TrppRaysToGenerate.x;
-    uint numRaysToGenerateOrDenoisePasses = TrppRaysToGenerate.y;
+    uint2 TsppRaysToGenerate = g_inTspp[DTid];
+    uint Tspp = TsppRaysToGenerate.x;
+    uint numRaysToGenerateOrDenoisePasses = TsppRaysToGenerate.y;
 
     
     bool isValidValue = value != RTAO::InvalidAOCoefficientValue;
@@ -215,7 +215,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
         if (isValidValue)
         {
-            float pixelWeight = cb.weightByTrpp ? Trpp : 1;
+            float pixelWeight = cb.weightByTspp ? Tspp : 1;
             float w = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
             weightSum = pixelWeight * w;
             weightedValueSum = weightSum * value;
@@ -244,8 +244,8 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
             kernelStep = max(1, round(k * avgRayHitDistance / projectedSurfaceDim));
 
             uint2 targetKernelStep = clamp(kernelStep, (cb.minKernelWidth - 1) / 2, (cb.maxKernelWidth - 1) / 2);
-            float MaxTrpp = 33;// ToDo
-           // float a = min(Trpp/MaxTrpp)
+            float MaxTspp = 33;// ToDo
+           // float a = min(Tspp/MaxTspp)
             uint2 adjustedKernelStep = cb.kernelStepShift > 0 ? lerp(1, targetKernelStep, (cb.kernelStepShift-1) / float(cb.maxKernelStepShift)) : targetKernelStep;
 
             kernelStep = adjustedKernelStep;

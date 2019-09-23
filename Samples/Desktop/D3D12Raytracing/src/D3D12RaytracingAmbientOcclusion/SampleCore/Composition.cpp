@@ -91,7 +91,7 @@ void Composition::CreateTextureResources()
     D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
     CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::AOCoefficient), m_renderingWidth, m_renderingHeight, m_cbvSrvUavHeap.get(), &m_upsampledAOValueResource, initialResourceState, L"Upsampled AO value");
-    CreateRenderTargetResource(device, DXGI_FORMAT_R8_UINT, m_renderingWidth, m_renderingHeight, m_cbvSrvUavHeap.get(), &m_upsampledTrppResource, initialResourceState, L"Upsampled Trpp");
+    CreateRenderTargetResource(device, DXGI_FORMAT_R8_UINT, m_renderingWidth, m_renderingHeight, m_cbvSrvUavHeap.get(), &m_upsampledTsppResource, initialResourceState, L"Upsampled Tspp");
     CreateRenderTargetResource(device, RTAO::ResourceFormat(RTAO::ResourceType::RayHitDistance), m_renderingWidth, m_renderingHeight, m_cbvSrvUavHeap.get(), &m_upsampledAORayHitDistanceResource, initialResourceState, L"Upsampled AO Ray Hit Distance");
     CreateRenderTargetResource(device, Denoiser::ResourceFormat(Denoiser::ResourceType::Variance), m_renderingWidth, m_renderingHeight, m_cbvSrvUavHeap.get(), &m_upsampledVarianceResource, initialResourceState, L"Upsampled Variance");
     CreateRenderTargetResource(device, Denoiser::ResourceFormat(Denoiser::ResourceType::LocalMeanVariance), m_renderingWidth, m_renderingHeight, m_cbvSrvUavHeap.get(), &m_upsampledLocalMeanVarianceResource, initialResourceState, L"Upsampled Local Mean Variance");
@@ -111,7 +111,7 @@ void Composition::CreateShaderResources()
         ranges[Slot::GBufferResources].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0); 
         ranges[Slot::AO].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  
         ranges[Slot::AORayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9); 
-        ranges[Slot::Trpp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); 
+        ranges[Slot::Tspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); 
         ranges[Slot::Color].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11);
         ranges[Slot::AOSurfaceAlbedo].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 12);
         ranges[Slot::Variance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13);
@@ -122,7 +122,7 @@ void Composition::CreateShaderResources()
         rootParameters[Slot::GBufferResources].InitAsDescriptorTable(1, &ranges[Slot::GBufferResources]);
         rootParameters[Slot::AO].InitAsDescriptorTable(1, &ranges[Slot::AO]);
         rootParameters[Slot::AORayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::AORayHitDistance]);
-        rootParameters[Slot::Trpp].InitAsDescriptorTable(1, &ranges[Slot::Trpp]);
+        rootParameters[Slot::Tspp].InitAsDescriptorTable(1, &ranges[Slot::Tspp]);
         rootParameters[Slot::Color].InitAsDescriptorTable(1, &ranges[Slot::Color]);
         rootParameters[Slot::AOSurfaceAlbedo].InitAsDescriptorTable(1, &ranges[Slot::AOSurfaceAlbedo]);
         rootParameters[Slot::Variance].InitAsDescriptorTable(1, &ranges[Slot::Variance]);
@@ -308,12 +308,12 @@ void Composition::Render(
             Composition_Args::CompositionMode == CompositionType::AmbientOcclusionOnly_Denoised
             ? &denoiser.m_temporalAOCoefficient[denoiser.m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex]
             : AOResource = &rtao.AOResources()[AOResource::AmbientCoefficient];
-        GpuResource* TrppResource = &TemporalResources[TemporalSupersampling::Trpp];
+        GpuResource* TsppResource = &TemporalResources[TemporalSupersampling::Tspp];
 
         if (RTAO_Args::QuarterResAO)
         {
             AOResource = &m_upsampledAOValueResource;
-            TrppResource = &m_upsampledTrppResource;
+            TsppResource = &m_upsampledTsppResource;
             VarianceResource = &m_upsampledVarianceResource;
             LocalMeanVarianceResource = &m_upsampledLocalMeanVarianceResource;
             AORayHitDistance = &m_upsampledAORayHitDistanceResource;
@@ -339,7 +339,7 @@ void Composition::Render(
         commandList->SetComputeRootDescriptorTable(Slot::AOSurfaceAlbedo, GBufferResources[GBufferResource::AOSurfaceAlbedo].gpuDescriptorReadAccess);
 
 
-        commandList->SetComputeRootDescriptorTable(Slot::Trpp, TrppResource->gpuDescriptorReadAccess);
+        commandList->SetComputeRootDescriptorTable(Slot::Tspp, TsppResource->gpuDescriptorReadAccess);
     }
 
     // Dispatch.

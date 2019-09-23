@@ -127,7 +127,7 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputVarianceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputHitDistanceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputTrppResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputTsppResourceHandle,
             GpuResource* outputResource,
             GpuResource* outputIntermediateResource,
             GpuResource* outputDebug1ResourceHandle,
@@ -154,7 +154,7 @@ namespace RTAOGpuKernels
             float depthWeightCutoff = 0.5f,
             bool useProjectedDepthTest = false,
             bool forceDenoisePass = false,
-            bool weightByTrpp = false);
+            bool weightByTspp = false);
 
         GpuResource& VarianceOutputResource() { return m_intermediateVarianceOutputs[0]; }
 
@@ -225,10 +225,10 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputTextureSpaceMotionVectorResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedValueResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedNormalDepthResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedTrppResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputCachedTsppResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedSquaredMeanValue,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedRayHitDistanceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheTrppResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheTsppResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheValuesResourceHandle,
             float minSmoothingFactor,
             float depthTolerance,
@@ -243,7 +243,7 @@ namespace RTAOGpuKernels
             GpuResource debugResources[2],
             const XMMATRIX& projectionToView,
             const XMMATRIX& prevProjectionToWorldWithCameraEyeAtOrigin,
-            UINT maxTrpp,
+            UINT maxTspp,
             UINT numRaysToTraceSinceTemporalMovement);
 
     private:
@@ -269,7 +269,7 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameLocalMeanVarianceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputCurrentFrameRayHitDistanceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputOutputValueResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputOutputTrppResourceHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE inputOutputTsppResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputOutputSquaredMeanValueResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputOutputRayHitDistanceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedCacheValuesResourceHandle,
@@ -280,12 +280,12 @@ namespace RTAOGpuKernels
             bool clampCachedValues,
             float clampStdDevGamma,
             float clampMinStdDevTolerance,
-            UINT minTrppToUseTemporalVariance,
-            float clampDifferenceToTrppScale,   // ToDo remove?
+            UINT minTsppToUseTemporalVariance,
+            float clampDifferenceToTsppScale,   // ToDo remove?
             GpuResource debugResources[2],
             UINT numFramesToDenoiseAfterLastTracedRay,
-            UINT lowTrppBlurStrengthMaxTrpp,
-            float lowTrppBlurStrengthDecayConstant,
+            UINT lowTsppBlurStrengthMaxTspp,
+            float lowTsppBlurStrengthDecayConstant,
             bool doCheckerboardSampling = false,
             bool checkerboardLoadEvenPixels = false);
 
