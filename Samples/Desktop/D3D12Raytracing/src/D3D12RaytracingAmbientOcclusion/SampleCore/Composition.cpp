@@ -28,19 +28,17 @@ namespace Composition_Args
 {
     // ToDO remove obsolete/not working
     const WCHAR* CompositionModes[CompositionType::Count] = {
-        L"Specular Pathtracer",
+        L"Specular PBR Pathtracer",
         L"Denoised AO",
-        L"Temporally Supersampled Ambient Occlusion",
-        L"Raw one-frame Ambient Occlusion",
-        L"AO and Disocclusion Map",
+        L"Raw one-frame AO",
+        L"Disocclusion Map",
         L"AO Variance",
         L"AO Local Variance",
-        L"Temporal AO Ray Hit Distance", // ToDo  raw as well?
-        // ToDo make it clear normal, depth and diffuse correspond to the surface AO is calculated for?
+        L"Temporal AO Ray Hit Distance",
         L"Normal Map",
         L"Depth Buffer",
-        L"Diffuse",
-        L"Disocclusion Map" 
+        L"Albedo/Texture",
+        L"Base Material Albedo"
     };
     EnumVar CompositionMode(L"Render/Render composition/Mode", CompositionType::AmbientOcclusionOnly_Denoised, CompositionType::Count, CompositionModes);
     BoolVar Compose_VarianceVisualizeStdDeviation(L"Render/Render composition/Variance/Visualize std deviation", true);
@@ -166,7 +164,6 @@ void Composition::UpsampleResourcesForRenderComposePass(
     {
     case CompositionType::PBRShading:
     case CompositionType::AmbientOcclusionOnly_Denoised:
-    case CompositionType::AmbientOcclusionOnly_TemporallySupersampled:
     case CompositionType::AmbientOcclusionOnly_RawOneFrame:
     {
         passName = L"Upsample AO";

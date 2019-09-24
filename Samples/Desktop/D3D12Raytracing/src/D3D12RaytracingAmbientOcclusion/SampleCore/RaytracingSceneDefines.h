@@ -13,7 +13,7 @@
 
 #include "RayTracingHlslCompat.h"
 
-namespace ComputeShader {   // ToDo remove this?
+namespace ComputeShader {
 	namespace Type {
 		enum Enum {
 			CompositionCS,
@@ -46,7 +46,7 @@ namespace ComputeShader {   // ToDo remove this?
 namespace CSType = ComputeShader::Type;
 namespace CSRootSignature = ComputeShader::RootSignature;
 
-// ToDo move?
+
 namespace RayGenShaderType {
     enum Enum {
         Pathtracer = 0,

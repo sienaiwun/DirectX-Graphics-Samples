@@ -626,7 +626,7 @@ void Pathtracer::UpdateConstantBuffer(Scene& scene)
 
     m_CB->useNormalMaps = Pathtracer_Args::RTAOUseNormalMaps;
     m_CB->defaultAmbientIntensity = Pathtracer_Args::DefaultAmbientIntensity;
-    m_CB->useDiffuseFromMaterial = Composition_Args::CompositionMode == CompositionType::Diffuse;
+    m_CB->useBaseAlbedoFromMaterial = Composition_Args::CompositionMode == CompositionType::BaseMaterialAlbedo;
 
     auto& prevFrameCamera = scene.PrevFrameCamera();
     XMMATRIX prevView, prevProj;
@@ -646,11 +646,9 @@ void Pathtracer::Run(Scene& scene)
     auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
 
-    // ToDo move
+    // TODO: this should be called before any rendering in a frame
     if (m_isRecreateRaytracingResourcesRequested)
     {
-        // ToDo what if scenargs change during rendering? race condition??
-        // Buffer them - create an intermediate
         m_isRecreateRaytracingResourcesRequested = false;
         m_deviceResources->WaitForGpu();
 
@@ -762,9 +760,7 @@ void Pathtracer::CreateTextureResources()
     DXGI_FORMAT hitPositionFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
     DXGI_FORMAT debugFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-
-    // ToDo remove obsolete resources, QuarterResAO event triggers this so we may not need all low/gbuffer width AO resources.
-
+    
     // Full-res GBuffer resources.
     {
         // Preallocate subsequent descriptor indices for both SRV and UAV groups.
@@ -798,9 +794,7 @@ void Pathtracer::CreateTextureResources()
         CreateRenderTargetResource(device, hitPositionFormat, m_quarterResWidth, m_quarterResHeight, m_cbvSrvUavHeap.get(), &m_GBufferQuarterResResources[GBufferResource::HitPosition], initialResourceState, L"GBuffer LowRes HitPosition");
         CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_quarterResWidth, m_quarterResHeight, m_cbvSrvUavHeap.get(), &m_GBufferQuarterResResources[GBufferResource::SurfaceNormalDepth], initialResourceState, L"GBuffer LowRes Normal");
         CreateRenderTargetResource(device, DXGI_FORMAT_R16_FLOAT, m_quarterResWidth, m_quarterResHeight, m_cbvSrvUavHeap.get(), &m_GBufferQuarterResResources[GBufferResource::Depth], initialResourceState, L"GBuffer LowRes Distance");
-        // ToDo are below two used?
         CreateRenderTargetResource(device, TextureResourceFormatRG::ToDXGIFormat(Pathtracer_Args::RTAO_PartialDepthDerivativesResourceFormat), m_quarterResWidth, m_quarterResHeight, m_cbvSrvUavHeap.get(), &m_GBufferQuarterResResources[GBufferResource::PartialDepthDerivatives], initialResourceState, L"GBuffer LowRes Partial Depth Derivatives");
-
         CreateRenderTargetResource(device, TextureResourceFormatRG::ToDXGIFormat(Pathtracer_Args::RTAO_MotionVectorResourceFormat), m_quarterResWidth, m_quarterResHeight, m_cbvSrvUavHeap.get(), &m_GBufferQuarterResResources[GBufferResource::MotionVector], initialResourceState, L"GBuffer LowRes Texture Space Motion Vector");
 
         CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_quarterResWidth, m_quarterResHeight, m_cbvSrvUavHeap.get(), &m_GBufferQuarterResResources[GBufferResource::ReprojectedNormalDepth], initialResourceState, L"GBuffer LowRes Reprojected Normal Depth");

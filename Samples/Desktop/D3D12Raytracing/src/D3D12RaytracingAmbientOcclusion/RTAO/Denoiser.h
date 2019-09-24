@@ -69,12 +69,12 @@ private:
     UINT m_denoisingWidth = 0;
     UINT m_denoisingHeight = 0;
 
-    // ToDo dedupe resources. Does dpeth need to have 2 instances?   
+    // ToDoF dedupe resources. Does dpeth need to have 2 instances?   
     GpuResource m_temporalCache[2][TemporalSupersampling::Count]; // ~array[Read/Write ping pong resource][Resources].
     GpuResource m_temporalAOCoefficient[2];
     GpuResource m_cachedTsppValueSquaredValueRayHitDistance;
 
-    // ToDo cleanup readId should be for input to TAO, confusing.
+    // ToDoF cleanup readId should be for input to TAO, confusing.
     UINT          m_temporalCacheCurrentFrameResourceIndex = 0;
     UINT          m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex = 0;
 

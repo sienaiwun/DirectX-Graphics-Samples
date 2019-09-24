@@ -20,7 +20,6 @@
 #include "RandomNumberGenerator.hlsli"
 #include "AnalyticalTextures.hlsli"
 #include "BxDF.hlsli"
-#define HitDistanceOnMiss 0 // ToDo
 
 //***************************************************************************
 //*****------ Shader resources bound via root signatures -------*************
@@ -35,7 +34,7 @@ RWTexture2D<NormalDepthTexFormat> g_rtGBufferNormalDepth : register(u8);
 RWTexture2D<float> g_rtGBufferDepth : register(u9);
 
 RWTexture2D<float2> g_rtTextureSpaceMotionVector : register(u17);
-RWTexture2D<NormalDepthTexFormat> g_rtReprojectedNormalDepth : register(u18); // ToDo rename
+RWTexture2D<NormalDepthTexFormat> g_rtReprojectedNormalDepth : register(u18);
 RWTexture2D<float4> g_rtColor : register(u19);
 RWTexture2D<float4> g_rtAOSurfaceAlbedo : register(u20);
 RWTexture2D<float4> g_outDebug1 : register(u21);
@@ -77,8 +76,6 @@ bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in UINT currentRay
     RayDesc rayDesc;
     rayDesc.Origin = ray.origin;
     rayDesc.Direction = ray.direction;
-    // Set TMin to a zero value to avoid aliasing artifacts along contact areas. // ToDo update comment re-floating error
-    // Note: make sure to enable back-face culling so as to avoid surface face fighting.
     rayDesc.TMin = 0.0;
 	rayDesc.TMax = TMax;
 
@@ -132,7 +129,7 @@ bool TraceShadowRayAndReportIfHit(in float3 hitPosition, in float3 direction, in
 {
     float tOffset = 0.001f;
     Ray visibilityRay = { hitPosition + tOffset * N, direction };
-    float dummyTHit;    // ToDo remove
+    float dummyTHit;   
     return TraceShadowRayAndReportIfHit(dummyTHit, visibilityRay, N, rayPayload.rayRecursionDepth, false, TMax);
 }
 
@@ -150,6 +147,7 @@ PathtracerRayPayload TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDep
 
     if (currentRayRecursionDepth >= g_cb.maxRadianceRayRecursionDepth)
     {
+        rayPayload.radiance = float3(133, 161, 179) / 255.0;
         return rayPayload;
     }
 
@@ -157,9 +155,6 @@ PathtracerRayPayload TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDep
     RayDesc rayDesc;
     rayDesc.Origin = ray.origin;
     rayDesc.Direction = ray.direction;
-    // ToDo update comments about Tmins
-    // Set TMin to a zero value to avoid aliasing artifacts along contact areas.
-    // Note: make sure to enable face culling so as to avoid surface face fighting.
     rayDesc.TMin = tMin;
     rayDesc.TMax = tMax;
 
@@ -487,7 +482,7 @@ void MyClosestHitShader_RadianceRay(inout PathtracerRayPayload rayPayload, in Bu
         normal = NormalMap(normal, texCoord, vertices, material, attr);
     }
 
-    if (material.hasDiffuseTexture && !g_cb.useDiffuseFromMaterial)
+    if (material.hasDiffuseTexture && !g_cb.useBaseAlbedoFromMaterial)
     {
         float3 texSample = l_texDiffuse.SampleLevel(LinearWrapSampler, texCoord, 0).xyz;
         material.Kd = texSample;

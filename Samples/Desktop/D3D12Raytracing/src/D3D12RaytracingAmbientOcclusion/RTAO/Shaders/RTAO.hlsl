@@ -128,7 +128,7 @@ void RayGenShader()
     float3 surfaceNormal;
     float depth;
     DecodeNormalDepth(g_texRayOriginSurfaceNormalDepth[srcRayIndex], surfaceNormal, depth);
-	bool isValidHit = depth != 0;
+	bool isValidHit = depth != HitDistanceOnMiss;
     float tHit = RTAO::RayHitDistanceOnMiss;
     float ambientCoef = RTAO::InvalidAOCoefficientValue;
 	if (isValidHit)

@@ -22,6 +22,7 @@ Demo
 - predefine views
 - camera rotation
 - Profiling?
+- allow to pause time
 
 Clamping
 -   Fix up under car ghosting. Or add to known issues. Filter tspp and see if that helps.
@@ -87,7 +88,7 @@ Documentation
 // ToDo
 #define ENABLE_PROFILING 0
 
-#define DISTANCE_ON_MISS 65504  // ~FLT_MAX within 16 bit format // ToDo explain
+#define HitDistanceOnMiss 0
 
 #define PRINT_OUT_CAMERA_CONFIG 1
 
@@ -162,7 +163,7 @@ struct AmbientOcclusionGBuffer
 struct PathtracerRayPayload
 {
     UINT rayRecursionDepth;
-    XMFLOAT3 radiance;
+    XMFLOAT3 radiance;              // TODO encode
     AmbientOcclusionGBuffer AOGBuffer;
 };
 
@@ -259,7 +260,7 @@ struct PathtracerConstantBuffer
 {
     XMMATRIX projectionToWorldWithCameraAtOrigin;
     XMFLOAT3 cameraPosition;
-    BOOL     useDiffuseFromMaterial;
+    BOOL     useBaseAlbedoFromMaterial;
     XMFLOAT3 lightPosition;     
     BOOL     useNormalMaps;
     XMFLOAT3 lightColor;
@@ -308,7 +309,6 @@ struct RTAOConstantBuffer
 enum CompositionType {
     PBRShading = 0,
     AmbientOcclusionOnly_Denoised,
-    AmbientOcclusionOnly_TemporallySupersampled, // ToDo remove
     AmbientOcclusionOnly_RawOneFrame,
     AmbientOcclusionAndDisocclusionMap, // ToDo quarter res support
     AmbientOcclusionVariance,
@@ -316,8 +316,8 @@ enum CompositionType {
     RTAOHitDistance,
     NormalsOnly,
     DepthOnly,
-    Diffuse,
-    DisocclusionMap,
+    Albedo,
+    BaseMaterialAlbedo,
     Count
 };
 

@@ -130,7 +130,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
             // Initialize the first 8 lanes to the center cell contribution of the kernel. 
             // This covers the remainder of 1 in FilterKernel::Width / 2 used in the loop below. 
-            if (GTid4x16.x < GroupDim.x && kcValue != RTAO::InvalidAOCoefficientValue && kcDepth != 0)
+            if (GTid4x16.x < GroupDim.x && kcValue != RTAO::InvalidAOCoefficientValue && kcDepth != HitDistanceOnMiss)
             {
                 float w_h = FilterKernel::Kernel1D[FilterKernel::Radius];
                 gaussianWeightedValueSum = w_h * kcValue;
@@ -155,7 +155,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
                 float cValue = WaveReadLaneAt(value, laneToReadFrom);
                 float cDepth = WaveReadLaneAt(depth, laneToReadFrom);
 
-                if (cValue != RTAO::InvalidAOCoefficientValue && kcDepth != 0 && cDepth != 0)
+                if (cValue != RTAO::InvalidAOCoefficientValue && kcDepth != HitDistanceOnMiss && cDepth != HitDistanceOnMiss)
                 {
                     float w_h = FilterKernel::Kernel1D[kernelCellIndex];
 
@@ -200,7 +200,7 @@ void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
     float kcDepth = kcValueDepth.y;
 
     float filteredValue = kcValue;
-    if (blurStrength >= 0.01 && kcDepth != 0)
+    if (blurStrength >= 0.01 && kcDepth != HitDistanceOnMiss)
     {
         float weightedValueSum = 0;
         float weightSum = 0;
@@ -217,7 +217,7 @@ void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
             float rDepth = rUnpackedValueDepth.y;
             float rFilteredValue = FilteredResultCache[rowID][GTid.x];
 
-            if (rDepth != 0 && rFilteredValue != RTAO::InvalidAOCoefficientValue)
+            if (rDepth != HitDistanceOnMiss && rFilteredValue != RTAO::InvalidAOCoefficientValue)
             {
                 float w_h = FilterKernel::Kernel1D[r];
 

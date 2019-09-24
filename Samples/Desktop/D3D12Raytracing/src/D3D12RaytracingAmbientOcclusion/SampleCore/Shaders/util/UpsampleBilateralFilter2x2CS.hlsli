@@ -56,7 +56,7 @@ float4 BilateralUpsampleWeights(
         samplesOffset,
         params);
 
-    bool4 isActive = SampleDepths != 0;
+    bool4 isActive = SampleDepths != HitDistanceOnMiss;
     float4 weights = isActive * bilinearDepthNormalWeights;
     float weightSum = dot(weights, 1);
 
@@ -138,10 +138,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 #if VALUE_NUM_COMPONENTS == 1
             float outValue = dot(nWeights, vLowResValues);
-            g_outValue[topLeftHiResIndex + srcIndexOffsets[i]] = targetDepth < DISTANCE_ON_MISS ? outValue : vLowResValues[i];
+            g_outValue[topLeftHiResIndex + srcIndexOffsets[i]] = targetDepth != HitDistanceOnMiss ? outValue : vLowResValues[i];
 #elif VALUE_NUM_COMPONENTS == 2
             float2 outValue = float2(dot(nWeights, vLowResValues[0]), dot(nWeights, vLowResValues[1]));
-            g_outValue[topLeftHiResIndex + srcIndexOffsets[i]] = targetDepth < DISTANCE_ON_MISS ? outValue : vLowResValues._11_21;
+            g_outValue[topLeftHiResIndex + srcIndexOffsets[i]] = targetDepth != HitDistanceOnMiss ? outValue : vLowResValues._11_21;
 #endif
         }
     }

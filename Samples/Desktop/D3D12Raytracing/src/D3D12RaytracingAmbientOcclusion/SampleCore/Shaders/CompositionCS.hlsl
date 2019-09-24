@@ -24,7 +24,7 @@ Texture2D<NormalDepthTexFormat> g_texGBufferNormalDepth : register(t3);
 Texture2D<float> g_texAO : register(t5);
 StructuredBuffer<PrimitiveMaterialBuffer> g_materials : register(t7);
 Texture2D<float> g_texRayHitDistance : register(t9);
-Texture2D<uint> g_texTemporalSupersamplingDisocclusionMap : register(t10);  // ToDo is this Tspp? rename
+Texture2D<uint> g_texTspp : register(t10);
 Texture2D<float4> g_texColor : register(t11);
 Texture2D<float4> g_texAOSurfaceAlbedo : register(t12);
 Texture2D<float4> g_texVariance : register(t13);
@@ -42,7 +42,7 @@ float4 RenderPBRResult(in uint2 DTid)
     float3 PBRcolor = g_texColor[DTid].xyz;
 
     float ambientCoef = 0;
-    bool hit = depth > 0;
+    bool hit = depth != HitDistanceOnMiss;
     if (hit && cb.isAOEnabled)
     {
         // Subtract the default ambient illumination that has already been added to the color in pathtracing pass.
@@ -67,25 +67,13 @@ float4 RenderAOResult(in uint2 DTid)
     float depth;
     float3 surfaceNormal;
     DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
-    bool hit = depth > 0;
+    bool hit = depth != HitDistanceOnMiss;
     if (hit)
     {
         float ambientCoef = g_texAO[DTid];
         color = ambientCoef != RTAO::InvalidAOCoefficientValue ? ambientCoef : 1;
         float4 albedo = float4(1, 1, 1, 1);
         color *= albedo;
-
-        if (cb.compositionType == AmbientOcclusionAndDisocclusionMap)
-        {
-            uint Tspp = g_texTemporalSupersamplingDisocclusionMap[DTid].x;
-            color = Tspp == 1 ? float4(1, 0, 0, 1) : color;
-
-
-            float normalizedTspp = min(1.f, Tspp / 32.f);
-            float3 minTsppColor = float3(153, 18, 15) / 255;
-            float3 maxTsppColor = float3(170, 220, 200) / 255;
-            color = float4(lerp(minTsppColor, maxTsppColor, normalizedTspp), 1);
-        }
     }
 
     return color;
@@ -97,7 +85,7 @@ float4 RenderVariance(in uint2 DTid)
     float depth;
     float3 surfaceNormal;
     DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
-    bool hit = depth > 0;
+    bool hit = depth != HitDistanceOnMiss;
     if (hit)
     {
         float variance;
@@ -123,10 +111,9 @@ float4 RenderRayHitDistance(in uint2 DTid)
     float depth;
     float3 surfaceNormal;
     DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
-    bool hit = depth > 0;
+    bool hit = depth != HitDistanceOnMiss;
     if (hit)
     {
-        // ToDo why is minHitDistance 0 or very dark on outer edges?
         float3 minDistanceColor = float3(15, 18, 153) / 255;
         float3 maxDistanceColor = float3(170, 220, 200) / 255;
         float hitDistance = g_texRayHitDistance[DTid].x;
@@ -143,7 +130,7 @@ float4 RenderNormalOrDepth(in uint2 DTid)
     float depth;
     float3 surfaceNormal;
     DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
-    bool hit = depth > 0;
+    bool hit = depth != HitDistanceOnMiss;
     if (hit)
     {
         float depth;
@@ -153,7 +140,7 @@ float4 RenderNormalOrDepth(in uint2 DTid)
         if (cb.compositionType == CompositionType::NormalsOnly)
             color = float4(surfaceNormal, 1);
         else 
-            color = depth / 80;
+            color = depth / 120;
     }
 
     return color;
@@ -165,7 +152,7 @@ float4 RenderAlbedo(in uint2 DTid)
     float depth;
     float3 surfaceNormal;
     DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
-    bool hit = depth > 0;
+    bool hit = depth != HitDistanceOnMiss;
     if (hit)
     {
         float3 albedo = g_texAOSurfaceAlbedo[DTid].xyz;
@@ -181,10 +168,17 @@ float4 RenderDisocclusionMap(in uint2 DTid)
     float depth;
     float3 surfaceNormal;
     DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
-    bool hit = depth > 0;
+    bool hit = depth != HitDistanceOnMiss;
     if (hit)
     {
-        color = g_texTemporalSupersamplingDisocclusionMap[DTid].x == 1 ? float4(1, 0, 0, 0) : float4(1, 1, 1, 1);
+        uint tspp = g_texTspp[DTid].x;
+        color = tspp == 1 ? float4(1, 0, 0, 1) : color;
+
+
+        float normalizedTspp = min(1.f, tspp / 32.f);
+        float3 minTsppColor = float3(153, 18, 15) / 255;
+        float3 maxTsppColor = float3(170, 220, 200) / 255;
+        color = float4(lerp(minTsppColor, maxTsppColor, normalizedTspp), 1);
     }
 
     return color;
@@ -201,10 +195,12 @@ void main(uint2 DTid : SV_DispatchThreadID )
         break;
 
     case CompositionType::AmbientOcclusionOnly_Denoised:
-    case CompositionType::AmbientOcclusionOnly_TemporallySupersampled:
     case CompositionType::AmbientOcclusionOnly_RawOneFrame:
-    case CompositionType::AmbientOcclusionAndDisocclusionMap:
         color = RenderAOResult(DTid);
+        break;
+
+    case CompositionType::AmbientOcclusionAndDisocclusionMap:
+        color = RenderDisocclusionMap(DTid);
         break;
 
     case CompositionType::AmbientOcclusionVariance:
@@ -221,13 +217,11 @@ void main(uint2 DTid : SV_DispatchThreadID )
         color = RenderNormalOrDepth(DTid);
         break;
 
-    case CompositionType::Diffuse:
+    case CompositionType::Albedo:
+    case CompositionType::BaseMaterialAlbedo:
         color = RenderAlbedo(DTid);
         break;
 
-    case CompositionType::DisocclusionMap:
-        color = RenderDisocclusionMap(DTid);
-        break;  
     default:
         color = float4(1, 0, 0, 0);
         break;

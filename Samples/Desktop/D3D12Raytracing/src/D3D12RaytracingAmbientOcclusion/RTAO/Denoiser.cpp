@@ -58,7 +58,7 @@ namespace Denoiser_Args
 
     BoolVar UseAdaptiveKernelSize(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Enabled", true);
     BoolVar KernelRadius_RotateKernel_Enabled(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Rotate kernel radius/Enabled", true);
-    IntVar KernelRadius_RotateKernel_NumCycles(L"Render/AO/RTAO/AdaptiveKernelSize/Rotate kernel radius/Num cycles", 3, 0, 10, 1);
+    IntVar KernelRadius_RotateKernel_NumCycles(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Rotate kernel radius/Num cycles", 3, 0, 10, 1);
     IntVar FilterMinKernelWidth(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Min kernel width", 3, 3, 101);
     NumVar FilterMaxKernelWidthPercentage(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Max kernel width [%% of screen width]", 1.5f, 0, 100, 0.1f);
     NumVar AdaptiveKernelSize_RayHitDistanceScaleFactor(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Hit distance scale factor", 0.02f, 0.001f, 0.1f, 0.001f);
@@ -470,7 +470,7 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
     GpuResource(&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
     GpuResource* InputAOCoefficientResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
 
-    // ToDo clean this up so that its clear.
+    // ToDoF clean this up so that its clear.
     m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex = (m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex + 1) % 2;
     GpuResource* OutputResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
     resourceStateTracker->TransitionResource(OutputResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);

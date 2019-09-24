@@ -156,7 +156,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     float filteredValue = value;
     float variance = g_inVariance[DTid];
 
-    if (depth != 0)
+    if (depth != HitDistanceOnMiss)
     {
         float2 ddxy = g_inPartialDistanceDerivatives[DTid];
         float weightSum = 0;
