@@ -10,10 +10,13 @@
 //*********************************************************
 
 
-// Desc: Filters values via a depth aware separable gaussian filter.
+// Desc: Filters values via a depth aware separable gaussian filter and input blur strength input.
 // The input pixels are interleaved such that kernel cells are at cb.step offsets
 // and the results are scatter wrote to memory. The interleaved layout
 // allows for a separable filtering via shared memory.
+// The purpose of the filter is to apply a strong blur and thus the depth test
+// is more relaxed than the one used in AtrousWaveletTransform filter.
+// It still however does a relaxed depth test to prevent blending surfaces too far apart.
 // Supports up to 9x9 kernels.
 // Requirements:
 //  - Wave lane size 16 or higher.
@@ -27,16 +30,15 @@
 #define GAUSSIAN_KERNEL_3X3
 #include "Kernels.hlsli"
 
-Texture2D<float> g_inValue : register(t0);
 Texture2D<float> g_inDepth : register(t1);
 Texture2D<float> g_inBlurStrength: register(t2);
-RWTexture2D<float> g_outValues : register(u0);
+RWTexture2D<float> g_inOutValue : register(u0);
 
 RWTexture2D<float4> g_outDebug1 : register(u3);
 RWTexture2D<float4> g_outDebug2 : register(u4);
 
 
-ConstantBuffer<BilateralFilterConstantBuffer> cb: register(b0);
+ConstantBuffer<FilterConstantBuffer> cb: register(b0);
 
 // Group shared memory cache for the row aggregated results.
 static const uint NumValuesToLoadPerRowOrColumn =
@@ -55,18 +57,6 @@ uint2 GetPixelIndex(in uint2 Gid, in uint2 GTid)
     uint2 sDTid = groupBase + groupThreadOffset;
 
     return sDTid;
-}
-
-float ReadValue(in uint2 pixel)
-{
-    if (cb.readWriteUAV_and_skipPassthrough)
-    {
-        return g_outValues[pixel];
-    }
-    else
-    {
-        return g_inValue[pixel];
-    }
 }
 
 // Load up to 16x16 pixels and filter them horizontally.
@@ -103,7 +93,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
         // However, we need to keep it as an active lane for a below split sum.
         if (GTid4x16.x < NumValuesToLoadPerRowOrColumn && IsWithinBounds(pixel, cb.textureDim))
         {
-            value = ReadValue(pixel);
+            value = g_inOutValue[pixel];
             depth = g_inDepth[pixel];
         }
 
@@ -168,6 +158,9 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
                 {
                     float w_h = FilterKernel::Kernel1D[kernelCellIndex];
 
+                    // Simple depth test with tolerance growing as the kernel radius increases.
+                    // Goal is to prevent values too far apart to blend together, while having 
+                    // the test being relaxed enough to get a strong blurring result.
                     float depthThreshold = 0.05 + cb.step * 0.001 * abs(int(FilterKernel::Radius) - c);
                     float w_d = abs(kcDepth - cDepth) <= depthThreshold * kcDepth;
                     float w = w_h * w_d;
@@ -200,6 +193,7 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
 
 void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
 {
+    // Kernel center values.
     float2 kcValueDepth = HalfToFloat2(PackedValueDepthCache[GTid.y + FilterKernel::Radius][GTid.x]);
     float kcValue = kcValueDepth.x;
     float kcDepth = kcValueDepth.y;
@@ -225,6 +219,10 @@ void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
             if (rDepth != 0 && rFilteredValue != RTAO::InvalidAOCoefficientValue)
             {
                 float w_h = FilterKernel::Kernel1D[r];
+
+                // Simple depth test with tolerance growing as the kernel radius increases.
+                // Goal is to prevent values too far apart to blend together, while having 
+                // the test being relaxed enough to get a strong blurring result.
                 float depthThreshold = 0.05 + cb.step * 0.001 * abs(int(FilterKernel::Radius) - int(r));
                 float w_d = abs(kcDepth - rDepth) <= depthThreshold * kcDepth;
                 float w = w_h * w_d;
@@ -239,7 +237,7 @@ void FilterVertically(uint2 DTid, in uint2 GTid, in float blurStrength)
         filteredValue = weightSum > 1e-6 ? weightedValueSum / weightSum : gaussianFilteredValue;
         filteredValue = filteredValue != RTAO::InvalidAOCoefficientValue ? lerp(kcValue, filteredValue, blurStrength) : filteredValue;
     }
-    g_outValues[DTid] = filteredValue;
+    g_inOutValue[DTid] = filteredValue;
 }
 
 
@@ -265,10 +263,6 @@ void main(uint2 Gid : SV_GroupID, uint2 GTid : SV_GroupThreadID, uint GI : SV_Gr
 
         if (FilteredResultCache[0][0] == 0)
         {
-            if (!cb.readWriteUAV_and_skipPassthrough)
-            {
-                g_outValues[sDTid] = g_inValue[sDTid];
-            }
             return;
         }
     }

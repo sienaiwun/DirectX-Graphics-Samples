@@ -26,7 +26,6 @@ Clamping
    build all configs.
   
   Glithces:
-  floor and surfaces with UP normal are dark, while other surfaces are light.
   - support neighbor sample generation for 2+ spp
   - Temporal
     On full re depth test fails on sharp angles on the ground
@@ -37,7 +36,7 @@ Clamping
     // - support checkerboard + 2+ spp
 
 Optimizaiton
-- test not using perspective correct deepth interpolation
+-  test not using perspective correct deepth interpolation
 
 - Cleanup:
     FlushResourceBarriers before GpuKernel calls
@@ -408,19 +407,6 @@ struct FilterConstantBuffer
     UINT step;
     float padding;
 };
-
-
-struct BilateralFilterConstantBuffer
-{
-    XMUINT2 textureDim;
-    UINT step;
-    BOOL readWriteUAV_and_skipPassthrough;
-
-    float normalWeightExponent;
-    float minNormalWeightStrength;
-    float padding[2];
-};
-
 
 struct TemporalSupersampling_ReverseReprojectConstantBuffer
 {

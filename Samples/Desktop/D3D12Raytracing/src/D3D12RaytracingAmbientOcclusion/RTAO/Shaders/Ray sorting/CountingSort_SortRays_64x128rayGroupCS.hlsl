@@ -16,7 +16,7 @@
 // Rays can be disabled by setting their depth to less than 0. Such rays will get moved
 // to the end of the sorted ray group and have a source index offset of [0xff, 0xff]. 
 // The ray hash is calculated from ray direction and origin depth
-// Ref: Ray Reordering Techniques for GPU Ray-Cast Ambient Occlusion
+// Ref: Costa2014, Ray Reordering Techniques for GPU Ray-Cast Ambient Occlusion
 
 // Algorithm: Counting Sort
 // - Load ray origin depths and ray direction hashes into SMem.
@@ -35,44 +35,44 @@
 // 5 - [4K 16b] - histrogram
 // 6 - [8K 16b] - SrcRay index
 //
-// Memory diagram:
-// - each lane represent 8 bits of a 32 bit element going from least to most significant bits top to bottom
-// - each column represents 2K elements
-// - each memory diagram represents the end state after an algorithm step.
-// - cells that changed are represent by an x in the second diagram on the right
-// - X-Y region is aliased with cells representing X or Y
-// - "-" zeroed out region
-//
-// Algorithm steps:
-// - Load ray origin depths and ray direction hashes into SMem.
-//  | - - 1 1 |  Least significant bits
-//  | - - 1 1 |
-//  | 2 2 2 2 |
-//  | 2 2 2 2 |  Most significant bits
-//
-// - Calculate min max origin depth per ray group.
-//  | 3 3 1 1 |     | x x - - | 
-//  | 3 3 1 1 |     | x x - - | 
-//  | 2 2 2 2 |     | - - - - | 
-//  | 2 2 2 2 |     | - - - - | 
-//
-// - Generate hash keys from ray directions and origin depths.
-//  | 5 5 - - |     | x x x x | 
-//  | 5 5 - - |     | x x x x | 
-//  | 4 4 4 4 |     | x x x x | 
-//  | 4 4 4 4 |     | x x x x | 
-//
-// - Calculates a prefix sum of the histograms.
-//  | 5 5 - - |     | x x - - | 
-//  | 5 5 - - |     | x x - - | 
-//  | 4 4 4 4 |     | - - - - | 
-//  | 4 4 4 4 |     | - - - - | 
-//
-// - Scatter write the ray source index offsets based on their hash and the prefix sum for the hash key into SMem cache.
-//  | 5 5 6 6 |     | - - x x | 
-//  | 5 5 6 6 |     | - - x x | 
-//  | 4-6 4 4 |     | x x - - | 
-//  | 4-6 4 4 |     | x x - - | 
+//// Memory diagram:
+//// - each lane represent 8 bits of a 32 bit element going from least to most significant bits top to bottom
+//// - each column represents 2K elements
+//// - each memory diagram represents the end state after an algorithm step.
+//// - cells that changed are represent by an x in the second diagram on the right
+//// - X-Y region is aliased with cells representing X or Y
+//// - "-" zeroed out region
+////
+//// Memory layout at subsequent algorithm steps:
+//// - Load ray origin depths and ray direction hashes into SMem.
+////  | - - 1 1 |  Least significant bits
+////  | - - 1 1 |
+////  | 2 2 2 2 |
+////  | 2 2 2 2 |  Most significant bits
+////
+//// - Calculate min max origin depth per ray group.
+////  | 3 3 1 1 |     | x x - - | 
+////  | 3 3 1 1 |     | x x - - | 
+////  | 2 2 2 2 |     | - - - - | 
+////  | 2 2 2 2 |     | - - - - | 
+////
+//// - Generate hash keys from ray directions and origin depths.
+////  | 5 5 - - |     | x x x x | 
+////  | 5 5 - - |     | x x x x | 
+////  | 4 4 4 4 |     | x x x x | 
+////  | 4 4 4 4 |     | x x x x | 
+////
+//// - Calculates a prefix sum of the histograms.
+////  | 5 5 - - |     | x x - - | 
+////  | 5 5 - - |     | x x - - | 
+////  | 4 4 4 4 |     | - - - - | 
+////  | 4 4 4 4 |     | - - - - | 
+////
+//// - Scatter write the ray source index offsets based on their hash and the prefix sum for the hash key into SMem cache.
+////  | 5 5 6 6 |     | - - x x | 
+////  | 5 5 6 6 |     | - - x x | 
+////  | 4-6 4 4 |     | x x - - | 
+////  | 4-6 4 4 |     | x x - - | 
 
 
 #define HLSL
@@ -382,6 +382,9 @@ uint CreateRayDirectionHashKey(in float2 encodedRayDirection)
 // Create a hash key from a ray origin depth. 
 uint CreateDepthHashKey(in float rayOriginDepth, in float2 rayGroupMinMaxDepth)
 {
+    if (DEPTH_HASH_KEY_BITS == 0)
+        return 0;
+
     float relativeDepth = rayOriginDepth - rayGroupMinMaxDepth.x;
     float rayGroupDepthRange = rayGroupMinMaxDepth.y - rayGroupMinMaxDepth.x;
     const uint DepthHashKeyBins = 1 << DEPTH_HASH_KEY_BITS;
@@ -397,6 +400,9 @@ uint CreateDepthHashKey(in float rayOriginDepth, in float2 rayGroupMinMaxDepth)
 // Create a hash key from a ray index. 
 uint CreateIndexHashKey(in uint2 rayIndex)
 {
+    if (INDEX_HASH_KEY_BITS == 0)
+        return 0;
+
     const uint IndexHashKeyBins = 1 << INDEX_HASH_KEY_BITS;
     const uint MaxIndexHashKeyBinValue = IndexHashKeyBins - 1;
     uint2 RayGroupDim = uint2(SortRays::RayGroup::Width, SortRays::RayGroup::Height);
@@ -488,6 +494,9 @@ void CalculatePartialRayDirectionHashKeyAndCacheDepth(in uint2 Gid, in uint GI)
 // Calculate an estimate of depth min max range of all rays within the ray group.
 float2 CalculateRayGroupMinMaxDepth(in uint GI, uint2 Gid)
 {
+    if (DEPTH_HASH_KEY_BITS == 0)
+        return 0;
+
     uint2 RayGroupDim = uint2(SortRays::RayGroup::Width, SortRays::RayGroup::Height);
     uint2 GroupStart = Gid * RayGroupDim;
     uint2 NextGroupStart = GroupStart + RayGroupDim;

@@ -61,7 +61,7 @@ namespace CrossBilateral
         float4 GetWeights(
             in float TargetDepth,
             in float2 Ddxy,
-            in float4 SampleDepths, // offset in-between the samples to scale ddxy by.
+            in float4 SampleDepths,
             in Parameters Params)
         {
             float depthThreshold = dot(1, abs(Ddxy));

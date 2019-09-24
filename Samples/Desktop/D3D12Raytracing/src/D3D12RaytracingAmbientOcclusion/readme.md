@@ -65,6 +65,9 @@ See the sideloaded License.txt next to each asset for further license informatio
 ## Sampling
 Spatial improvement by reusing a sample set for NxN (i.e. 8x8) pixels and randomly picking a sample.
 
+## Ray sorting
+// Ref: Costa2014, Ray Reordering Techniques for GPU Ray-Cast Ambient Occlusion
+
 ## Denoiser
 ### Temporal Reprojection
 
@@ -110,10 +113,10 @@ Temporal reprojection needs to be able to find vertices of a triangle that was h
 				
 ### Potential improvements
 There are multiple opportunities to improve the denoiser further both quality and performance wise
-Quality:
 * RTAO
 ** Variable rate sampling. For example, adjust sampling depending on tspp of a pixel. Temporal reprojection can be run before current's frame AO raytracing and thus provide per pixel tspp.
 ** Use a better sampler that suffers less from sample clunking that's visible at raw visualition. For example [Correlated Multi-Jittered Sampling](http://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf)
+** Ray sorting is a win on Pascal with Ray Tracing time speedup being greater than the overhead of ray sorting. On Turing it breaks around even. Currently AO ray gen and ray sort are two CS passes. Combining them should lower the pre-sort overhead.  
 *** There's a potential to detect undersampled parts of the hemisphere in accumulated samples over time and improve coverage, and use a progressive sampling technique for better aggregated sample coverage. This could be extended in the spatial domain as well. 
 * Denoiser
 ** The denoising filter blurs more towards available/similar samples and overblurs when some side of the kernel is not applicable. For example, surface under a car tire, or ground under the corner of stairstep gets blurred more since the samples from the tire/steps don't apply and the result gets biased by the visible samples making those regions be brighter than they should.
@@ -121,10 +124,9 @@ Quality:
 * Upsampling could be improved to find better candidates from low res inputs. Either by increasing the 2x2 sampling quad and/or improving the depth test to be more strict by testing against expected depth at the source low-res sample offset instead of the current test target depth +/- threshold.
 *
 
-There are also few areas in the sample which you should consider to improve in your implementation if porting over:
+There are also few areas in the sample which you should consider to improve in your implementation if porting over the sample code over:
 * Acceleration Structure 
 ** Use a separate scratch resource for each BLAS build to allow driver to overlap the builds.
-** Use compaction to compact the size of BLAS resources (by ~55%).
-
+** Use compaction to lower the size of static BLAS resources (by ~55%).
 
 ### What's next

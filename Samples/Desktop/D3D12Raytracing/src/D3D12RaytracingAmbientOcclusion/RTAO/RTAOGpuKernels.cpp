@@ -134,8 +134,7 @@ namespace RTAOGpuKernels
         namespace BilateralFilter {
             namespace Slot {
                 enum Enum {
-                    Output = 0,
-                    Input,
+                    InputOutput = 0,
                     Depth,
                     BlurStrength,
                     Debug1,
@@ -154,18 +153,16 @@ namespace RTAOGpuKernels
             using namespace RootSignature::BilateralFilter;
 
             CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
-            ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
             ranges[Slot::Depth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
             ranges[Slot::BlurStrength].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
-            ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+            ranges[Slot::InputOutput].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
             ranges[Slot::Debug1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);
             ranges[Slot::Debug2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);
 
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
-            rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
             rootParameters[Slot::Depth].InitAsDescriptorTable(1, &ranges[Slot::Depth]);
             rootParameters[Slot::BlurStrength].InitAsDescriptorTable(1, &ranges[Slot::BlurStrength]);
-            rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
+            rootParameters[Slot::InputOutput].InitAsDescriptorTable(1, &ranges[Slot::InputOutput]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
             rootParameters[Slot::Debug1].InitAsDescriptorTable(1, &ranges[Slot::Debug1]);
             rootParameters[Slot::Debug2].InitAsDescriptorTable(1, &ranges[Slot::Debug2]);
@@ -195,28 +192,21 @@ namespace RTAOGpuKernels
     void BilateralFilter::Run(
         ID3D12GraphicsCommandList4* commandList,
         UINT filterStep,
-        float normalWeightExponent,
-        float minNormalWeightStrength,
         ID3D12DescriptorHeap* descriptorHeap,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputDepthResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputBlurStrengthResourceHandle,
-        GpuResource* outputResource,
-        bool readWriteUAV_and_skipPassthrough)
+        GpuResource* inputOutputResource)
     {
         using namespace RootSignature::BilateralFilter;
         using namespace DefaultComputeShaderParams;
 
         ScopedTimer _prof(L"BilateralFilter", commandList);
 
-        auto resourceDesc = outputResource->resource.Get()->GetDesc();
+        auto resourceDesc = inputOutputResource->resource.Get()->GetDesc();
         XMUINT2 resourceDim(static_cast<UINT>(resourceDesc.Width), static_cast<UINT>(resourceDesc.Height));
 
         m_CB->textureDim = resourceDim;
         m_CB->step = filterStep;
-        m_CB->readWriteUAV_and_skipPassthrough = readWriteUAV_and_skipPassthrough;
-        m_CB->normalWeightExponent = normalWeightExponent;
-        m_CB->minNormalWeightStrength = minNormalWeightStrength;
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);
 
@@ -224,10 +214,9 @@ namespace RTAOGpuKernels
         {
             commandList->SetDescriptorHeaps(1, &descriptorHeap);
             commandList->SetComputeRootSignature(m_rootSignature.Get());
-            commandList->SetComputeRootDescriptorTable(Slot::Input, inputResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::Depth, inputDepthResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::BlurStrength, inputBlurStrengthResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::Output, outputResource->gpuDescriptorWriteAccess);
+            commandList->SetComputeRootDescriptorTable(Slot::InputOutput, inputOutputResource->gpuDescriptorWriteAccess);
             commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
 
             GpuResource* debugResources = Sample::g_debugOutput;

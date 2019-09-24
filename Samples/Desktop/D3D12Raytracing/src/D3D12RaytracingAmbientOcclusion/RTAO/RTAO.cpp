@@ -134,7 +134,7 @@ namespace RTAO_Args
     NumVar ExponentialFalloff_DecayConstant(L"Render/AO/RTAO/Exponential Falloff/Decay Constant", 2.f, 0.0f, 20.f, 0.25f);
     NumVar ExponentialFalloff_MinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff/Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);       // ToDo Finetune document perf.
     
-    BoolVar QuarterResAO(L"Render/AO/RTAO/Quarter res", true, Sample::OnRecreateRaytracingResources, nullptr);
+    BoolVar QuarterResAO(L"Render/AO/RTAO/Quarter res", false, Sample::OnRecreateRaytracingResources, nullptr);
 }
 
 

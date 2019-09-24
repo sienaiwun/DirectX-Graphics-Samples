@@ -80,20 +80,16 @@ namespace RTAOGpuKernels
         void Run(
             ID3D12GraphicsCommandList4* commandList,
             UINT filterStep,
-            float normalWeightExponent,
-            float minNormalWeightStrength,
             ID3D12DescriptorHeap* descriptorHeap,
-            D3D12_GPU_DESCRIPTOR_HANDLE inputResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputDepthResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE inputBlurStrengthResourceHandle,
-            GpuResource* outputResource,
-            bool readWriteUAV_and_skipPassthrough = true);
+            GpuResource* inputOutputResource);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
         ComPtr<ID3D12PipelineState>         m_pipelineStateObject;
 
-        ConstantBuffer<BilateralFilterConstantBuffer> m_CB;
+        ConstantBuffer<FilterConstantBuffer> m_CB;
         UINT                                m_CBinstanceID = 0;
     };
 

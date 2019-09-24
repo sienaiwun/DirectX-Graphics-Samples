@@ -65,7 +65,7 @@ float4 BilateralResampleWeights(in float TargetDepth, in float3 TargetNormal, in
         // Account for 0.5 sample offset in bilateral downsampled partial depth derivative buffer.
         // Since both target and the samples can be offseted by up to 0.5 the higher resolution, 
         // they add up to total 0.5 sample offset in the lower resolution.
-        float2 samplesOffset = float2(1.5, 1.5);
+        float2 samplesOffset = 1 + float2(0.5, 0.5); 
 
         bilinearDepthNormalWeights = CrossBilateral::BilinearDepthNormal::GetWeights(
             TargetDepth,
@@ -195,6 +195,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
     else
     {
         // No valid values can be retrieved from the cache.
+        // TODO: try a greater cache footprint to find useful samples,
+        //   For example a 3x3 pixel cache footprint or use lower mip cache input.
         tspp = 0;
     }
     g_outCachedTspp[DTid] = tspp;

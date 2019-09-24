@@ -10,7 +10,9 @@
 //*********************************************************
 
 #define RAY_DIRECTION_HASH_KEY_BITS_1D 4   // Max 4 bits
-#define DEPTH_HASH_KEY_BITS 2 
+// TODO: Depth and Index hashing is disabled (set to 0 bits) as it didn't shown improved ray tracing times, 
+//  while adding a substantial perf overhead to the ray sorting (~20% for 2 bit depth hash key).
+#define DEPTH_HASH_KEY_BITS 0 
 #define INDEX_HASH_KEY_BITS 0  // (4 - DEPTH_HASH_KEY_BITS) 
 #define NUM_RAYS SortRays::RayGroup::Size
 #define NUM_THREADS SortRays::ThreadGroup::Size
