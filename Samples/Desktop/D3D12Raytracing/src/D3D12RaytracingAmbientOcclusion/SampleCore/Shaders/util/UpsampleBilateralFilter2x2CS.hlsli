@@ -44,7 +44,7 @@ float4 BilateralUpsampleWeights(
     params.Depth.WeightCutoff = 0.98;
     params.Depth.NumMantissaBits = 10;
     params.Normal.Sigma = 1.1;      // Bump the sigma a bit to add tolerance for slight geometry misalignments and/or format precision limitations.
-    params.Normal.SigmaExponent = 32; 
+    params.Normal.SigmaExponent = 64; 
 
     float4 bilinearDepthNormalWeights = CrossBilateral::BilinearDepthNormal::GetWeights(
         TargetDepth,
