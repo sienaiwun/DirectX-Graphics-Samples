@@ -40,6 +40,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 {
     int2 pixel = GetInactivePixelIndex(int2(DTid.x, DTid.y * 2));
 
+    // Load 4 valid neighbors.
     const int2 srcIndexOffsets[4] = { {-1, 0}, {0, -1}, {1, 0}, {0, 1} };
     float4x2 inValues_4x2;
     {
@@ -50,9 +51,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
         }
     }
 
+    // Average valid inputs.
     float4 weights = inValues_4x2._11_21_31_41 != RTAO::InvalidAOCoefficientValue;
     float weightSum = dot(1, weights);
-
     float2 filteredValue =  weightSum > 1e-3 ? mul(weights, inValues_4x2) / weightSum : RTAO::InvalidAOCoefficientValue;
 
     g_inOutValues[pixel] = filteredValue;

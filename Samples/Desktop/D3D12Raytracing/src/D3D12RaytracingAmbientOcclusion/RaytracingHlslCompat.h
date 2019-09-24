@@ -22,7 +22,7 @@
 - Total GPU time >> sum of component gpu times??
 
 Clamping
--   Fix up under car ghosting. Or add to known issues
+-   Fix up under car ghosting. Or add to known issues. Filter tspp and see if that helps.
    - Fine tune min std dev tolerance in clamping
 
 - Double check
@@ -32,12 +32,12 @@ Clamping
   Glithces:
   - support neighbor sample generation for 2+ spp
   - Temporal
+
 // ToDo some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
 // ToDo sharp edges fail temporal reprojection due to clamping even for static scene
     Checkerboard
     // - no perf difference on checkerboard. Add checkerboard support when not using ray sorting.
     // - support checkerboard + 2+ spp
-    // - visible random clamping on checkerboard.
 
 
 - Cleanup:
@@ -468,23 +468,20 @@ struct TemporalSupersampling_ReverseReprojectConstantBuffer
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
 {
-    XMUINT2 textureDim;
-    XMFLOAT2 invTextureDim;
-
-    BOOL forceUseMinSmoothingFactor;
-    BOOL clampCachedValues;
-    float minSmoothingFactor;
     float stdDevGamma;
+    BOOL clampCachedValues;
+    float clamping_minStdDevTolerance;
+    float tsppAdjustmentDueClamping;
 
-    UINT minTsppToUseTemporalVariance;
-    float minStdDevTolerance;
-    float TsppAdjustmentDueClamping;
     float clampDifferenceToTsppScale;
+    BOOL forceUseMinSmoothingFactor;
+    float minSmoothingFactor;
+    UINT minTsppToUseTemporalVariance;
 
     UINT blurStrength_MaxTspp;
     float blurDecayStrength;
-    BOOL doCheckerboardSampling;
-    BOOL areEvenPixelsActive;
+    BOOL checkerboard_enabled;
+    BOOL checkerboard_areEvenPixelsActive;
 };
 
 struct CalculatePartialDerivativesConstantBuffer

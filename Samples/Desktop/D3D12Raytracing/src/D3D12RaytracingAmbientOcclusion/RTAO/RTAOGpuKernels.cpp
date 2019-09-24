@@ -349,7 +349,6 @@ namespace RTAOGpuKernels
         float depthSigma,
         float normalSigma,
         float weightScale,
-        UINT passNumberToOutputToIntermediateResource,
         Mode filterMode,
         bool perspectiveCorrectDepthInterpolation,
         bool useAdaptiveKernelSize,
@@ -888,12 +887,12 @@ namespace RTAOGpuKernels
         float clampStdDevGamma,
         float clampMinStdDevTolerance,
         UINT minTsppToUseTemporalVariance,
-        float clampDifferenceToTsppScale,
         GpuResource debugResources[2],
         UINT lowTsppBlurStrengthMaxTspp,
         float lowTsppBlurStrengthDecayConstant,
         bool doCheckerboardSampling,
-        bool checkerboardLoadEvenPixels)
+        bool checkerboardLoadEvenPixels,
+        float clampDifferenceToTsppScale)
     {
         using namespace RootSignature::TemporalSupersampling_BlendWithCurrentFrame;
         using namespace DefaultComputeShaderParams;
@@ -902,17 +901,15 @@ namespace RTAOGpuKernels
 
         m_CB->minSmoothingFactor = minSmoothingFactor;
         m_CB->forceUseMinSmoothingFactor = forceUseMinSmoothingFactor;
-        m_CB->textureDim = XMUINT2(width, height);
-        m_CB->invTextureDim = XMFLOAT2(1.f / width, 1.f / height);
         m_CB->clampCachedValues = clampCachedValues;
         m_CB->stdDevGamma = clampStdDevGamma;
-        m_CB->minStdDevTolerance = clampMinStdDevTolerance;
+        m_CB->clamping_minStdDevTolerance = clampMinStdDevTolerance;
         m_CB->minTsppToUseTemporalVariance = minTsppToUseTemporalVariance;
         m_CB->clampDifferenceToTsppScale = clampDifferenceToTsppScale;
         m_CB->blurStrength_MaxTspp = lowTsppBlurStrengthMaxTspp;
         m_CB->blurDecayStrength = lowTsppBlurStrengthDecayConstant;
-        m_CB->doCheckerboardSampling = doCheckerboardSampling;
-        m_CB->areEvenPixelsActive = checkerboardLoadEvenPixels;
+        m_CB->checkerboard_enabled = doCheckerboardSampling;
+        m_CB->checkerboard_areEvenPixelsActive = checkerboardLoadEvenPixels;
         m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();
         m_CB.CopyStagingToGpu(m_CBinstanceID);
 

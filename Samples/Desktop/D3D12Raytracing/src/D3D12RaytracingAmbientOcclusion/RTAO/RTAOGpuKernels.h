@@ -127,7 +127,6 @@ namespace RTAOGpuKernels
             float depthSigma,
             float normalSigma,
             float weightScale,
-            UINT passNumberToOutputToIntermediateResource = 1,
             Mode filterMode = OutputFilteredValue,
             bool perspectiveCorrectDepthInterpolation = false,
             bool useAdaptiveKernelSize = false,
@@ -259,12 +258,12 @@ namespace RTAOGpuKernels
             float clampStdDevGamma,
             float clampMinStdDevTolerance,
             UINT minTsppToUseTemporalVariance,
-            float clampDifferenceToTsppScale,   // ToDo remove?
             GpuResource debugResources[2],
             UINT lowTsppBlurStrengthMaxTspp,
             float lowTsppBlurStrengthDecayConstant,
             bool doCheckerboardSampling = false,
-            bool checkerboardLoadEvenPixels = false);
+            bool checkerboardLoadEvenPixels = false,
+            float clampDifferenceToTsppScale = 4);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;

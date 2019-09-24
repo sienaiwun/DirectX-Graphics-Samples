@@ -38,14 +38,14 @@ void main(uint2 DTid : SV_DispatchThreadID)
     uint Tspp = encodedCachedValues.x;
     float4 cachedValues = float4(Tspp, f16tof32(encodedCachedValues.yzw));
 
-    bool isCurrentFrameRayActive = true;
-    if (cb.doCheckerboardSampling)
+    bool isCurrentFrameValueActive = true;
+    if (cb.checkerboard_enabled)
     {
         bool isEvenPixel = ((DTid.x + DTid.y) & 1) == 0;
-        isCurrentFrameRayActive = cb.areEvenPixelsActive == isEvenPixel;
+        isCurrentFrameValueActive = cb.checkerboard_areEvenPixelsActive == isEvenPixel;
     }
 
-    float value = isCurrentFrameRayActive ? g_inCurrentFrameValue[DTid] : RTAO::InvalidAOCoefficientValue;
+    float value = isCurrentFrameValueActive ? g_inCurrentFrameValue[DTid] : RTAO::InvalidAOCoefficientValue;
     bool isValidValue = value != RTAO::InvalidAOCoefficientValue;
     float valueSquaredMean = isValidValue ? value * value : RTAO::InvalidAOCoefficientValue;
     float rayHitDistance = RTAO::InvalidAOCoefficientValue;
@@ -60,10 +60,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
         float2 localMeanVariance = g_inCurrentFrameLocalMeanVariance[DTid];
         float localMean = localMeanVariance.x;
-        float localVariance = localMeanVariance.y;
+        float localVariance = localMeanVariance.y + (isValidValue ? 0 : 0.25);
         if (cb.clampCachedValues)
         {
-            float localStdDev = max(cb.stdDevGamma * sqrt(localVariance), cb.minStdDevTolerance);
+            float localStdDev = max(cb.stdDevGamma * sqrt(localVariance), cb.clamping_minStdDevTolerance);
             float nonClampedCachedValue = cachedValue;
 
             // Clamp value to mean +/- std.dev of local neighborhood to surpress ghosting on value changing due to other occluder movements.

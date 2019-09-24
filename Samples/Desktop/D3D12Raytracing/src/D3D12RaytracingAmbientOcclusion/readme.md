@@ -15,6 +15,9 @@ ToDo...
 - Capitatlization
 - links to code
 
+### Checkerboard
+* the variance tends to be underestimated on checkerboard sampling. Increasing min std.dev tolerance for clamping to 0.1 helps to prevent unwanted clamping.
+
 ## Usage
 ToDo
 

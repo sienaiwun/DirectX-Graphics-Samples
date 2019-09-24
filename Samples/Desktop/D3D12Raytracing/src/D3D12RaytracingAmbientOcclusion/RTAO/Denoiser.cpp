@@ -37,12 +37,16 @@ namespace Denoiser_Args
     BoolVar TemporalSupersampling_UseNormalWeights(L"Render/AO/RTAO/Temporal Cache/Use normal weights", true);
     BoolVar TemporalSupersampling_ForceUseMinSmoothingFactor(L"Render/AO/RTAO/Temporal Cache/Force min smoothing factor", false);
     BoolVar TemporalSupersampling_CacheDenoisedOutput(L"Render/AO/RTAO/Temporal Cache/Cache denoised output", true);
-    IntVar TemporalSupersampling_CacheDenoisedOutputPassNumber(L"Render/AO/RTAO/Temporal Cache/Cache denoised output - pass number", 0, 0, 10, 1);
     BoolVar TemporalSupersampling_ClampCachedValues_UseClamping(L"Render/AO/RTAO/Temporal Cache/Clamping/Enabled", true);
     BoolVar TemporalSupersampling_CacheSquaredMean(L"Render/AO/RTAO/Temporal Cache/Cached SquaredMean", false);
     NumVar TemporalSupersampling_ClampCachedValues_StdDevGamma(L"Render/AO/RTAO/Temporal Cache/Clamping/Std.dev gamma", 1.0f, 0.1f, 20.f, 0.1f);
-    NumVar TemporalSupersampling_ClampCachedValues_MinStdDevTolerance(L"Render/AO/RTAO/Temporal Cache/Clamping/Minimum std.dev", 0.04f, 0.0f, 1.f, 0.01f);
-    NumVar TemporalSupersampling_ClampDifferenceToTsppScale(L"Render/AO/RTAO/Temporal Cache/Clamping/Tspp scale", 4.00f, 0, 10.f, 0.05f);
+
+    // Minimum std.dev used in clamping
+    // - higher values helps prevent clamping. 
+    //   Especially on checkerboard 1spp sampling values of ~0.10 prevent random clamping.
+    // - higher values limit clamping due to true change and increases ghosting.
+    NumVar TemporalSupersampling_ClampCachedValues_MinStdDevTolerance(L"Render/AO/RTAO/Temporal Cache/Clamping/Minimum std.dev", 0.05f, 0.f, 1.f, 0.01f);
+    NumVar TemporalSupersampling_ClampDifferenceToTsppScale(L"Render/AO/RTAO/Temporal Cache/Clamping/Tspp scale", 4.f, 0.f, 10.f, 0.05f);
     NumVar TemporalSupersampling_ClampCachedValues_AbsoluteDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Absolute depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
     NumVar TemporalSupersampling_ClampCachedValues_DepthBasedDepthTolerance(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Depth based depth tolerance", 1.0f, 0.0f, 100.f, 1.f);
     NumVar TemporalSupersampling_ClampCachedValues_DepthSigma(L"Render/AO/RTAO/Temporal Cache/Depth threshold/Depth sigma", 1.0f, 0.0f, 10.f, 0.01f);
@@ -397,12 +401,12 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_StdDevGamma,
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_MinStdDevTolerance,
         Denoiser_Args::MinTsppToUseTemporalVariance,
-        Denoiser_Args::TemporalSupersampling_ClampDifferenceToTsppScale,
         Sample::g_debugOutput,
         Denoiser_Args::LowTsppMaxTspp,
         Denoiser_Args::LowTsppDecayConstant,
         isCheckerboardSamplingEnabled,
-        checkerboardLoadEvenPixels);
+        checkerboardLoadEvenPixels,
+        Denoiser_Args::TemporalSupersampling_ClampDifferenceToTsppScale);
 
     // Transition output resource to SRV state.        
     {
@@ -413,50 +417,41 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         resourceStateTracker->TransitionResource(&m_multiPassDenoisingBlurStrength, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     }
 
-    // ToDo only run when smoothing is enabled
-    // Smoothen the variance.
+    // Smoothen the local variance which is prone to error due to undersampled input.
+    if (Denoiser_Args::UseSmoothedVariance)
     {
+        ScopedTimer _prof(L"Mean Variance Smoothing", commandList);
+
         resourceStateTracker->TransitionResource(&m_varianceResources[AOVarianceResource::Smoothed], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->InsertUAVBarrier(&m_varianceResources[AOVarianceResource::Raw]);
 
-        // ToDo should we be smoothing before temporal?
-        // Smoothen the local variance which is prone to error due to undersampled input.
-        {
-            {
-                ScopedTimer _prof(L"Mean Variance Smoothing", commandList);
-                resourceStateTracker->FlushResourceBarriers();
-                m_gaussianSmoothingKernel.Run(
-                    commandList,
-                    m_denoisingWidth,
-                    m_denoisingHeight,
-                    RTAOGpuKernels::GaussianFilter::Filter3x3,
-                    m_cbvSrvUavHeap->GetHeap(),
-                    m_varianceResources[AOVarianceResource::Raw].gpuDescriptorReadAccess,
-                    m_varianceResources[AOVarianceResource::Smoothed].gpuDescriptorWriteAccess);
-            }
-        }
+        resourceStateTracker->FlushResourceBarriers();
+        m_gaussianSmoothingKernel.Run(
+            commandList,
+            m_denoisingWidth,
+            m_denoisingHeight,
+            RTAOGpuKernels::GaussianFilter::Filter3x3,
+            m_cbvSrvUavHeap->GetHeap(),
+            m_varianceResources[AOVarianceResource::Raw].gpuDescriptorReadAccess,
+            m_varianceResources[AOVarianceResource::Smoothed].gpuDescriptorWriteAccess);
+
         resourceStateTracker->TransitionResource(&m_varianceResources[AOVarianceResource::Smoothed], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     }
 
-    // ToDo?
-    if (fillInMissingValues)
+    // Fill in missing/disoccluded values.
+    if (isCheckerboardSamplingEnabled && fillInMissingValues)
     {
-        // Fill in missing/disoccluded values.
-        {
-            if (isCheckerboardSamplingEnabled)
-            {
-                bool fillEvenPixels = !checkerboardLoadEvenPixels;
-                resourceStateTracker->FlushResourceBarriers();
-                m_fillInCheckerboardKernel.Run(
-                    commandList,
-                    m_cbvSrvUavHeap->GetHeap(),
-                    m_denoisingWidth,
-                    m_denoisingHeight,
-                    TemporalOutCoefficient->gpuDescriptorWriteAccess,
-                    fillEvenPixels);
-            }
-        }
+        bool fillEvenPixels = !checkerboardLoadEvenPixels;
+        resourceStateTracker->FlushResourceBarriers();
+        m_fillInCheckerboardKernel.Run(
+            commandList,
+            m_cbvSrvUavHeap->GetHeap(),
+            m_denoisingWidth,
+            m_denoisingHeight,
+            TemporalOutCoefficient->gpuDescriptorWriteAccess,
+            fillEvenPixels);
     }
+
     resourceStateTracker->TransitionResource(TemporalOutCoefficient, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
@@ -465,27 +460,18 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
     auto commandList = m_deviceResources->GetCommandList();
     auto resourceStateTracker = m_deviceResources->GetGpuResourceStateTracker();
 
-    ScopedTimer _prof(L"Low-Tspp Multi-pass blur", commandList);
-
-    UINT numPasses = static_cast<UINT>(Denoiser_Args::LowTspBlurPasses);
-    
-    GpuResource* resources[2] = {
-        &m_temporalSupersampling_blendedAOCoefficient[0],
-        &m_temporalSupersampling_blendedAOCoefficient[1],
-    };
-
+    ScopedTimer _prof(L"Disocclusions blur", commandList);
     GpuResource* inOutResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
-
-    bool readWriteUAV_and_skipPassthrough = true;
 
     // ToDo remove the flush. It's done to avoid two same resource transitions since prev atrous pass sets the resource to SRV.
     resourceStateTracker->FlushResourceBarriers();
     resourceStateTracker->TransitionResource(inOutResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     
-    // ToDo test perf win by using 16b Depth over 32b encoded normal depth.
     GpuResource(&GBufferResources)[GBufferResource::Count] = pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
 
+    bool readWriteUAV_and_skipPassthrough = true;
     UINT filterStep = 1;
+    UINT numPasses = static_cast<UINT>(Denoiser_Args::LowTspBlurPasses);
     for (UINT i = 0; i < numPasses; i++)
     {
         wstring passName = L"Depth Aware Gaussian Blur with a pixel step " + to_wstring(filterStep);
@@ -566,7 +552,6 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             Denoiser_Args::AODenoiseDepthSigma,
             Denoiser_Args::AODenoiseNormalSigma,
             Denoiser_Args::WeightScale,
-            static_cast<UINT>(Denoiser_Args::TemporalSupersampling_CacheDenoisedOutputPassNumber),
             RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::Mode::OutputFilteredValue,
             Denoiser_Args::PerspectiveCorrectDepthInterpolation,
             Denoiser_Args::UseAdaptiveKernelSize,
