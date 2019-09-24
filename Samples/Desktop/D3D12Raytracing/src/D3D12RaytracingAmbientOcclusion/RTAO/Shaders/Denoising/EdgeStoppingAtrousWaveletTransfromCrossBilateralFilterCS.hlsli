@@ -11,7 +11,7 @@
 
 // Atrous Wavelet Transform Cross Bilateral Filter
 // Ref: [Dammertz2010], Edge-Avoiding A-Trous Wavelet Transform for Fast Global Illumination Filtering
-// Ref: Schied 2007, Spatiotemporal Variance-Guided Filtering
+// Ref: [SVGF], Spatiotemporal Variance-Guided Filtering
 // Ref: [RTGCH19] Ray Tracing Gems (Ch 19)
 
 #define HLSL
@@ -22,7 +22,6 @@
 
 
 Texture2D<float> g_inValue : register(t0);
-
 Texture2D<NormalDepthTexFormat> g_inNormalDepth : register(t1);
 Texture2D<float> g_inVariance : register(t4); 
 Texture2D<float> g_inSmoothedVariance : register(t5); 
@@ -90,70 +89,51 @@ void AddFilterContribution(
             return;
         }
 
-        // ToDo explain/remove
-        float w_s = 1;
-#if RTAO_MARK_CACHED_VALUES_NEGATIVE
-        if (iValue < 0)
+        // Calculate a weight for the neighbor's contribtuion.
+        // Ref:[SVGF]
+        float w;
         {
-            w_s = cb.staleNeighborWeightScale;
-            iValue = -iValue;
-        }
-#endif
+            // Value based weight.
+            // Lower value tolerance for the neighbors further apart. Prevents overbluring sharp value transitions.
+            // Ref: [Dammertz2010]
+            const float errorOffset = 0.005f;
+            float valueSigmaDistCoef = 1.0 / length(pixelOffset);
+            float e_x = -abs(value - iValue) / (valueSigmaDistCoef * valueSigma * stdDeviation + errorOffset);
+            float w_x = exp(e_x);
 
+            // Normal based weight.
+            float w_n = pow(max(0, dot(normal, iNormal)), normalSigma);
 
-        // Enforce tspp of at least 1 for reprojected values.
-        // This is because the denoiser will fill in invalid values with filtered 
-        // ones if it can. But it doesn't increase the tspp.
-        uint iTspp = g_inTspp[id].x;
-        iTspp = max(iTspp, 1);
-
-        // Confidence based weight
-        // This helps prevent recently disoccluded pixels with fewer samples
-        // contribute as much as samples with higher accumulated samples,
-        // and hence lowers the visible firefly/sparkly artifacts on disocclusions on creases an such.
-        float w_c = 1;
-        w_c = cb.weightByTspp ? iTspp : 1;
-
-        // Value based weight.
-        // Lower value tolerance for the neighbors further apart. Prevents overbluring sharp value transitions.
-        // Ref: [Dammertz2010]
-        const float errorOffset = 0.005f;
-        float valueSigmaDistCoef = 1.0 / length(pixelOffset);
-        float e_x = -abs(value - iValue) / (valueSigmaDistCoef * valueSigma * stdDeviation + errorOffset);
-        float w_x = exp(e_x);
- 
-        // Normal based weight.
-        float w_n = pow(max(0, dot(normal, iNormal)), normalSigma);
-
-        // Depth based weight.
-        float w_d;
-        {
-            float2 pixelOffsetForDepth = pixelOffset;
-
-            // Account for sample offset in bilateral downsampled partial depth derivative buffer.
-            if (cb.usingBilateralDownsampledBuffers)
+            // Depth based weight.
+            float w_d;
             {
-                float2 offsetSign = sign(pixelOffset);
-                pixelOffsetForDepth = pixelOffset + offsetSign * float2(0.5, 0.5);
+                float2 pixelOffsetForDepth = pixelOffset;
+
+                // Account for sample offset in bilateral downsampled partial depth derivative buffer.
+                if (cb.usingBilateralDownsampledBuffers)
+                {
+                    float2 offsetSign = sign(pixelOffset);
+                    pixelOffsetForDepth = pixelOffset + offsetSign * float2(0.5, 0.5);
+                }
+
+                // ToDo dedupe with CrossBilateralWeights.hlsli?
+                float depthFloatPrecision = FloatPrecision(max(depth, iDepth), cb.DepthNumMantissaBits);
+                float depthThreshold = DepthThreshold(depth, ddxy, pixelOffsetForDepth);
+                float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
+                float delta = abs(depth - iDepth);
+                delta = max(0, delta - depthFloatPrecision); // Avoid distinguising initial values up to the float precision. Gets rid of banding due to low depth precision format.
+                w_d = exp(-delta / depthTolerance);
+
+                // Scale down contributions for samples beyond tolerance, but completely disable contribution for samples too far away.
+                w_d *= w_d >= cb.depthWeightCutoff;
             }
 
-            // ToDo dedupe with CrossBilateralWeights.hlsli?
-            float depthFloatPrecision = FloatPrecision(max(depth, iDepth), cb.DepthNumMantissaBits);
-            float depthThreshold = DepthThreshold(depth, ddxy, pixelOffsetForDepth);
-            float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
-            float delta = abs(depth - iDepth);
-            delta = max(0, delta - depthFloatPrecision); // Avoid distinguising initial values up to the float precision. Gets rid of banding due to low depth precision format.
-            w_d = exp(-delta / depthTolerance);
+            // Filter kernel weight.
+            float w_h = FilterKernel::Kernel[row][col];
 
-            // Scale down contributions for samples beyond tolerance, but completely disable contribution for samples too far away.
-            w_d *= w_d >= cb.depthWeightCutoff;
+            // Final weight.
+            w = w_h * w_n * w_x * w_d;
         }
-
-        // Filter kernel weight.
-        float w_h = FilterKernel::Kernel[row][col];
-        
-        // Final weight.
-        float w = w_c * w_s * w_h * w_n * w_x * w_d;
 
         weightedValueSum += w * iValue;
         weightSum += w;
@@ -175,21 +155,11 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     DecodeNormalDepth(g_inNormalDepth[DTid], normal, depth);
     
     bool isValidValue = value != RTAO::InvalidAOCoefficientValue;
-    float filteredValue = isValidValue && value < 0 ? -value : value;
+    float filteredValue = value;
     float variance = g_inSmoothedVariance[DTid];
 
     if (depth != 0)
     {
-        float w_c = 1;
-#if RTAO_MARK_CACHED_VALUES_NEGATIVE
-        if (isValidValue && value < 0)
-        {
-            // ToDo clean up, document or remove
-            w_c = cb.staleNeighborWeightScale;
-            value = -value;
-        }
-#endif
-
         float2 ddxy = g_inPartialDistanceDerivatives[DTid];
         float weightSum = 0;
         float weightedValueSum = 0;
@@ -197,9 +167,8 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
 
         if (isValidValue)
         {
-            float pixelWeight = cb.weightByTspp ? g_inTspp[DTid] : 1;
             float w = FilterKernel::Kernel[FilterKernel::Radius][FilterKernel::Radius];
-            weightSum = pixelWeight * w;
+            weightSum = w;
             weightedValueSum = weightSum * value;
             stdDeviation = sqrt(variance);
         }

@@ -119,6 +119,10 @@ Quality:
 ** The denoising filter blurs more towards available/similar samples and overblurs when some side of the kernel is not applicable. For example, surface under a car tire, or ground under the corner of stairstep gets blurred more since the samples from the tire/steps don't apply and the result gets biased by the visible samples making those regions be brighter than they should.
 * Upsampling could be improved to find better candidates from low res inputs. Either by increasing the 2x2 sampling quad and/or improving the depth test to be more strict by testing against expected depth at the source low-res sample offset instead of the current test target depth +/- threshold.
 
+There are also few areas in the sample which you should consider to improve in your implementation if porting over:
+* Acceleration Structure 
+** Use a separate scratch resource for each BLAS build to allow driver to overlap the builds.
+** Use compaction to compact the size of BLAS resources (by ~55%).
 
 
 ### What's next

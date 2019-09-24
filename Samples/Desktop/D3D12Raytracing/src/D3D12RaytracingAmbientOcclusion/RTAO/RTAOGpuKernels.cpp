@@ -360,9 +360,7 @@ namespace RTAOGpuKernels
         float varianceSigmaScaleOnSmallKernels,
         bool usingBilateralDownsampledBuffers,
         float minVarianceToDenoise,
-        float staleNeighborWeightScale,
-        float depthWeightCutoff,
-        bool weightByTspp)
+        float depthWeightCutoff)
     {
 
         // ToDo: cleanup use of variance
@@ -384,7 +382,6 @@ namespace RTAOGpuKernels
             m_CB->depthSigma = depthSigma;
             m_CB->normalSigma = normalSigma;
             m_CB->weightScale = weightScale;
-            m_CB->weightByTspp = weightByTspp;
             m_CB->rayHitDistanceToKernelSizeScaleExponent = rayHitDistanceToKernelSizeScaleExponent;
             m_CB->kernelRadiusLerfCoef = kernelRadiusLerfCoef;
             m_CB->outputFilteredValue = filterMode == OutputFilteredValue;
@@ -397,7 +394,6 @@ namespace RTAOGpuKernels
             m_CB->usingBilateralDownsampledBuffers = usingBilateralDownsampledBuffers;
             m_CB->textureDim = resourceDim;
             m_CB->minVarianceToDenoise = minVarianceToDenoise;
-            m_CB->staleNeighborWeightScale = staleNeighborWeightScale;
             m_CB->depthWeightCutoff = depthWeightCutoff;
             m_CB->DepthNumMantissaBits = NumMantissaBitsInFloatFormat(16);
             m_CBinstanceID = (m_CBinstanceID + 1) % m_CB.NumInstances();

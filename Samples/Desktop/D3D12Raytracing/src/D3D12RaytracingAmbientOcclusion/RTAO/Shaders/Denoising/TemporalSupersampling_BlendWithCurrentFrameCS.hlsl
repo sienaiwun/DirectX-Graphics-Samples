@@ -60,7 +60,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
         float2 localMeanVariance = g_inCurrentFrameLocalMeanVariance[DTid];
         float localMean = localMeanVariance.x;
-        float localVariance = localMeanVariance.y + (isValidValue ? 0 : 0.25);
+        float localVariance = localMeanVariance.y;
         if (cb.clampCachedValues)
         {
             float localStdDev = max(cb.stdDevGamma * sqrt(localVariance), cb.clamping_minStdDevTolerance);
@@ -100,10 +100,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
         rayHitDistance = isValidValue ? g_inCurrentFrameRayHitDistance[DTid] : 0;
         float cachedRayHitDistance = cachedValues.w;
         rayHitDistance = isValidValue ? lerp(cachedRayHitDistance, rayHitDistance, a) : cachedRayHitDistance;
-
-#if RTAO_MARK_CACHED_VALUES_NEGATIVE
-        value = isValidValue ? value : -value;
-#endif
     }
     else if (isValidValue)
     {

@@ -138,9 +138,7 @@ namespace RTAOGpuKernels
             float varianceSigmaScaleOnSmallKernels = 2.f,
             bool usingBilateralDownsampledBuffers = false,
             float minVarianceToDenoise = 0,
-            float staleNeighborWeightScale = 1,
-            float depthWeightCutoff = 0.5f,
-            bool weightByTspp = false);
+            float depthWeightCutoff = 0.5f);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;

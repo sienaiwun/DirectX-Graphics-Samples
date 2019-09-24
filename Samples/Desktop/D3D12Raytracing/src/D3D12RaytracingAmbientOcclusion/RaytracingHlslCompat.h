@@ -83,8 +83,6 @@ Documentation
 #define NEAR_PLANE 0.001f
 #define FAR_PLANE 1000.0f
 
-#define RTAO_MARK_CACHED_VALUES_NEGATIVE  1   // ToDo cleanup
-
 #define SAMPLER_FILTER D3D12_FILTER_ANISOTROPIC
 
 // ToDo
@@ -101,12 +99,11 @@ typedef uint NormalDepthTexFormat;
 #endif
 
 #ifdef _DEBUG
+// ToDoF Uncomment to speed up start up on debug
 #define LOAD_ONLY_ONE_PBRT_MESH 1 
 #else
 #define LOAD_ONLY_ONE_PBRT_MESH 0 
 #endif
-
-#define AO_RAY_T_MAX 22
 
 namespace ReduceSumCS {
 	namespace ThreadGroup {
@@ -185,8 +182,8 @@ struct ShadowRayPayload
 struct AtrousWaveletTransformFilterConstantBuffer
 {
     XMUINT2 textureDim;
-    float weightByTspp;
     float weightScale;
+    float depthWeightCutoff;
 
     BOOL useAdaptiveKernelSize;
     float kernelRadiusLerfCoef;
@@ -206,10 +203,7 @@ struct AtrousWaveletTransformFilterConstantBuffer
     BOOL outputFilteredValue;
     float varianceSigmaScaleOnSmallKernels;
     bool usingBilateralDownsampledBuffers;
-    float staleNeighborWeightScale;
-
-    float depthWeightCutoff;
-    float padding[3];
+    float padding;
 };
 
 struct CalculateVariance_BilateralFilterConstantBuffer

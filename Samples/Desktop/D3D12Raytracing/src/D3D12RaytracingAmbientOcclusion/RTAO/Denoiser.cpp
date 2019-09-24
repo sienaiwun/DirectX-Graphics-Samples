@@ -72,7 +72,6 @@ namespace Denoiser_Args
     BoolVar UseSmoothedVariance(L"Render/AO/RTAO/Denoising/Use smoothed variance", false);
 
     BoolVar Checkerboard_LowerWeightForStaleSamples(L"Render/AO/RTAO/Denoising/Checkerboard support/Scale down stale samples weight", false);
-    BoolVar FilterWeightByTspp(L"Render/AO/RTAO/Denoising/Filter weight by tspp", false);
 
 
 #define MAX_NUM_PASSES_LOW_TSPP 6
@@ -498,7 +497,7 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
     resourceStateTracker->InsertUAVBarrier(inOutResource);
 }
 
-
+// Applies a single pass of a Atrous wavelet transform filter.
 void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& rtao)
 {
     auto commandList = m_deviceResources->GetCommandList();
@@ -525,10 +524,7 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
     m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex = (m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex + 1) % 2;
     GpuResource* OutputResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
     resourceStateTracker->TransitionResource(OutputResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-
-    float staleNeighborWeightScale = Denoiser_Args::Checkerboard_LowerWeightForStaleSamples && RTAO_Args::Spp_doCheckerboard ? 0.5f : 1.f;
-
+    
     // A-trous edge-preserving wavelet tranform filter
     {
         // Adjust factors that change based on max ray hit distance.
@@ -563,9 +559,7 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             Denoiser_Args::FilterVarianceSigmaScaleOnSmallKernels,
             RTAO_Args::QuarterResAO,
             Denoiser_Args::MinVarianceToDenoise,
-            staleNeighborWeightScale,
-            Denoiser_Args::AODenoiseDepthWeightCutoff,
-            Denoiser_Args::FilterWeightByTspp);
+            Denoiser_Args::AODenoiseDepthWeightCutoff);
     }
     resourceStateTracker->TransitionResource(OutputResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }

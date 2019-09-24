@@ -124,7 +124,7 @@ namespace RTAO_Args
     EnumVar AmbientCoefficientResourceFormat(L"Render/Texture Formats/AO/RTAO/Ambient Coefficient", TextureResourceFormatR::R16_FLOAT, TextureResourceFormatR::Count, FloatingPointFormatsR, Sample::OnRecreateRaytracingResources);
 
 
-    NumVar MaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", AO_RAY_T_MAX, 0.0f, 50.0f, 0.2f);
+    NumVar MaxRayHitTime(L"Render/AO/RTAO/Max ray hit time", 22, 0.0f, 100.0f, 0.2f);
     NumVar  MinimumAmbientIllumination(L"Render/AO/RTAO/Minimum Ambient Illumination", 0.07f, 0.0f, 1.0f, 0.01f);
 
     BoolVar ApproximateInterreflections_Enabled(L"Render/AO/RTAO/Approximate Interreflections/Enabled", true);

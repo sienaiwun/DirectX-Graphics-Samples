@@ -124,9 +124,6 @@ void FilterHorizontally(in uint2 Gid, in uint GI)
                 float cValue = WaveReadLaneAt(value, laneToReadFrom);
                 if (cValue != RTAO::InvalidAOCoefficientValue)
                 {
-#if RTAO_MARK_CACHED_VALUES_NEGATIVE
-                    cValue = abs(cValue);
-#endif
                     valueSum += cValue;
                     squaredValueSum += cValue * cValue;
                     numValues++;
