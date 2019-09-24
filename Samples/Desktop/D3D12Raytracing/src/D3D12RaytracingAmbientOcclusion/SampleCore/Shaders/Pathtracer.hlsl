@@ -162,7 +162,6 @@ PathtracerRayPayload TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDep
     // ToDo update comments about Tmins
     // Set TMin to a zero value to avoid aliasing artifacts along contact areas.
     // Note: make sure to enable face culling so as to avoid surface face fighting.
-    // ToDo Tmin - this should be offset along normal.
     rayDesc.TMin = tMin;
     rayDesc.TMax = tMax;
 

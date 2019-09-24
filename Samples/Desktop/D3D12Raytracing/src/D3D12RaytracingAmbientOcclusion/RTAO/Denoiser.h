@@ -73,7 +73,7 @@ private:
     GpuResource m_temporalCache[2][TemporalSupersampling::Count]; // ~array[Read/Write ping pong resource][Resources].
 
     GpuResource m_temporalAOCoefficient[2];    // ToDo why is this not part of m_temporalCache?
-    GpuResource m_temporalSupersampling_blendedAOCoefficient[2];
+    GpuResource m_temporalSupersampling_blendedAOCoefficient[2]; // ToDo remove
     GpuResource m_cachedTsppValueSquaredValueRayHitDistance;
 
     // ToDo cleanup readId should be for input to TAO, confusing.

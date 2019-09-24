@@ -189,8 +189,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
             float4 vCachedRayHitDepths = g_inCachedRayHitDepth.GatherRed(ClampSampler, adjustedCacheFrameTexturePos).wzxy;
             cachedRayHitDepth = dot(nWeights, vCachedRayHitDepths);
-            g_outDebug1[DTid] = nWeights;
-            g_outDebug1[DTid] = vCachedRayHitDepths;
         }
 
     }
