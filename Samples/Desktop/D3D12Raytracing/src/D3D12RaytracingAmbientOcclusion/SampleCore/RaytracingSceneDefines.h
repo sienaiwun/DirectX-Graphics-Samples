@@ -56,11 +56,10 @@ namespace RayGenShaderType {
 
 namespace GBufferResource {
 	enum Enum {
-		Hit = 0,		// Geometry hit or not.
-        // ToDo rename to AORay hit members?
+		Hit = 0,		// Geometry hit or not. // ToDo redundant
 		Material,		// Material of the object hit ~ {MaterialID, texCoord}.
 		HitPosition,	// 3D position of hit.
-		SurfaceNormalDepth,	// Encoded normal.
+		SurfaceNormalDepth,	// Encoded normal and linear depth.
         Depth,          // Linear depth of the hit.
         PartialDepthDerivatives,
         MotionVector,

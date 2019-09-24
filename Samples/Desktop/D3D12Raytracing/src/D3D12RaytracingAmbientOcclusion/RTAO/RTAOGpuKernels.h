@@ -100,11 +100,6 @@ namespace RTAOGpuKernels
     class AtrousWaveletTransformCrossBilateralFilter
     {
     public:
-        enum Mode {
-            OutputFilteredValue,
-            OutputPerPixelFilterWeightSum
-        };
-
         enum FilterType {
             EdgeStoppingGaussian3x3 = 0,
             EdgeStoppingGaussian5x5,
@@ -126,8 +121,6 @@ namespace RTAOGpuKernels
             float valueSigma,
             float depthSigma,
             float normalSigma,
-            float weightScale,
-            Mode filterMode = OutputFilteredValue,
             bool perspectiveCorrectDepthInterpolation = false,
             bool useAdaptiveKernelSize = false,
             float kernelRadiusLerfCoef = 0.f,
@@ -135,7 +128,6 @@ namespace RTAOGpuKernels
             float rayHitDistanceToKernelSizeScaleExponent = 2.f,
             UINT minKernelWidth = 3,
             UINT maxKernelWidth = 101,
-            float varianceSigmaScaleOnSmallKernels = 2.f,
             bool usingBilateralDownsampledBuffers = false,
             float minVarianceToDenoise = 0,
             float depthWeightCutoff = 0.5f);
@@ -191,7 +183,6 @@ namespace RTAOGpuKernels
     class TemporalSupersampling_ReverseReproject
     {
     public:
-        // ToDo set default parameters
         void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
         void Run(
             ID3D12GraphicsCommandList4* commandList,
@@ -209,17 +200,8 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputCachedRayHitDistanceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheTsppResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE outputReprojectedCacheValuesResourceHandle,
-            float minSmoothingFactor,
-            float depthTolerance,
-            bool useDepthWeights,
-            bool useNormalWeights,
-            float floatEpsilonDepthTolerance,
-            float depthDistanceBasedDepthTolerance,
-            float depthSigma,
             bool usingBilateralDownsampledBuffers,
-            bool perspectiveCorrectDepthInterpolation,
-            GpuResource debugResources[2],
-            UINT maxTspp);
+            float depthSigma = 1);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;
@@ -232,8 +214,6 @@ namespace RTAOGpuKernels
     class TemporalSupersampling_BlendWithCurrentFrame
     {
     public:
-
-        // ToDo set default parameters
         void Initialize(ID3D12Device5* device, UINT frameCount, UINT numCallsPerFrame = 1);
         void Run(
             ID3D12GraphicsCommandList4* commandList,
@@ -250,15 +230,14 @@ namespace RTAOGpuKernels
             D3D12_GPU_DESCRIPTOR_HANDLE inputReprojectedCacheValuesResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE outputVarianceResourceHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE outputBlurStrengthResourceHandle,
-            float minSmoothingFactor,
-            bool forceUseMinSmoothingFactor,
-            bool clampCachedValues,
-            float clampStdDevGamma,
-            float clampMinStdDevTolerance,
-            UINT minTsppToUseTemporalVariance,
-            GpuResource debugResources[2],
-            UINT lowTsppBlurStrengthMaxTspp,
-            float lowTsppBlurStrengthDecayConstant,
+            float minSmoothingFactor = 0.03f,
+            bool forceUseMinSmoothingFactor = false,
+            bool clampCachedValues = true,
+            float clampStdDevGamma = 1,
+            float clampMinStdDevTolerance = 0,
+            UINT minTsppToUseTemporalVariance = 4,
+            UINT lowTsppBlurStrengthMaxTspp = 12,
+            float lowTsppBlurStrengthDecayConstant = 1,
             bool doCheckerboardSampling = false,
             bool checkerboardLoadEvenPixels = false,
             float clampDifferenceToTsppScale = 4);

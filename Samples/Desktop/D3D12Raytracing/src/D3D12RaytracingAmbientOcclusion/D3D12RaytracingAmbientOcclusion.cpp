@@ -44,13 +44,10 @@ namespace Sample
         m_isSceneInitializationRequested(false),
         m_isRecreateRaytracingResourcesRequested(false)
     {
-        ThrowIfFalse(g_pSample == nullptr, L"There can be only one D3D12RaytracingAmbientOcclusion instance.");
-        g_pSample = this;
-
+        ThrowIfFalse(g_pSample == nullptr, L"There can be only one sample object instance.");
         g_pSample = this;
         UpdateForSizeChange(width, height);
         m_generatorURNG.seed(1729);
-
     }
 
     void D3D12RaytracingAmbientOcclusion::OnInit()
@@ -322,7 +319,6 @@ namespace Sample
         DXSample::ParseCommandLineArgs(argv, argc);
     }
 
-
     // Copy the raytracing output to the backbuffer.
     void D3D12RaytracingAmbientOcclusion::CopyRaytracingOutputToBackbuffer(D3D12_RESOURCE_STATES outRenderTargetState)
     {
@@ -483,8 +479,6 @@ namespace Sample
         m_deviceResources->HandleDeviceLost();
     }
 
-
-    // ToDo cleanup
     // Render the scene.
     void D3D12RaytracingAmbientOcclusion::OnRender()
     {
@@ -497,59 +491,55 @@ namespace Sample
 
         // Begin frame.
         m_deviceResources->Prepare();
-
-        EngineProfiling::BeginFrame(commandList);
-        
+        EngineProfiling::BeginFrame(commandList);        
         for (UINT i = 0; i < Sample_GPUTime::Count; i++)
         {
             m_sampleGpuTimes[i].BeginFrame(commandList);
         }
 
+        // ToDoF finalize UI tree
+        ScopedTimer _prof(L"Render", commandList);
         {
-            // ToDoF finalize UI tree
-            ScopedTimer _prof(L"Dummy", commandList);
+            // Acceleration structure update.
+            m_scene.OnRender();
+
+            // Pathracing
             {
-                {
-
-                    m_scene.OnRender();
-
-                    // Pathracing
-                    {
-                        m_sampleGpuTimes[Sample_GPUTime::Pathtracing].Start(commandList);
-                        m_pathtracer.Run(m_scene);
-                        m_sampleGpuTimes[Sample_GPUTime::Pathtracing].Stop(commandList);
-                    }
-
-                    // RTAO
-                    {
-                        ScopedTimer _prof(L"RTAO_Root", commandList);
-
-                        GpuResource* GBufferResources = m_pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
-
-                        // Raytracing
-                        {
-                            m_sampleGpuTimes[Sample_GPUTime::AOraytracing].Start(commandList);
-                            m_RTAO.Run(
-                                m_scene.AccelerationStructure()->GetTopLevelASResource()->GetGPUVirtualAddress(),
-                                GBufferResources[GBufferResource::HitPosition].gpuDescriptorReadAccess,
-                                GBufferResources[GBufferResource::SurfaceNormalDepth].gpuDescriptorReadAccess,
-                                GBufferResources[GBufferResource::AOSurfaceAlbedo].gpuDescriptorReadAccess);
-                            m_sampleGpuTimes[Sample_GPUTime::AOraytracing].Stop(commandList);
-                        }
-
-                        // Denoising
-                        {
-                            m_sampleGpuTimes[Sample_GPUTime::AOdenoising].Start(commandList);
-                            m_denoiser.Run(m_pathtracer, m_RTAO);
-                            m_sampleGpuTimes[Sample_GPUTime::AOdenoising].Stop(commandList);
-                        }
-                    }
-                }
-                m_composition.Render(&m_raytracingOutput, m_scene, m_pathtracer, m_RTAO, m_denoiser, m_width, m_height);
-
-                // UILayer will transition backbuffer to a present state.
-                CopyRaytracingOutputToBackbuffer(m_enableUI ? D3D12_RESOURCE_STATE_RENDER_TARGET : D3D12_RESOURCE_STATE_PRESENT);
+                m_sampleGpuTimes[Sample_GPUTime::Pathtracing].Start(commandList);
+                m_pathtracer.Run(m_scene);
+                m_sampleGpuTimes[Sample_GPUTime::Pathtracing].Stop(commandList);
             }
+
+            // RTAO
+            {
+                ScopedTimer _prof(L"RTAO", commandList);
+
+                GpuResource* GBufferResources = m_pathtracer.GBufferResources(RTAO_Args::QuarterResAO);
+
+                // Raytracing
+                {
+                    m_sampleGpuTimes[Sample_GPUTime::AOraytracing].Start(commandList);
+                    m_RTAO.Run(
+                        m_scene.AccelerationStructure()->GetTopLevelASResource()->GetGPUVirtualAddress(),
+                        GBufferResources[GBufferResource::HitPosition].gpuDescriptorReadAccess,
+                        GBufferResources[GBufferResource::SurfaceNormalDepth].gpuDescriptorReadAccess,
+                        GBufferResources[GBufferResource::AOSurfaceAlbedo].gpuDescriptorReadAccess);
+                    m_sampleGpuTimes[Sample_GPUTime::AOraytracing].Stop(commandList);
+                }
+
+                // Denoising
+                {
+                    m_sampleGpuTimes[Sample_GPUTime::AOdenoising].Start(commandList);
+                    m_denoiser.Run(m_pathtracer, m_RTAO);
+                    m_sampleGpuTimes[Sample_GPUTime::AOdenoising].Stop(commandList);
+                }
+            }
+            
+            // Composition
+            m_composition.Render(&m_raytracingOutput, m_scene, m_pathtracer, m_RTAO, m_denoiser, m_width, m_height);
+
+            // UILayer will transition backbuffer to a present state.
+            CopyRaytracingOutputToBackbuffer(m_enableUI ? D3D12_RESOURCE_STATE_RENDER_TARGET : D3D12_RESOURCE_STATE_PRESENT);
         }
 
         // End frame.
@@ -568,7 +558,6 @@ namespace Sample
 
         m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT, m_syncInterval);
     }
-
 
     // Compute the average frames per second and million rays per second.
     void D3D12RaytracingAmbientOcclusion::CalculateFrameStats()
@@ -589,14 +578,12 @@ namespace Sample
             prevTime = totalTime;
 
             // Display partial UI on the window title bar if UI is disabled.
-            if (1)//!m_enableUI)
-            {
-                wstringstream windowText;
-                windowText << setprecision(2) << fixed
-                    << L"    fps: " << m_fps //<< L"     ~Million Primary Rays/s: " << NumCameraRaysPerSecond()
-                    << L"    GPU[" << m_deviceResources->GetAdapterID() << L"]: " << m_deviceResources->GetAdapterDescription();
-                SetCustomWindowText(windowText.str().c_str());
-            }
+ 
+            wstringstream windowText;
+            windowText << setprecision(2) << fixed
+                << L"    fps: " << m_fps 
+                << L"    GPU[" << m_deviceResources->GetAdapterID() << L"]: " << m_deviceResources->GetAdapterDescription();
+            SetCustomWindowText(windowText.str().c_str());
         }
     }
 

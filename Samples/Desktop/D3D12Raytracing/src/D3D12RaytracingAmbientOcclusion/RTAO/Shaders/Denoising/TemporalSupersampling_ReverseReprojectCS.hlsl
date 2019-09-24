@@ -53,10 +53,10 @@ float4 BilateralResampleWeights(in float TargetDepth, in float3 TargetNormal, in
  
     CrossBilateral::BilinearDepthNormal::Parameters params;
     params.Depth.Sigma = cb.depthSigma;
-    params.Depth.WeightCutoff = 0.5;// ToDo pass from cb cb.DepthWeightCutoff;
+    params.Depth.WeightCutoff = 0.5;
     params.Depth.NumMantissaBits = cb.DepthNumMantissaBits;
     params.Normal.Sigma = 1.1;      // Bump the sigma a bit to add tolerance for slight geometry misalignments and/or format precision limitations.
-    params.Normal.SigmaExponent = 32; // ToDo pass from cb
+    params.Normal.SigmaExponent = 32; 
 
     float4 bilinearDepthNormalWeights;
 

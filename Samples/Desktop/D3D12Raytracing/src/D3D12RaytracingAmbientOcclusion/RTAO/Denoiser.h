@@ -82,7 +82,7 @@ private:
 
     GpuResource m_varianceResources[AOVarianceResource::Count];
     GpuResource m_localMeanVarianceResources[AOVarianceResource::Count];
-    GpuResource m_multiPassDenoisingBlurStrength;
+    GpuResource m_disocclusionBlurStrength;
     GpuResource m_prevFrameGBufferNormalDepth;
 
     // RTAOGpuKernels
@@ -95,4 +95,6 @@ private:
     RTAOGpuKernels::BilateralFilter m_bilateralFilterKernel;
 
     friend class Composition;
+public:
+    static const UINT c_MaxNumDisocllusionBlurPasses = 6;
 };

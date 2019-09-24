@@ -67,10 +67,6 @@ Texture2D<float3> l_texNormalMap : register(t4, space1);
 // Delayed include to resolve resource references
 #include "MotionVector.hlsli"
 
-//***************************************************************************
-//*****------ TraceRay wrappers for radiance and shadow rays. -------********
-//***************************************************************************
-
 // Trace a shadow ray and return true if it hits any geometry.
 bool TraceShadowRayAndReportIfHit(out float tHit, in Ray ray, in UINT currentRayRecursionDepth, in bool retrieveTHit = true, in float TMax = 10000)
 {
@@ -183,13 +179,13 @@ PathtracerRayPayload TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDep
 	return rayPayload;
 }
 
-// Returns radiance of the traced ray.
+// Returns radiance of the traced reflected ray.
 float3 TraceReflectedGBufferRay(in float3 hitPosition, in float3 wi, in float3 N, in float3 objectNormal, inout PathtracerRayPayload rayPayload, in float TMax = 10000)
 {
-    float tOffset = 0.001f;
     // Here we offset ray start along the ray direction instead of surface normal 
     // so that the reflected ray projects to the same screen pixel. 
-    // Otherwise it results in swimming in temporally accumulated buffer. 
+    // Offsetting by surface normal would result in incorrect mappating in temporally accumulated buffer. 
+    float tOffset = 0.001f;
     float3 offsetAlongRay = tOffset * wi;
 
     float3 adjustedHitPosition = hitPosition + offsetAlongRay;
@@ -220,20 +216,23 @@ float3 TraceReflectedGBufferRay(in float3 hitPosition, in float3 wi, in float3 N
     return rayPayload.radiance;
 }
 
-// Returns radiance of the traced ray.
-// ToDo standardize variable names
+// Returns radiance of the traced refracted ray.
 float3 TraceRefractedGBufferRay(in float3 hitPosition, in float3 wt, in float3 N, in float3 objectNormal, inout PathtracerRayPayload rayPayload, in float TMax = 10000)
 {
+    // Here we offset ray start along the ray direction instead of surface normal 
+    // so that the reflected ray projects to the same screen pixel. 
+    // Offsetting by surface normal would result in incorrect mappating in temporally accumulated buffer. 
     float tOffset = 0.001f;
-    float3 adjustedHitPosition = hitPosition + tOffset * wt;
+    float3 offsetAlongRay = tOffset * wt;
 
-    // ToDo offset along surface normal, and adjust tOffset subtraction below.
+    float3 adjustedHitPosition = hitPosition + offsetAlongRay;
+
     Ray ray = { adjustedHitPosition,  wt };
 
     float tMin = 0; 
     float tMax = TMax; 
 
-    // Performance vs visual quality trade-off:
+    // TRADEOFF: Performance vs visual quality
     // Cull transparent surfaces when casting a transmission ray for a transparent surface.
     // Spaceship in particular has multiple layer glass causing a substantial perf hit 
     // with multiple bounces along the way.
@@ -270,7 +269,6 @@ void UpdateAOGBufferOnLargerDiffuseComponent(inout PathtracerRayPayload rayPaylo
     }
 }
 
-
 float3 Shade(
     inout PathtracerRayPayload rayPayload,
     in float3 N,
@@ -287,10 +285,10 @@ float3 Shade(
     const float3 Ks = material.Ks;
     const float3 Kr = material.Kr;
     const float3 Kt = material.Kt;
-    const float roughness = material.roughness;    // ToDo Roughness of 0.001 loses specular - precision? 
+    const float roughness = material.roughness;
 
      // Direct illumination
-    rayPayload.AOGBuffer.diffuseByte3 = NormalizedFloat3ToByte3(Kd);    // ToDo use BRDF instead?
+    rayPayload.AOGBuffer.diffuseByte3 = NormalizedFloat3ToByte3(Kd);
     if (!BxDF::IsBlack(material.Kd) || !BxDF::IsBlack(material.Ks))
     {
         float3 wi = normalize(g_cb.lightPosition.xyz - hitPosition);
@@ -388,7 +386,7 @@ void MyRayGenShader_RadianceRay()
     bool hasCameraRayHitGeometry = rayPayload.AOGBuffer.tHit != HitDistanceOnMiss;
 
 	// Write out GBuffer information to rendertargets.
-	g_rtGBufferCameraRayHits[DTid] = hasCameraRayHitGeometry ? 1 : 0;   // ToDo should this be 1 if we hit a perfect mirror reflecting into skybox?
+	g_rtGBufferCameraRayHits[DTid] = hasCameraRayHitGeometry ? 1 : 0;
     g_rtGBufferPosition[DTid] = float4(rayPayload.AOGBuffer.hitPosition, 1);
 
     float rayLength = HitDistanceOnMiss;

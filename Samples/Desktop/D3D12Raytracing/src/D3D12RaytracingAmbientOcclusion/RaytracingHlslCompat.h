@@ -14,31 +14,29 @@
 
 /*
 //ToDoF
-- cleanup filter shaders, remove obsolete
- compare denoise quality from before the cleanup(video). It seems like current denoiser blurs much more on motion.
 - finetune clamping/remove ghosting (test gliding spaceship)
 - Full res - adaptive kernel size visible horizontal lines
 - Cleanup UI paths. Remove unneccasary vars. hardcode them instead
-- Total GPU time >> sum of component gpu times??
 
 Clamping
 -   Fix up under car ghosting. Or add to known issues. Filter tspp and see if that helps.
-   - Fine tune min std dev tolerance in clamping
 
 - Double check
-- TAO fails on dragons surface on small rotaions
    - disocclussions on static geometry and camera around reflections
+   build all configs.
   
   Glithces:
   - support neighbor sample generation for 2+ spp
   - Temporal
-
-// ToDo some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
-// ToDo sharp edges fail temporal reprojection due to clamping even for static scene
+    On full re depth test fails on sharp angles on the ground
+    some pixels here and there on mirror boundaries fail temporal reprojection even for static scene/camera
+    sharp edges fail temporal reprojection due to clamping even for static scene
     Checkerboard
     // - no perf difference on checkerboard. Add checkerboard support when not using ray sorting.
     // - support checkerboard + 2+ spp
 
+Optimizaiton
+- test not using perspective correct deepth interpolation
 
 - Cleanup:
     FlushResourceBarriers before GpuKernel calls
@@ -47,16 +45,12 @@ Clamping
     - Add/revise comments. Incl file decs
     - Move global defines in RaytracingSceneDefines.h locally for RTAO and Denoiser.
     // make sure no shaders are writing to debug resources
-    remove obsolete filtering hlsl kernels
-    remove obsolete GPukernel vars
     remove obsolete composition modes
     prune redundant using namespace ...
-     zero out caches on resource reset.
     Test all UI parameters, finetune and set best limits
     Test denoising quality at 60 and 100, 200+ FPS
     Increase averaging window for CPU times
     move resource descriptions from root sig def, to root sig Enum and shader res in shader files
-    spp vs spp
     - Add device removal support or remove it being announced
     use a struct to pass vars?
     - cleanup this file. Split RTAO to a RTAO specific file.
@@ -133,13 +127,6 @@ using namespace DirectX;
 typedef UINT Index;
 #endif
 
-
-
-struct ProceduralPrimitiveAttributes
-{
-    XMFLOAT3 normal;
-};
-
 struct Ray
 {
     XMFLOAT3 origin;
@@ -182,8 +169,8 @@ struct ShadowRayPayload
 struct AtrousWaveletTransformFilterConstantBuffer
 {
     XMUINT2 textureDim;
-    float weightScale;
     float depthWeightCutoff;
+    bool usingBilateralDownsampledBuffers;
 
     BOOL useAdaptiveKernelSize;
     float kernelRadiusLerfCoef;
@@ -199,11 +186,6 @@ struct AtrousWaveletTransformFilterConstantBuffer
     float depthSigma;
     float normalSigma;
     UINT DepthNumMantissaBits;
-
-    BOOL outputFilteredValue;
-    float varianceSigmaScaleOnSmallKernels;
-    bool usingBilateralDownsampledBuffers;
-    float padding;
 };
 
 struct CalculateVariance_BilateralFilterConstantBuffer
@@ -439,25 +421,15 @@ struct BilateralFilterConstantBuffer
 };
 
 
-// ToDo remove obsolete
 struct TemporalSupersampling_ReverseReprojectConstantBuffer
 {
     XMUINT2 textureDim;
     XMFLOAT2 invTextureDim;
 
-    BOOL useDepthWeights;
-    BOOL useNormalWeights;
     float depthSigma;
-    float depthTolerance;
-
     UINT DepthNumMantissaBits;      // Number of Mantissa Bits in the floating format of the input depth resources format.
     BOOL usingBilateralDownsampledBuffers;
-    BOOL perspectiveCorrectDepthInterpolation;
-    float floatEpsilonDepthTolerance;
-
-    float depthDistanceBasedDepthTolerance;
-    UINT maxTspp;
-    float padding[2];
+    float padding;
 };
 
 struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
@@ -465,7 +437,7 @@ struct TemporalSupersampling_BlendWithCurrentFrameConstantBuffer
     float stdDevGamma;
     BOOL clampCachedValues;
     float clamping_minStdDevTolerance;
-    float tsppAdjustmentDueClamping;
+    float padding;
 
     float clampDifferenceToTsppScale;
     BOOL forceUseMinSmoothingFactor;
@@ -556,21 +528,6 @@ struct PrimitiveMaterialBuffer
     float padding;
 };
 
-// Attributes per primitive instance.
-struct PrimitiveInstanceConstantBuffer
-{
-    UINT instanceIndex;  
-    UINT primitiveType; // Procedural primitive type
-    float padding[2];
-};
-
-// Dynamic attributes per primitive instance.
-struct PrimitiveInstancePerFrameBuffer
-{
-    XMMATRIX localSpaceToBottomLevelAS;   // Matrix from local primitive space to bottom-level object space.
-    XMMATRIX bottomLevelASToLocalSpace;   // Matrix from bottom-level object space to local primitive space.
-};
-
 struct AlignedUnitSquareSample2D
 {
     XMFLOAT2 value;
@@ -587,13 +544,6 @@ struct Vertex
 {
     XMFLOAT3 position;
     XMFLOAT3 normal;
-};
-
-struct VertexPositionNormalTexture
-{
-	XMFLOAT3 position;
-	XMFLOAT3 normal;
-	XMFLOAT2 uv;
 };
 
 struct VertexPositionNormalTextureTangent

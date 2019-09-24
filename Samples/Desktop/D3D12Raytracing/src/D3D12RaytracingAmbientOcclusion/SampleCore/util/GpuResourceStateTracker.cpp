@@ -23,9 +23,11 @@ void GpuResourceStateTracker::TransitionResource(GpuResource* Resource, D3D12_RE
 {
     D3D12_RESOURCE_STATES OldState = Resource->m_UsageState;
 
+    if (m_NumBarriersToFlush == c_MaxNumBarriers)
+        FlushResourceBarriers();
+
     if (OldState != NewState)
     {
-        ASSERT(m_NumBarriersToFlush < c_MaxNumBarriers, "Exceeded arbitrary limit on buffered barriers");
         D3D12_RESOURCE_BARRIER& BarrierDesc = m_ResourceBarrierBuffer[m_NumBarriersToFlush++];
 
         BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -34,9 +36,9 @@ void GpuResourceStateTracker::TransitionResource(GpuResource* Resource, D3D12_RE
         BarrierDesc.Transition.StateBefore = OldState;
         BarrierDesc.Transition.StateAfter = NewState;
 
-        // ToDO: automatically insert UAV barrier on SRV<->UAV transitions.
-        // if (OldState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS || NewState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-        //InsertUAVBarrier(Resource, FlushImmediate);
+        // Insert UAV barrier on SRV<->UAV transitions.
+        if (OldState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS || NewState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+            InsertUAVBarrier(Resource);
 
         // Check to see if we already started the transition
         if (NewState == Resource->m_TransitioningState)
@@ -50,14 +52,17 @@ void GpuResourceStateTracker::TransitionResource(GpuResource* Resource, D3D12_RE
         Resource->m_UsageState = NewState;
     }
     else if (NewState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-        InsertUAVBarrier(Resource, FlushImmediate);
+        InsertUAVBarrier(Resource);
 
-    if (FlushImmediate || m_NumBarriersToFlush == c_MaxNumBarriers)
+    if (FlushImmediate)
         FlushResourceBarriers();
 }
 
 void GpuResourceStateTracker::BeginResourceTransition(GpuResource* Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
 {
+    if (m_NumBarriersToFlush == c_MaxNumBarriers)
+        FlushResourceBarriers();
+
     // If it's already transitioning, finish that transition
     if (Resource->m_TransitioningState != (D3D12_RESOURCE_STATES)-1)
         TransitionResource(Resource, Resource->m_TransitioningState);
@@ -66,7 +71,6 @@ void GpuResourceStateTracker::BeginResourceTransition(GpuResource* Resource, D3D
 
     if (OldState != NewState)
     {
-        ASSERT(m_NumBarriersToFlush < c_MaxNumBarriers, "Exceeded arbitrary limit on buffered barriers");
         D3D12_RESOURCE_BARRIER& BarrierDesc = m_ResourceBarrierBuffer[m_NumBarriersToFlush++];
 
         BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -85,7 +89,9 @@ void GpuResourceStateTracker::BeginResourceTransition(GpuResource* Resource, D3D
 
 void GpuResourceStateTracker::InsertUAVBarrier(GpuResource* Resource, bool FlushImmediate)
 {
-    ASSERT(m_NumBarriersToFlush < c_MaxNumBarriers, "Exceeded arbitrary limit on buffered barriers");
+    if (m_NumBarriersToFlush == c_MaxNumBarriers)
+        FlushResourceBarriers();
+
     D3D12_RESOURCE_BARRIER& BarrierDesc = m_ResourceBarrierBuffer[m_NumBarriersToFlush++];
 
     BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;

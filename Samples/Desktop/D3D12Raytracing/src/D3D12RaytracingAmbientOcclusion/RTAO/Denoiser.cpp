@@ -61,7 +61,6 @@ namespace Denoiser_Args
     IntVar KernelRadius_RotateKernel_NumCycles(L"Render/AO/RTAO/AdaptiveKernelSize/Rotate kernel radius/Num cycles", 3, 0, 10, 1);
     IntVar FilterMinKernelWidth(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Min kernel width", 3, 3, 101);
     NumVar FilterMaxKernelWidthPercentage(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Max kernel width [%% of screen width]", 1.5f, 0, 100, 0.1f);
-    NumVar FilterVarianceSigmaScaleOnSmallKernels(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Variance sigma scale on small kernels", 2.0f, 1.0f, 20.f, 0.5f);
     NumVar AdaptiveKernelSize_RayHitDistanceScaleFactor(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Hit distance scale factor", 0.02f, 0.001f, 0.1f, 0.001f);
     NumVar AdaptiveKernelSize_RayHitDistanceScaleExponent(L"Render/AO/RTAO/Denoising/AdaptiveKernelSize/Hit distance scale exponent", 2.0f, 1.0f, 5.0f, 0.1f);
     BoolVar Variance_UseDepthWeights(L"Render/AO/RTAO/Denoising/Variance/Use normal weights", true);
@@ -74,10 +73,9 @@ namespace Denoiser_Args
     BoolVar Checkerboard_LowerWeightForStaleSamples(L"Render/AO/RTAO/Denoising/Checkerboard support/Scale down stale samples weight", false);
 
 
-#define MAX_NUM_PASSES_LOW_TSPP 6
     BoolVar LowTspp(L"Render/AO/RTAO/Denoising/Low tspp filter/enabled", true);
     IntVar LowTsppMaxTspp(L"Render/AO/RTAO/Denoising/Low tspp filter/Max tspp", 12, 0, 33);
-    IntVar LowTspBlurPasses(L"Render/AO/RTAO/Denoising/Low tspp filter/Num blur passes", 3, 0, MAX_NUM_PASSES_LOW_TSPP);
+    IntVar LowTspBlurPasses(L"Render/AO/RTAO/Denoising/Low tspp filter/Num blur passes", 3, 0, Denoiser::c_MaxNumDisocllusionBlurPasses);
     NumVar LowTsppDecayConstant(L"Render/AO/RTAO/Denoising/Low tspp filter/Decay constant", 1.0f, 0.1f, 32.f, 0.1f);
     BoolVar LowTsppFillMissingValues(L"Render/AO/RTAO/Denoising/Low tspp filter/Post-Temporal fill in missing values", true);
     NumVar LowTsppMinNormalWeight(L"Render/AO/RTAO/Denoising/Low tspp filter/Normal Weights/Min weight", 0.25f, 0.0f, 1.f, 0.05f);
@@ -87,8 +85,6 @@ namespace Denoiser_Args
     EnumVar Mode(L"Render/AO/RTAO/Denoising/Mode", RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::FilterType::EdgeStoppingGaussian3x3, RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::FilterType::Count, Modes);
     NumVar AODenoiseValueSigma(L"Render/AO/RTAO/Denoising/Value Sigma", 1.0f, 0.0f, 30.0f, 0.1f);
 
-    // ToDo remove
-    NumVar WeightScale(L"Render/AO/RTAO/Denoising/Weight Scale", 1, 0.0f, 5.0f, 0.01f);
     NumVar AODenoiseDepthSigma(L"Render/AO/RTAO/Denoising/Depth Sigma", 1.0f, 0.0f, 10.0f, 0.02f); 
     NumVar AODenoiseDepthWeightCutoff(L"Render/AO/RTAO/Denoising/Depth Weight Cutoff", 0.2f, 0.0f, 2.0f, 0.01f);
     NumVar AODenoiseNormalSigma(L"Render/AO/RTAO/Denoising/Normal Sigma", 64, 0, 256, 4);
@@ -129,7 +125,7 @@ void Denoiser::CreateAuxilaryDeviceResources()
     m_temporalCacheBlendWithCurrentFrameKernel.Initialize(device, Sample::FrameCount);
     m_atrousWaveletTransformFilter.Initialize(device, Sample::FrameCount);
     m_calculateMeanVarianceKernel.Initialize(device, Sample::FrameCount); 
-    m_bilateralFilterKernel.Initialize(device, Sample::FrameCount, MAX_NUM_PASSES_LOW_TSPP);
+    m_bilateralFilterKernel.Initialize(device, Sample::FrameCount, c_MaxNumDisocllusionBlurPasses);
 }
 
 
@@ -217,7 +213,7 @@ void Denoiser::CreateTextureResources()
     }
 
     // ToDo remove obsolete resources, QuarterResAO event triggers this so we may not need all low/gbuffer width AO resources.
-    CreateRenderTargetResource(device, DXGI_FORMAT_R8_UNORM, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_multiPassDenoisingBlurStrength, initialResourceState, L"Disocclusion Denoising Blur Strength");
+    CreateRenderTargetResource(device, DXGI_FORMAT_R8_UNORM, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_disocclusionBlurStrength, initialResourceState, L"Disocclusion Denoising Blur Strength");
     CreateRenderTargetResource(device, COMPACT_NORMAL_DEPTH_DXGI_FORMAT, m_denoisingWidth, m_denoisingHeight, m_cbvSrvUavHeap.get(), &m_prevFrameGBufferNormalDepth, initialResourceState, L"Previous Frame GBuffer Normal Depth");
 }
 
@@ -264,17 +260,8 @@ void Denoiser::TemporalSupersamplingReverseReproject(Pathtracer& pathtracer)
         m_temporalCache[temporalCachePreviousFrameResourceIndex][TemporalSupersampling::RayHitDistance].gpuDescriptorReadAccess,
         m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Tspp].gpuDescriptorWriteAccess,
         m_cachedTsppValueSquaredValueRayHitDistance.gpuDescriptorWriteAccess,
-        Denoiser_Args::TemporalSupersampling_MinSmoothingFactor,
-        Denoiser_Args::TemporalSupersampling_DepthTolerance,
-        Denoiser_Args::TemporalSupersampling_UseDepthWeights,
-        Denoiser_Args::TemporalSupersampling_UseNormalWeights,
-        Denoiser_Args::TemporalSupersampling_ClampCachedValues_AbsoluteDepthTolerance,
-        Denoiser_Args::TemporalSupersampling_ClampCachedValues_DepthBasedDepthTolerance,
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_DepthSigma,
-        RTAO_Args::QuarterResAO,
-        Denoiser_Args::TemporalSupersampling_PerspectiveCorrectDepthInterpolation,
-        Sample::g_debugOutput,
-        maxTspp);
+        RTAO_Args::QuarterResAO);
 
     // Transition output resources to SRV state.
     // All the others are used as input/output UAVs in 2nd stage of Temporal Supersampling.
@@ -357,15 +344,7 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         resourceStateTracker->InsertUAVBarrier(&m_localMeanVarianceResources[AOVarianceResource::Smoothed]);
     }
 
-
-    // ToDo remove?
-    bool fillInMissingValues = false;   // ToDo fix up barriers if changing this to true
-#if 0
-    // ToDo?
-    Denoiser_Args::LowTsppFillMissingValues
-        && rtao.GetSpp() < 1;
-#endif
-    GpuResource* TemporalOutCoefficient = fillInMissingValues ? &m_temporalSupersampling_blendedAOCoefficient[0] : &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
+    GpuResource* TemporalOutCoefficient = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
 
     // Transition output resource to UAV state.      
     {
@@ -374,7 +353,7 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::CoefficientSquaredMean], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->TransitionResource(&m_varianceResources[AOVarianceResource::Raw], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        resourceStateTracker->TransitionResource(&m_multiPassDenoisingBlurStrength, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        resourceStateTracker->TransitionResource(&m_disocclusionBlurStrength, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         resourceStateTracker->InsertUAVBarrier(&m_cachedTsppValueSquaredValueRayHitDistance);
     }
 
@@ -393,14 +372,13 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance].gpuDescriptorWriteAccess,
         m_cachedTsppValueSquaredValueRayHitDistance.gpuDescriptorReadAccess,
         m_varianceResources[AOVarianceResource::Raw].gpuDescriptorWriteAccess,
-        m_multiPassDenoisingBlurStrength.gpuDescriptorWriteAccess,
+        m_disocclusionBlurStrength.gpuDescriptorWriteAccess,
         Denoiser_Args::TemporalSupersampling_MinSmoothingFactor,
         Denoiser_Args::TemporalSupersampling_ForceUseMinSmoothingFactor,
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_UseClamping,
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_StdDevGamma,
         Denoiser_Args::TemporalSupersampling_ClampCachedValues_MinStdDevTolerance,
         Denoiser_Args::MinTsppToUseTemporalVariance,
-        Sample::g_debugOutput,
         Denoiser_Args::LowTsppMaxTspp,
         Denoiser_Args::LowTsppDecayConstant,
         isCheckerboardSamplingEnabled,
@@ -413,7 +391,7 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::CoefficientSquaredMean], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         resourceStateTracker->TransitionResource(&m_temporalCache[m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         resourceStateTracker->TransitionResource(&m_varianceResources[AOVarianceResource::Raw], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        resourceStateTracker->TransitionResource(&m_multiPassDenoisingBlurStrength, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        resourceStateTracker->TransitionResource(&m_disocclusionBlurStrength, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     }
 
     // Smoothen the local variance which is prone to error due to undersampled input.
@@ -437,20 +415,6 @@ void Denoiser::TemporalSupersamplingBlendWithCurrentFrame(RTAO& rtao)
         resourceStateTracker->TransitionResource(&m_varianceResources[AOVarianceResource::Smoothed], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     }
 
-    // Fill in missing/disoccluded values.
-    if (isCheckerboardSamplingEnabled && fillInMissingValues)
-    {
-        bool fillEvenPixels = !checkerboardLoadEvenPixels;
-        resourceStateTracker->FlushResourceBarriers();
-        m_fillInCheckerboardKernel.Run(
-            commandList,
-            m_cbvSrvUavHeap->GetHeap(),
-            m_denoisingWidth,
-            m_denoisingHeight,
-            TemporalOutCoefficient->gpuDescriptorWriteAccess,
-            fillEvenPixels);
-    }
-
     resourceStateTracker->TransitionResource(TemporalOutCoefficient, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
@@ -462,7 +426,7 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
     ScopedTimer _prof(L"Disocclusions blur", commandList);
     GpuResource* inOutResource = &m_temporalAOCoefficient[m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
 
-    // ToDo remove the flush. It's done to avoid two same resource transitions since prev atrous pass sets the resource to SRV.
+    // Force a barrier flush to avoid two same resource transitions since prev atrous pass sets the resource to SRV.
     resourceStateTracker->FlushResourceBarriers();
     resourceStateTracker->TransitionResource(inOutResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     
@@ -487,7 +451,7 @@ void Denoiser::BlurDisocclusions(Pathtracer& pathtracer)
             m_cbvSrvUavHeap->GetHeap(),
             m_temporalSupersampling_blendedAOCoefficient[0].gpuDescriptorReadAccess,
             GBufferResources[GBufferResource::Depth].gpuDescriptorReadAccess,
-            m_multiPassDenoisingBlurStrength.gpuDescriptorReadAccess,
+            m_disocclusionBlurStrength.gpuDescriptorReadAccess,
             inOutResource,
             readWriteUAV_and_skipPassthrough);
         filterStep *= 2;
@@ -547,8 +511,6 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             Denoiser_Args::AODenoiseValueSigma,
             Denoiser_Args::AODenoiseDepthSigma,
             Denoiser_Args::AODenoiseNormalSigma,
-            Denoiser_Args::WeightScale,
-            RTAOGpuKernels::AtrousWaveletTransformCrossBilateralFilter::Mode::OutputFilteredValue,
             Denoiser_Args::PerspectiveCorrectDepthInterpolation,
             Denoiser_Args::UseAdaptiveKernelSize,
             kernelRadiusLerfCoef,
@@ -556,7 +518,6 @@ void Denoiser::ApplyAtrousWaveletTransformFilter(Pathtracer& pathtracer, RTAO& r
             RayHitDistanceScaleExponent,
             Denoiser_Args::FilterMinKernelWidth,
             static_cast<UINT>((Denoiser_Args::FilterMaxKernelWidthPercentage / 100) * m_denoisingWidth),
-            Denoiser_Args::FilterVarianceSigmaScaleOnSmallKernels,
             RTAO_Args::QuarterResAO,
             Denoiser_Args::MinVarianceToDenoise,
             Denoiser_Args::AODenoiseDepthWeightCutoff);

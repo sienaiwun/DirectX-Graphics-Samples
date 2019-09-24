@@ -116,7 +116,6 @@ void AddFilterContribution(
                     pixelOffsetForDepth = pixelOffset + offsetSign * float2(0.5, 0.5);
                 }
 
-                // ToDo dedupe with CrossBilateralWeights.hlsli?
                 float depthFloatPrecision = FloatPrecision(max(depth, iDepth), cb.DepthNumMantissaBits);
                 float depthThreshold = DepthThreshold(depth, ddxy, pixelOffsetForDepth);
                 float depthTolerance = depthSigma * depthThreshold + depthFloatPrecision;
