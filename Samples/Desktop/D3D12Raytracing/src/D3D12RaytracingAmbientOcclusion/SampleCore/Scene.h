@@ -33,6 +33,7 @@ public:
     void InitializeAccelerationStructures();
     void OnUpdate();
     void OnRender();
+    void OnKeyDown(UINT8 key);
 
     const GameCore::Camera& Camera() { return m_camera; }
     const GameCore::Camera& PrevFrameCamera() { return m_prevFrameCamera; }
@@ -69,7 +70,7 @@ private:
     StepTimer m_timer;
     bool m_animateCamera = false;
     bool m_animateLight = false;
-    bool m_animateScene = false;
+    bool m_animateScene = true;
     bool m_isCameraFrozen = false;
     GameCore::Camera m_camera;
     GameCore::Camera m_prevFrameCamera;
@@ -85,7 +86,12 @@ private:
     static const UINT MaxBLAS = 10 + NumGrassPatchesX * NumGrassPatchesZ;
 
     GpuKernels::GenerateGrassPatch      m_grassGeometryGenerator;
-    UINT                                m_animatedCarInstanceIndex;
+    UINT                                m_animatedCarInstanceIndex = UINT_MAX;
+    UINT                                m_carByTheHouseInstanceIndex = UINT_MAX;
+    UINT                                m_spaceshipInstanceIndex = UINT_MAX;
+    XMVECTOR                            m_carByTheHousePosition = XMVectorZero();
+    XMVECTOR                            m_spaceshipPosition = XMVectorZero();
+    float                               m_spaceshipRotationAngleY = 0;
     UINT                                m_grassInstanceIndices[NumGrassPatchesX * NumGrassPatchesZ];
     UINT                                m_currentGrassPatchVBIndex = 0;
     UINT                                m_grassInstanceShaderRecordOffsets[2];

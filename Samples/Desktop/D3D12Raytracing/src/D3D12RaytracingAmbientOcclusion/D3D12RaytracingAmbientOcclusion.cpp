@@ -197,6 +197,8 @@ namespace Sample
     
     void D3D12RaytracingAmbientOcclusion::OnKeyDown(UINT8 key)
     {
+        m_scene.OnKeyDown(key);
+
        // float fValue;
         // ToDoF call componanet's handlers
         switch (key)

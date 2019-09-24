@@ -100,6 +100,43 @@ void Scene::OnRender()
     UpdateAccelerationStructure();
 }
 
+
+void Scene::OnKeyDown(UINT8 key)
+{
+    switch (key)
+    {
+    case 'U':
+        m_carByTheHousePosition += XMVectorSet(0.2f, 0, 0, 0);
+        break;
+    case 'Y':
+        m_carByTheHousePosition -= XMVectorSet(0.2f, 0, 0, 0);
+        break;
+    case 'J':
+        m_spaceshipPosition += XMVectorSet(0, 0.3f, 0, 0);
+        break;
+    case 'M':
+        m_spaceshipPosition -= XMVectorSet(0, 0.3f, 0, 0);
+        break;
+    case 'H':
+        m_spaceshipRotationAngleY += XMConvertToRadians(45);
+        break;
+    case 'K':
+        m_spaceshipRotationAngleY -= XMConvertToRadians(45);
+        break;
+    default:
+        break;
+    }
+    m_carByTheHousePosition = XMVectorClamp(m_carByTheHousePosition, XMVectorSet(-9, 0, 0, 0), XMVectorZero());
+    XMMATRIX transform = XMMatrixTranslationFromVector(m_carByTheHousePosition);
+    m_accelerationStructure->GetBottomLevelASInstance(m_carByTheHouseInstanceIndex).SetTransform(transform);
+
+    m_spaceshipPosition = XMVectorClamp(m_spaceshipPosition, XMVectorZero(), XMVectorSet(0, 10, 0, 0));
+    transform = XMMatrixTranslationFromVector(m_spaceshipPosition);
+    XMMATRIX mRotate = XMMatrixRotationY(XMConvertToRadians(m_spaceshipRotationAngleY));
+    transform *= mRotate;
+    m_accelerationStructure->GetBottomLevelASInstance(m_spaceshipInstanceIndex).SetTransform(transform);
+}
+
 void Scene::OnUpdate()
 {
     m_timer.Tick();
@@ -593,7 +630,16 @@ void Scene::InitializeAccelerationStructures()
     // Initialize the bottom-level AS instances, one for each BLAS.
     for (auto& bottomLevelASname : bottomLevelASnames)
     {
-        m_accelerationStructure->AddBottomLevelASInstance(bottomLevelASname);
+        UINT instanceIndex = m_accelerationStructure->AddBottomLevelASInstance(bottomLevelASname);
+
+        if (bottomLevelASname.find(L"Car") != wstring::npos)
+        {
+            m_carByTheHouseInstanceIndex = instanceIndex;
+        }
+        else if (bottomLevelASname.find(L"Spaceship") != wstring::npos)
+        {
+            m_spaceshipInstanceIndex = instanceIndex;
+        }
     }
 
 #if !LOAD_ONLY_ONE_PBRT_MESH
