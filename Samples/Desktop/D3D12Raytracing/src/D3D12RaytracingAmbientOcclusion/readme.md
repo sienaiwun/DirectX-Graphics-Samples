@@ -121,7 +121,8 @@ There are multiple opportunities to improve the denoiser further both quality an
 ** The denoising filter blurs more towards available/similar samples and overblurs when some side of the kernel is not applicable. For example, surface under a car tire, or ground under the corner of stairstep gets blurred more since the samples from the tire/steps don't apply and the result gets biased by the visible samples making those regions be brighter than they should.
 ** Consider increasing depth bit allocation to improve depth testing. The sample uses 16b depth and 16b encoded normals to lower bandwidth requirements. However, given the high exponent (64) used for normal testing, it might be worthwhile to use some of the bits for the depth test instead. For example, 24b for depth and 8b for encoded normal. This would be only for denoising. 8b normal encoding would be insufficient if used for AO ray generation.
 * Upsampling could be improved to find better candidates from low res inputs. Either by increasing the 2x2 sampling quad and/or improving the depth test to be more strict by testing against expected depth at the source low-res sample offset instead of the current test target depth +/- threshold.
-*
+** Disocclusion blur
+*** The current implementation uses a 3x3 separable filter and runs three times at varying kernel steps. It might be possible to get a better quality/perf tradeoff with larger kernel, larger steps and fewer iterations.
 
 There are also few areas in the sample which you should consider to improve in your implementation if porting over the sample code over:
 * Acceleration Structure 

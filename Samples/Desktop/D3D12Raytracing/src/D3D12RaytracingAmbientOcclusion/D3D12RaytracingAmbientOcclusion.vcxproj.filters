@@ -34,9 +34,6 @@
     <Filter Include="Shaders\SampleCore\Util">
       <UniqueIdentifier>{f6ae1511-f58a-4af8-a167-b79e11f8c1de}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\RTAO\Denoising\Variance">
-      <UniqueIdentifier>{2fbe6f49-be73-41a0-8fdc-29d6b38db505}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\RTAO\Denoising\Filtering">
       <UniqueIdentifier>{d695bb7e-51db-46b1-b9a0-4a1841fa7ab8}</UniqueIdentifier>
     </Filter>
@@ -335,6 +332,9 @@
     </FxCompile>
     <FxCompile Include="RTAO\Shaders\Denoising\DisocclusionBlur_DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
+    </FxCompile>
+    <FxCompile Include="SampleCore\Shaders\util\UpsampleBilateralFilter2x2UintCS.hlsl">
+      <Filter>Shaders\SampleCore\Util</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

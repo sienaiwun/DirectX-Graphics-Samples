@@ -85,8 +85,9 @@ namespace GpuKernels
     {
     public:
         enum FilterType {
-            Filter2x2R = 0,
-            Filter2x2RG,
+            Filter2x2FloatR = 0,
+            Filter2x2UintR,
+            Filter2x2FloatRG,
             Count
         };
 

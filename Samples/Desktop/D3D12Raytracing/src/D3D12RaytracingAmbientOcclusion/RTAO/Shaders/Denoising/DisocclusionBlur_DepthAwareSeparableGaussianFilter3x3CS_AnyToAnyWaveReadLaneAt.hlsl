@@ -27,7 +27,6 @@
 #include "RaytracingShaderHelper.hlsli"
 #include "RTAO/Shaders/RTAO.hlsli"
 
-// ToDo add different XxX and add option to change steps increases between iterations
 #define GAUSSIAN_KERNEL_3X3
 #include "Kernels.hlsli"
 

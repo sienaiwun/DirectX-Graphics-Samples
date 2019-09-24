@@ -40,7 +40,7 @@ namespace Composition_Args
         L"Albedo/Texture",
         L"Base Material Albedo"
     };
-    EnumVar CompositionMode(L"Render/Render composition/Mode", CompositionType::AmbientOcclusionOnly_Denoised, CompositionType::Count, CompositionModes);
+    EnumVar CompositionMode(L"Render/Render composition/Mode", CompositionType::AmbientOcclusionAndDisocclusionMap, CompositionType::Count, CompositionModes);
     BoolVar Compose_VarianceVisualizeStdDeviation(L"Render/Render composition/Variance/Visualize std deviation", true);
     NumVar Compose_VarianceScale(L"Render/Render composition/Variance/Variance scale", 1.0f, 0, 10, 0.1f);
 
@@ -158,7 +158,7 @@ void Composition::UpsampleResourcesForRenderComposePass(
     GpuResource* inputLowResValueResource = nullptr;
     GpuResource* outputHiResValueResource = nullptr;
     wstring passName;
-    GpuKernels::UpsampleBilateralFilter::FilterType filterType = GpuKernels::UpsampleBilateralFilter::Filter2x2R;
+    GpuKernels::UpsampleBilateralFilter::FilterType filterType = GpuKernels::UpsampleBilateralFilter::Filter2x2FloatR;
 
     switch (Composition_Args::CompositionMode)
     {
@@ -179,6 +179,14 @@ void Composition::UpsampleResourcesForRenderComposePass(
         }
         break;
     }
+    case CompositionType::AmbientOcclusionAndDisocclusionMap:
+    {
+        passName = L"Upsample Disocclusion Map";
+        filterType = GpuKernels::UpsampleBilateralFilter::Filter2x2UintR;
+        inputLowResValueResource = &denoiser.m_temporalCache[denoiser.m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::Tspp];
+        outputHiResValueResource = &m_upsampledTsppResource;
+        break;
+    }
     case CompositionType::RTAOHitDistance:
     {
         passName = L"Upsample AO ray hit distance";
@@ -196,7 +204,7 @@ void Composition::UpsampleResourcesForRenderComposePass(
     case CompositionType::AmbientOcclusionLocalVariance:
     {
         passName = L"Upsample AO local variance";
-        filterType = GpuKernels::UpsampleBilateralFilter::Filter2x2RG;
+        filterType = GpuKernels::UpsampleBilateralFilter::Filter2x2FloatRG;
         inputLowResValueResource = Denoiser_Args::UseSmoothedVariance ? &denoiser.m_localMeanVarianceResources[AOVarianceResource::Smoothed] : &denoiser.m_localMeanVarianceResources[AOVarianceResource::Raw];
         outputHiResValueResource = &m_upsampledLocalMeanVarianceResource;
         break;
@@ -306,7 +314,6 @@ void Composition::Render(
         {
         case CompositionType::PBRShading:
         case CompositionType::AmbientOcclusionOnly_Denoised:
-        case CompositionType::AmbientOcclusionAndDisocclusionMap:
             AOResource = &denoiser.m_temporalAOCoefficient[denoiser.m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
             break;
 

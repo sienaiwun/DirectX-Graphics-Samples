@@ -19,6 +19,7 @@
 #include "CompiledShaders\CalculatePartialDerivativesViaCentralDifferencesCS.hlsl.h"
 #include "CompiledShaders\DownsampleGBufferDataBilateralFilter2x2CS.hlsl.h"
 #include "CompiledShaders\UpsampleBilateralFilter2x2FloatCS.hlsl.h"
+#include "CompiledShaders\UpsampleBilateralFilter2x2UintCS.hlsl.h"
 #include "CompiledShaders\UpsampleBilateralFilter2x2Float2CS.hlsl.h"
 #include "CompiledShaders\GenerateGrassStrawsCS.hlsl.h"
 
@@ -427,10 +428,13 @@ namespace GpuKernels
             {
                 switch (i)
                 {
-                case Filter2x2R:
+                case Filter2x2FloatR:
                     descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pUpsampleBilateralFilter2x2FloatCS), ARRAYSIZE(g_pUpsampleBilateralFilter2x2FloatCS));
                     break;
-                case Filter2x2RG:
+                case Filter2x2UintR:
+                    descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pUpsampleBilateralFilter2x2UintCS), ARRAYSIZE(g_pUpsampleBilateralFilter2x2UintCS));
+                    break;
+                case Filter2x2FloatRG:
                     descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pUpsampleBilateralFilter2x2Float2CS), ARRAYSIZE(g_pUpsampleBilateralFilter2x2Float2CS));
                     break;
                 }
