@@ -599,8 +599,7 @@ void RTAO::Run(
             true,
             m_cbvSrvUavHeap->GetHeap(),
             m_AORayDirectionOriginDepth.gpuDescriptorReadAccess,
-            m_sortedToSourceRayIndexOffset.gpuDescriptorWriteAccess,
-            Sample::g_debugOutput[0].gpuDescriptorWriteAccess);
+            m_sortedToSourceRayIndexOffset.gpuDescriptorWriteAccess);
 
         resourceStateTracker->TransitionResource(&m_sortedToSourceRayIndexOffset, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         resourceStateTracker->TransitionResource(&Sample::g_debugOutput[0], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);

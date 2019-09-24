@@ -108,7 +108,7 @@ void Composition::CreateShaderResources()
 
         CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; 
         ranges[Slot::Output].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  
-        ranges[Slot::GBufferResources].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0); 
+        ranges[Slot::GBufferResources].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 2); 
         ranges[Slot::AO].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  
         ranges[Slot::AORayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9); 
         ranges[Slot::Tspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); 
@@ -304,10 +304,20 @@ void Composition::Render(
         GpuResource* LocalMeanVarianceResource = &denoiser.m_localMeanVarianceResources[AOVarianceResource::Raw];
         GpuResource* AORayHitDistance = &denoiser.m_temporalCache[denoiser.m_temporalCacheCurrentFrameResourceIndex][TemporalSupersampling::RayHitDistance];
 
-        GpuResource* AOResource = 
-            Composition_Args::CompositionMode == CompositionType::AmbientOcclusionOnly_Denoised
-            ? &denoiser.m_temporalAOCoefficient[denoiser.m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex]
-            : AOResource = &rtao.AOResources()[AOResource::AmbientCoefficient];
+        GpuResource* AOResource;
+        switch (Composition_Args::CompositionMode)
+        {
+        case CompositionType::PBRShading:
+        case CompositionType::AmbientOcclusionOnly_Denoised:
+        case CompositionType::AmbientOcclusionAndDisocclusionMap:
+            AOResource = &denoiser.m_temporalAOCoefficient[denoiser.m_temporalCacheCurrentFrameTemporalAOCoefficientResourceIndex];
+            break;
+
+        case CompositionType::AmbientOcclusionOnly_RawOneFrame:
+        default:
+            AOResource = &rtao.AOResources()[AOResource::AmbientCoefficient];
+            break;
+        }
         GpuResource* TsppResource = &TemporalResources[TemporalSupersampling::Tspp];
 
         if (RTAO_Args::QuarterResAO)

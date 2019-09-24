@@ -257,8 +257,7 @@ namespace RTAOGpuKernels
             bool useOctahedralRayDirectionQuantization,
             ID3D12DescriptorHeap* descriptorHeap,
             D3D12_GPU_DESCRIPTOR_HANDLE inputRayDirectionOriginDepthResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputSortedToSourceRayIndexOffsetResourceHandle,
-            D3D12_GPU_DESCRIPTOR_HANDLE outputDebugResourceHandle);
+            D3D12_GPU_DESCRIPTOR_HANDLE outputSortedToSourceRayIndexOffsetResourceHandle);
 
     private:
         ComPtr<ID3D12RootSignature>         m_rootSignature;

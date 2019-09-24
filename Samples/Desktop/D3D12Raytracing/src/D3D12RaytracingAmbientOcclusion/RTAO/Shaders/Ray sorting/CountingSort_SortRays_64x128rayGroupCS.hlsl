@@ -86,7 +86,8 @@ Texture2D<NormalDepthTexFormat> g_inRayDirectionOriginDepth : register(t0);    /
 // This is essentially a sorted source ray index offsets buffer within a ray group.
 // Inactive rays have a valid index but have INACTIVE_RAY_INDEX_BIT_Y bit set in the y coordinate to 1.
 RWTexture2D<uint2> g_outSortedToSourceRayIndexOffset : register(u0);   
-RWTexture2D<float4> g_outDebug : register(u2);  // Thread group per-pixel index offsets within each 128x64 pixel group.
+
+RWTexture2D<float4> g_outDebug : register(u2); 
 
 ConstantBuffer<SortRaysConstantBuffer> cb: register(b0);
 

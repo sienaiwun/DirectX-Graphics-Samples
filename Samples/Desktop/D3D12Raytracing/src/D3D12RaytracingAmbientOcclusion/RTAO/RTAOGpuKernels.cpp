@@ -24,7 +24,7 @@
 #include "CompiledShaders\TemporalSupersampling_ReverseReprojectCS.hlsl.h"
 #include "CompiledShaders\CountingSort_SortRays_64x128rayGroupCS.hlsl.h"
 #include "CompiledShaders\AORayGenCS.hlsl.h"
-#include "CompiledShaders\DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl.h"
+#include "CompiledShaders\DisocclusionBlur_DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl.h"
 #include "CompiledShaders\FillInCheckerboard_CrossBox4TapFilterCS.hlsl.h"
 
 using namespace std;
@@ -175,7 +175,7 @@ namespace RTAOGpuKernels
         {
             D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
             descComputePSO.pRootSignature = m_rootSignature.Get();
-            descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pDepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt));
+            descComputePSO.CS = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(g_pDisocclusionBlur_DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt), ARRAYSIZE(g_pDisocclusionBlur_DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt));
 
             ThrowIfFailed(device->CreateComputePipelineState(&descComputePSO, IID_PPV_ARGS(&m_pipelineStateObject)));
             m_pipelineStateObject->SetName(L"Pipeline state object: BilateralFilter");
@@ -900,7 +900,7 @@ namespace RTAOGpuKernels
                 enum Enum {
                     OutputSortedToSourceRayIndexOffset = 0,
                     Input,
-                    OutputDebug,
+                    Debug,
                     ConstantBuffer,
                     Count
                 };
@@ -917,12 +917,12 @@ namespace RTAOGpuKernels
             CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count];
             ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);  // 1 input texture
             ranges[Slot::OutputSortedToSourceRayIndexOffset].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
-            ranges[Slot::OutputDebug].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);  // 1 output texture
+            ranges[Slot::Debug].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);  // 1 output texture
 
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
             rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
             rootParameters[Slot::OutputSortedToSourceRayIndexOffset].InitAsDescriptorTable(1, &ranges[Slot::OutputSortedToSourceRayIndexOffset]);
-            rootParameters[Slot::OutputDebug].InitAsDescriptorTable(1, &ranges[Slot::OutputDebug]);
+            rootParameters[Slot::Debug].InitAsDescriptorTable(1, &ranges[Slot::Debug]);
             rootParameters[Slot::ConstantBuffer].InitAsConstantBufferView(0);
 
             CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
@@ -954,8 +954,7 @@ namespace RTAOGpuKernels
         bool useOctahedralRayDirectionQuantization,
         ID3D12DescriptorHeap* descriptorHeap,
         D3D12_GPU_DESCRIPTOR_HANDLE inputRayDirectionOriginDepthResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE outputSortedToSourceRayIndexOffsetResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE outputDebugResourceHandle)
+        D3D12_GPU_DESCRIPTOR_HANDLE outputSortedToSourceRayIndexOffsetResourceHandle)
     {
         using namespace RootSignature::SortRays;
         using namespace SortRays;
@@ -974,7 +973,10 @@ namespace RTAOGpuKernels
             commandList->SetComputeRootSignature(m_rootSignature.Get());
             commandList->SetComputeRootDescriptorTable(Slot::Input, inputRayDirectionOriginDepthResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputSortedToSourceRayIndexOffset, outputSortedToSourceRayIndexOffsetResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::OutputDebug, outputDebugResourceHandle);
+            
+
+            GpuResource* debugResources = Sample::g_debugOutput;
+            commandList->SetComputeRootDescriptorTable(Slot::Debug, debugResources[0].gpuDescriptorWriteAccess);
             commandList->SetComputeRootConstantBufferView(Slot::ConstantBuffer, m_CB.GpuVirtualAddress(m_CBinstanceID));
             commandList->SetPipelineState(m_pipelineStateObject.Get());
         }

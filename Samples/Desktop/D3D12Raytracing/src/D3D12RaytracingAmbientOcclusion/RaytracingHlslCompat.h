@@ -18,6 +18,11 @@
 - Full res - adaptive kernel size visible horizontal lines
 - Cleanup UI paths. Remove unneccasary vars. hardcode them instead
 
+Demo
+- predefine views
+- camera rotation
+- Profiling?
+
 Clamping
 -   Fix up under car ghosting. Or add to known issues. Filter tspp and see if that helps.
 
@@ -54,7 +59,7 @@ Optimizaiton
     - Add device removal support or remove it being announced
     use a struct to pass vars?
     - cleanup this file. Split RTAO to a RTAO specific file.
-
+    rended animated car at start
 Documentation
     Review all comments
     Add descs to GPU kernels
@@ -303,7 +308,7 @@ struct RTAOConstantBuffer
 enum CompositionType {
     PBRShading = 0,
     AmbientOcclusionOnly_Denoised,
-    AmbientOcclusionOnly_TemporallySupersampled,
+    AmbientOcclusionOnly_TemporallySupersampled, // ToDo remove
     AmbientOcclusionOnly_RawOneFrame,
     AmbientOcclusionAndDisocclusionMap, // ToDo quarter res support
     AmbientOcclusionVariance,

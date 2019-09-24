@@ -93,7 +93,6 @@ private:
     ConstantBuffer<PathtracerConstantBuffer> m_CB;
     GpuResource m_GBufferResources[GBufferResource::Count];
     GpuResource m_GBufferQuarterResResources[GBufferResource::Count];
-    GpuResource m_debugOutput[2];
 
     D3D12_GPU_DESCRIPTOR_HANDLE m_nullVertexBufferGPUhandle;
 

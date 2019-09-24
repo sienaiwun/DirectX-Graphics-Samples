@@ -56,9 +56,7 @@ namespace RayGenShaderType {
 
 namespace GBufferResource {
 	enum Enum {
-		Hit = 0,		// Geometry hit or not. // TODO: remove - obsolete
-		Material,		// Material of the object hit ~ {MaterialID, texCoord}.
-		HitPosition,	// 3D position of hit.
+		HitPosition = 0,	// 3D position of hit.
 		SurfaceNormalDepth,	// Encoded normal and linear depth.
         Depth,          // Linear depth of the hit.
         PartialDepthDerivatives,

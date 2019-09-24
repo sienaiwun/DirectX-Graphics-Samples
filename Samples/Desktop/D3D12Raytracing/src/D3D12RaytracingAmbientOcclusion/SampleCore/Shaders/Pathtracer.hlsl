@@ -20,7 +20,7 @@
 #include "RandomNumberGenerator.hlsli"
 #include "AnalyticalTextures.hlsli"
 #include "BxDF.hlsli"
-#define HitDistanceOnMiss 0
+#define HitDistanceOnMiss 0 // ToDo
 
 //***************************************************************************
 //*****------ Shader resources bound via root signatures -------*************
@@ -30,8 +30,6 @@
 //  l_* - bound via a local root signature.
 RaytracingAccelerationStructure g_scene : register(t0, space0);
 
-RWTexture2D<uint> g_rtGBufferCameraRayHits : register(u5);
-RWTexture2D<uint2> g_rtGBufferMaterialInfo : register(u6);  // 16b {1x Material Id, 3x Diffuse.RGB}.
 RWTexture2D<float4> g_rtGBufferPosition : register(u7);
 RWTexture2D<NormalDepthTexFormat> g_rtGBufferNormalDepth : register(u8);
 RWTexture2D<float> g_rtGBufferDepth : register(u9);
@@ -40,8 +38,8 @@ RWTexture2D<float2> g_rtTextureSpaceMotionVector : register(u17);
 RWTexture2D<NormalDepthTexFormat> g_rtReprojectedNormalDepth : register(u18); // ToDo rename
 RWTexture2D<float4> g_rtColor : register(u19);
 RWTexture2D<float4> g_rtAOSurfaceAlbedo : register(u20);
-RWTexture2D<float4> g_outputDebug1 : register(u21);
-RWTexture2D<float4> g_outputDebug2 : register(u22);
+RWTexture2D<float4> g_outDebug1 : register(u21);
+RWTexture2D<float4> g_outDebug2 : register(u22);
 
 TextureCube<float4> g_texEnvironmentMap : register(t12);
 ConstantBuffer<PathtracerConstantBuffer> g_cb : register(b0);
@@ -385,7 +383,6 @@ void MyRayGenShader_RadianceRay()
     bool hasCameraRayHitGeometry = rayPayload.AOGBuffer.tHit != HitDistanceOnMiss;
 
 	// Write out GBuffer information to rendertargets.
-	g_rtGBufferCameraRayHits[DTid] = hasCameraRayHitGeometry ? 1 : 0;
     g_rtGBufferPosition[DTid] = float4(rayPayload.AOGBuffer.hitPosition, 1);
 
     float rayLength = HitDistanceOnMiss;
@@ -411,6 +408,8 @@ void MyRayGenShader_RadianceRay()
     else // No geometry hit.
     {
         g_rtGBufferNormalDepth[DTid] = 0;
+        g_rtGBufferDepth[DTid] = 0;
+        g_rtAOSurfaceAlbedo[DTid] = 0;
 
         // Invalidate the motion vector - set it to move well out of texture bounds.
         g_rtTextureSpaceMotionVector[DTid] = 1e3f;

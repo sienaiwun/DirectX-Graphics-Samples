@@ -333,7 +333,7 @@
     <FxCompile Include="RTAO\Shaders\Ray sorting\CountingSort_SortRays_64x128rayGroupCS.hlsl">
       <Filter>Shaders\RTAO\Ray Sorting</Filter>
     </FxCompile>
-    <FxCompile Include="RTAO\Shaders\Denoising\DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl">
+    <FxCompile Include="RTAO\Shaders\Denoising\DisocclusionBlur_DepthAwareSeparableGaussianFilter3x3CS_AnyToAnyWaveReadLaneAt.hlsl">
       <Filter>Shaders\RTAO\Denoising\Filtering</Filter>
     </FxCompile>
   </ItemGroup>

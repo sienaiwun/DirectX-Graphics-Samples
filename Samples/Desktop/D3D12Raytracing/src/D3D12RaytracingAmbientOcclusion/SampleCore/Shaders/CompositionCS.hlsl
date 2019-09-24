@@ -19,8 +19,6 @@ RWTexture2D<float4> g_renderTarget : register(u0);
 
 // Input.
 ConstantBuffer<ComposeRenderPassesConstantBuffer> cb : register(b0);
-Texture2D<uint> g_texGBufferPositionHits : register(t0);
-Texture2D<uint2> g_texGBufferMaterial : register(t1);    // 16b {1x Material Id, 3x Diffuse.RGB}
 Texture2D<float4> g_texGBufferPositionRT : register(t2);
 Texture2D<NormalDepthTexFormat> g_texGBufferNormalDepth : register(t3);
 Texture2D<float> g_texAO : register(t5);
@@ -37,19 +35,14 @@ float4 RenderPBRResult(in uint2 DTid)
 {
     float4 color;
 
+    float depth;
     float3 surfaceNormal;
-    DecodeNormal(g_texGBufferNormalDepth[DTid], surfaceNormal);
+    DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
 
-    uint2 materialInfo = g_texGBufferMaterial[DTid];
-    UINT materialID;
-    float3 albedo;
-    DecodeMaterial16b(materialInfo, materialID, albedo);
-    PrimitiveMaterialBuffer material = g_materials[materialID];
-    float3 specular = material.Ks;      
     float3 PBRcolor = g_texColor[DTid].xyz;
 
     float ambientCoef = 0;
-    bool hit = g_texGBufferPositionHits[DTid] > 0;
+    bool hit = depth > 0;
     if (hit && cb.isAOEnabled)
     {
         // Subtract the default ambient illumination that has already been added to the color in pathtracing pass.
@@ -71,7 +64,10 @@ float4 RenderPBRResult(in uint2 DTid)
 float4 RenderAOResult(in uint2 DTid)
 {
     float4 color = float4(1, 1, 1, 1);
-    bool hit = g_texGBufferPositionHits[DTid] > 0;
+    float depth;
+    float3 surfaceNormal;
+    DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
+    bool hit = depth > 0;
     if (hit)
     {
         float ambientCoef = g_texAO[DTid];
@@ -98,7 +94,10 @@ float4 RenderAOResult(in uint2 DTid)
 float4 RenderVariance(in uint2 DTid)
 {
     float4 color = float4(1, 1, 1, 1);
-    bool hit = g_texGBufferPositionHits[DTid] > 0;
+    float depth;
+    float3 surfaceNormal;
+    DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
+    bool hit = depth > 0;
     if (hit)
     {
         float variance;
@@ -121,7 +120,10 @@ float4 RenderVariance(in uint2 DTid)
 float4 RenderRayHitDistance(in uint2 DTid)
 {
     float4 color = float4(1, 1, 1, 1);
-    bool hit = g_texGBufferPositionHits[DTid] > 0;
+    float depth;
+    float3 surfaceNormal;
+    DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
+    bool hit = depth > 0;
     if (hit)
     {
         // ToDo why is minHitDistance 0 or very dark on outer edges?
@@ -138,7 +140,10 @@ float4 RenderRayHitDistance(in uint2 DTid)
 float4 RenderNormalOrDepth(in uint2 DTid)
 {
     float4 color = float4(1, 1, 1, 1);
-    bool hit = g_texGBufferPositionHits[DTid] > 0;
+    float depth;
+    float3 surfaceNormal;
+    DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
+    bool hit = depth > 0;
     if (hit)
     {
         float depth;
@@ -157,13 +162,13 @@ float4 RenderNormalOrDepth(in uint2 DTid)
 float4 RenderAlbedo(in uint2 DTid)
 {
     float4 color = float4(1, 1, 1, 1);
-    bool hit = g_texGBufferPositionHits[DTid] > 0;
+    float depth;
+    float3 surfaceNormal;
+    DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
+    bool hit = depth > 0;
     if (hit)
     {
-        uint2 materialInfo = g_texGBufferMaterial[DTid];
-        UINT materialID;
-        float3 albedo;
-        DecodeMaterial16b(materialInfo, materialID, albedo);
+        float3 albedo = g_texAOSurfaceAlbedo[DTid].xyz;
         color = float4(albedo, 1);
     }
 
@@ -173,7 +178,10 @@ float4 RenderAlbedo(in uint2 DTid)
 float4 RenderDisocclusionMap(in uint2 DTid)
 {
     float4 color = float4(1, 1, 1, 1);
-    bool hit = g_texGBufferPositionHits[DTid] > 0;
+    float depth;
+    float3 surfaceNormal;
+    DecodeNormalDepth(g_texGBufferNormalDepth[DTid], surfaceNormal, depth);
+    bool hit = depth > 0;
     if (hit)
     {
         color = g_texTemporalSupersamplingDisocclusionMap[DTid].x == 1 ? float4(1, 0, 0, 0) : float4(1, 1, 1, 1);

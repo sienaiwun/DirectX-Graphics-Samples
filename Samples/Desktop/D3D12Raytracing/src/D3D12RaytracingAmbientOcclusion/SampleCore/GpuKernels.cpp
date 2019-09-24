@@ -225,7 +225,6 @@ namespace GpuKernels
                 enum Enum {
                     OutputNormal = 0,
                     OutputPosition,
-                    OutputGeometryHit,
                     OutputPartialDistanceDerivative,
                     OutputMotionVector,
                     OutputPrevFrameHitPosition,
@@ -233,7 +232,6 @@ namespace GpuKernels
                     OutputSurfaceAlbedo,
                     InputNormal,
                     InputPosition,
-                    InputGeometryHit,
                     InputPartialDistanceDerivative,
                     InputMotionVector,
                     InputPrevFrameHitPosition,
@@ -255,11 +253,9 @@ namespace GpuKernels
             CD3DX12_DESCRIPTOR_RANGE ranges[Slot::Count]; 
             ranges[Slot::InputNormal].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);  // 1 input normal texture
             ranges[Slot::InputPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);  // 1 input position texture
-            ranges[Slot::InputGeometryHit].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);  // 1 input geometry hit texture
             ranges[Slot::InputPartialDistanceDerivative].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);  // 1 input partial distance derivative
             ranges[Slot::OutputNormal].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);  // 1 output normal texture
             ranges[Slot::OutputPosition].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);  // 1 output position texture
-            ranges[Slot::OutputGeometryHit].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3);  // 1 output geometry hit texture
             ranges[Slot::OutputPartialDistanceDerivative].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 4);  // 1 output partial distance derivative
             ranges[Slot::InputDepth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);  // 1 input depth
             ranges[Slot::OutputDepth].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 5);  // 1 output depth
@@ -273,11 +269,9 @@ namespace GpuKernels
             CD3DX12_ROOT_PARAMETER rootParameters[Slot::Count];
             rootParameters[Slot::InputNormal].InitAsDescriptorTable(1, &ranges[Slot::InputNormal]);
             rootParameters[Slot::InputPosition].InitAsDescriptorTable(1, &ranges[Slot::InputPosition]);
-            rootParameters[Slot::InputGeometryHit].InitAsDescriptorTable(1, &ranges[Slot::InputGeometryHit]);
             rootParameters[Slot::InputPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[Slot::InputPartialDistanceDerivative]);
             rootParameters[Slot::OutputNormal].InitAsDescriptorTable(1, &ranges[Slot::OutputNormal]);
             rootParameters[Slot::OutputPosition].InitAsDescriptorTable(1, &ranges[Slot::OutputPosition]);
-            rootParameters[Slot::OutputGeometryHit].InitAsDescriptorTable(1, &ranges[Slot::OutputGeometryHit]);
             rootParameters[Slot::OutputPartialDistanceDerivative].InitAsDescriptorTable(1, &ranges[Slot::OutputPartialDistanceDerivative]);
             rootParameters[Slot::InputDepth].InitAsDescriptorTable(1, &ranges[Slot::InputDepth]);
             rootParameters[Slot::OutputDepth].InitAsDescriptorTable(1, &ranges[Slot::OutputDepth]);
@@ -321,7 +315,6 @@ namespace GpuKernels
         ID3D12DescriptorHeap* descriptorHeap,
         D3D12_GPU_DESCRIPTOR_HANDLE inputNormalResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputPositionResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE inputGeometryHitResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputPartialDistanceDerivativesResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputMotionVectorResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE inputPrevFrameHitPositionResourceHandle,
@@ -329,7 +322,6 @@ namespace GpuKernels
         D3D12_GPU_DESCRIPTOR_HANDLE inputSurfaceAlbedoResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE outputNormalResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE outputPositionResourceHandle,
-        D3D12_GPU_DESCRIPTOR_HANDLE outputGeometryHitResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE outputPartialDistanceDerivativesResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE outputMotionVectorResourceHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE outputPrevFrameHitPositionResourceHandle,
@@ -352,7 +344,6 @@ namespace GpuKernels
             commandList->SetComputeRootSignature(m_rootSignature.Get());
             commandList->SetComputeRootDescriptorTable(Slot::InputNormal, inputNormalResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputPosition, inputPositionResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::InputGeometryHit, inputGeometryHitResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputPartialDistanceDerivative, inputPartialDistanceDerivativesResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputMotionVector, inputMotionVectorResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::InputPrevFrameHitPosition, inputPrevFrameHitPositionResourceHandle);
@@ -360,7 +351,6 @@ namespace GpuKernels
             commandList->SetComputeRootDescriptorTable(Slot::InputSurfaceAlbedo, inputSurfaceAlbedoResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputNormal, outputNormalResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputPosition, outputPositionResourceHandle);
-            commandList->SetComputeRootDescriptorTable(Slot::OutputGeometryHit, outputGeometryHitResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputPartialDistanceDerivative, outputPartialDistanceDerivativesResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputMotionVector, outputMotionVectorResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::OutputPrevFrameHitPosition, outputPrevFrameHitPositionResourceHandle);
