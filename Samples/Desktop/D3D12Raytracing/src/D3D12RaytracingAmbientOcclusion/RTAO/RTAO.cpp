@@ -132,7 +132,7 @@ namespace RTAO_Args
     
     BoolVar ExponentialFalloff_Enabled(L"Render/AO/RTAO/Exponential Falloff/Enabled", true);
     NumVar ExponentialFalloff_DecayConstant(L"Render/AO/RTAO/Exponential Falloff/Decay Constant", 2.f, 0.0f, 20.f, 0.25f);
-    NumVar ExponentialFalloff_MinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff/Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);       // ToDo Finetune document perf.
+    NumVar ExponentialFalloff_MinOcclusionCutoff(L"Render/AO/RTAO/Exponential Falloff/Min Occlusion Cutoff", 0.4f, 0.0f, 1.f, 0.05f);
     
     BoolVar QuarterResAO(L"Render/AO/RTAO/Quarter res", false, Sample::OnRecreateRaytracingResources, nullptr);
 }
@@ -339,7 +339,6 @@ void RTAO::CreateTextureResources()
 
     D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
-    // ToDo cleanup raytracing resolution - twice for coefficient.
     CreateRenderTargetResource(device,  ResourceFormat(ResourceType::AOCoefficient), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::AmbientCoefficient], initialResourceState, L"Render/AO Coefficient");
     CreateRenderTargetResource(device, ResourceFormat(ResourceType::RayHitDistance), m_raytracingWidth, m_raytracingHeight, m_cbvSrvUavHeap.get(), &m_AOResources[AOResource::RayHitDistance], initialResourceState, L"Render/AO Hit Distance");
 

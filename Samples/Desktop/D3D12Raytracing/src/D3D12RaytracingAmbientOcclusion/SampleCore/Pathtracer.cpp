@@ -651,7 +651,6 @@ void Pathtracer::Run(Scene& scene)
         m_isRecreateRaytracingResourcesRequested = false;
         m_deviceResources->WaitForGpu();
 
-        // ToDo split to recreate only whats needed?
         CreateResolutionDependentResources();
         CreateAuxilaryDeviceResources();
     }

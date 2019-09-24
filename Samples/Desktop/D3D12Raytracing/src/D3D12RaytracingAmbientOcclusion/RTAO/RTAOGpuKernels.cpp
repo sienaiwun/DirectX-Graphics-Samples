@@ -244,7 +244,6 @@ namespace RTAOGpuKernels
                     Input,
                     Normals,
                     Variance,
-                    SmoothedVariance,
                     RayHitDistance,
                     PartialDistanceDerivatives,
                     Tspp,
@@ -267,7 +266,6 @@ namespace RTAOGpuKernels
             ranges[Slot::Input].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
             ranges[Slot::Normals].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
             ranges[Slot::Variance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
-            ranges[Slot::SmoothedVariance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
             ranges[Slot::RayHitDistance].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
             ranges[Slot::PartialDistanceDerivatives].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7);
             ranges[Slot::Tspp].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8);
@@ -280,7 +278,6 @@ namespace RTAOGpuKernels
             rootParameters[Slot::Input].InitAsDescriptorTable(1, &ranges[Slot::Input]);
             rootParameters[Slot::Normals].InitAsDescriptorTable(1, &ranges[Slot::Normals]);
             rootParameters[Slot::Variance].InitAsDescriptorTable(1, &ranges[Slot::Variance]);
-            rootParameters[Slot::SmoothedVariance].InitAsDescriptorTable(1, &ranges[Slot::SmoothedVariance]);
             rootParameters[Slot::Output].InitAsDescriptorTable(1, &ranges[Slot::Output]);
             rootParameters[Slot::RayHitDistance].InitAsDescriptorTable(1, &ranges[Slot::RayHitDistance]);
             rootParameters[Slot::PartialDistanceDerivatives].InitAsDescriptorTable(1, &ranges[Slot::PartialDistanceDerivatives]);
@@ -348,16 +345,10 @@ namespace RTAOGpuKernels
         float minVarianceToDenoise,
         float depthWeightCutoff)
     {
-
-        // ToDo: cleanup use of variance
-        // SmoothedVariance is used for edge stopping
-        // Variance is used for intermediate variance calculations for the 
-
         using namespace RootSignature::AtrousWaveletTransformCrossBilateralFilter;
         using namespace AtrousWaveletTransformFilterCS;
 
         ScopedTimer _prof(L"AtrousWaveletTransformCrossBilateralFilter", commandList);
-
 
         auto resourceDesc = outputResource->resource.Get()->GetDesc();
         XMUINT2 resourceDim(static_cast<UINT>(resourceDesc.Width), static_cast<UINT>(resourceDesc.Height));
@@ -390,8 +381,6 @@ namespace RTAOGpuKernels
             commandList->SetPipelineState(m_pipelineStateObjects[filterType].Get());
             commandList->SetComputeRootDescriptorTable(Slot::Normals, inputNormalsResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::Variance, inputVarianceResourceHandle);
-            // ToDo Smoothen input variance or remove the dupe
-            commandList->SetComputeRootDescriptorTable(Slot::SmoothedVariance, inputVarianceResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::RayHitDistance, inputHitDistanceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::PartialDistanceDerivatives, inputPartialDistanceDerivativesResourceHandle);
             commandList->SetComputeRootDescriptorTable(Slot::Tspp, inputTsppResourceHandle);

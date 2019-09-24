@@ -24,7 +24,6 @@
 Texture2D<float> g_inValue : register(t0);
 Texture2D<NormalDepthTexFormat> g_inNormalDepth : register(t1);
 Texture2D<float> g_inVariance : register(t4); 
-Texture2D<float> g_inSmoothedVariance : register(t5); 
 Texture2D<float> g_inHitDistance : register(t6);
 Texture2D<float2> g_inPartialDistanceDerivatives : register(t7);
 Texture2D<uint> g_inTspp : register(t8);
@@ -155,7 +154,7 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID)
     
     bool isValidValue = value != RTAO::InvalidAOCoefficientValue;
     float filteredValue = value;
-    float variance = g_inSmoothedVariance[DTid];
+    float variance = g_inVariance[DTid];
 
     if (depth != 0)
     {

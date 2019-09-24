@@ -41,8 +41,7 @@ The title bar of the sample provides runtime information:
 * Hold right mouse key and drag - rotate scene.
 * 
 ## Requirements
-// ToDo can we confirm where this is available?
-* "*AnyToAnyWaveReadLaneAt*" shaders require ReadLaneAt() with any to any wave read lane support. Tested on (Pascal & Turing). If your HW doesn't support it, use the non wave intrinsic version of the shader.
+* "*AnyToAnyWaveReadLaneAt*" shaders require ReadLaneAt() with any to any wave read lane support. Tested on (Pascal & Turing). If your HW doesn't support it, you will need to replace those wave intrinsics.
 * Requires DXR capable HW and SW. Consult the main [D3D12 Raytracing readme](../../readme.md) for requirements. The sample doesn't implement Raytracing Fallback Layer path.
 
 ## Acknowledgements
