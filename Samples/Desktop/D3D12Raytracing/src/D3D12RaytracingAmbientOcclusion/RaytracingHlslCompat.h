@@ -26,6 +26,7 @@ Clamping
    build all configs.
   
   Glithces:
+  floor and surfaces with UP normal are dark, while other surfaces are light.
   - support neighbor sample generation for 2+ spp
   - Temporal
     On full re depth test fails on sharp angles on the ground
