@@ -26,6 +26,8 @@ class RTAO;
 namespace Denoiser_Args
 {
     extern BoolVar UseSmoothedVariance;
+    extern NumVar MinVarianceToDenoise;
+    extern BoolVar LowTspp;
 }
 
 class Denoiser

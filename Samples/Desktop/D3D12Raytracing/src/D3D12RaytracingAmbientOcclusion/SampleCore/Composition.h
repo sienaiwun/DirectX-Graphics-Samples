@@ -26,6 +26,7 @@
 namespace Composition_Args
 {
     extern EnumVar CompositionMode;
+    extern BoolVar AOEnabled;
 }
 
 class RTAO;

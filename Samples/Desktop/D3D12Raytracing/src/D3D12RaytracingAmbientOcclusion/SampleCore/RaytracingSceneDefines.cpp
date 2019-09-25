@@ -32,15 +32,10 @@ namespace SampleScene
 			camera.boundaries.max = XMVectorSplatInfinity();
 
             // ToDoF remove
-#if 1  // Profiling
-
-            camera.position.eye = { -35.7656f, 14.7652f, -22.5312f, 1 };
-            camera.position.at = { -35.0984f, 14.345f, -21.9154f, 1 };
-            camera.position.up = { 0.378971f, 0.854677f, 0.354824f, 0 };
-#elif 0   // Isometric view of all objects and grass around
-            camera.position.at = { -47.2277f, 27.3063f, -30.9273f, 1 };
-            camera.position.up = { 0.483884f, 0.740712f, 0.466033f, 0 };
-            camera.position.eye = { -47.8157f, 27.891f, -31.4868f, 1 };
+#if 1  
+            camera.position.eye = { -38.5863f, 13.9563f, -24.2481f, 1 };
+            camera.position.at = { -37.9042f, 13.5773f, -23.6219f, 1 };
+            camera.position.up = { 0.351221f, 0.877166f, 0.32744f, 0 };
 #endif
 		}
 	}

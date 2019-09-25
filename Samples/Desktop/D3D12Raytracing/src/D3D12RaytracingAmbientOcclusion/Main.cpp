@@ -20,7 +20,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     ThrowIfFailed(CoInitializeEx(nullptr, COINITBASE_MULTITHREADED), L"Failed to initialize WIC component");
 
     // ToDoF
-    Sample::D3D12RaytracingAmbientOcclusion sample(3840, 2160, L"D3D12 Raytracing - Real-Time Denoised Raytraced Ambient Occlusion");
+    //Sample::D3D12RaytracingAmbientOcclusion sample(3840, 2160, L"D3D12 Raytracing - Real-Time Denoised Raytraced Ambient Occlusion");
+    Sample::D3D12RaytracingAmbientOcclusion sample(1920, 2160, L"D3D12 Raytracing - Real-Time Denoised Raytraced Ambient Occlusion");
     //Sample::D3D12RaytracingAmbientOcclusion sample(1280, 720, L"D3D12 Raytracing - Real-Time Denoised Raytraced Ambient Occlusion");
     //Sample::D3D12RaytracingAmbientOcclusion sample(1280, 720, L"D3D12 Raytracing - Real-Time Denoised Raytraced Ambient Occlusion");
     return Win32Application::Run(&sample, hInstance, nCmdShow);

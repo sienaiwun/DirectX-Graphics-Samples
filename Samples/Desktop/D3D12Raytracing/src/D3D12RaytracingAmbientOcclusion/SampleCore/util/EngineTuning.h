@@ -59,7 +59,7 @@ public:
 
 	virtual void Increment() override { m_Flag = true; OnChanged(); }
     virtual void Decrement() override { m_Flag = false; OnChanged(); }
-    virtual void Bang() override { m_Flag = !m_Flag; }
+    virtual void Bang() override { m_Flag = !m_Flag; OnChanged(); }
 
     virtual std::wstring ToFormattedString() const override;
     virtual std::wstring ToString() const override;

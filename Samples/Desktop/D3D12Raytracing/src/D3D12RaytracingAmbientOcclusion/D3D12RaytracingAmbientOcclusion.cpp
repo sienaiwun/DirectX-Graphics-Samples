@@ -199,8 +199,8 @@ namespace Sample
     {
         m_scene.OnKeyDown(key);
 
-       // float fValue;
-        // ToDoF call componanet's handlers
+        float fValue;
+        // ToDoF call componanet's handlers5
         switch (key)
         {
         case VK_ESCAPE:
@@ -211,49 +211,37 @@ namespace Sample
         case 'C':
             m_scene.ToggleAnimateCamera();
             break;
-        case 'A':
+        case 'T':
             m_scene.ToggleAnimateScene();
             break;
-#if 0
-        case 'V':
-            Args::TAO_LazyRender.Bang();
+        case VK_NUMPAD0:
+            RTAO_Args::Spp_useGroundTruthSpp.Bang();
             break;
-        case 'B':
-            m_cameraChangedIndex = 2;
-            break;
-#if ENABLE_PROFILING
-        case VK_F9:
-            if (m_isProfiling)
-                WriteProfilingResultsToFile();
-            else
-            {
-                m_numRemainingFramesToProfile = 1000;
-                float perFrameSeconds = Args::CameraRotationDuration / m_numRemainingFramesToProfile;
-                m_timer.SetTargetElapsedSeconds(perFrameSeconds);
-                m_timer.ResetElapsedTime();
-                m_animateCamera = true;
-            }
-            m_isProfiling = !m_isProfiling;
-            m_timer.SetFixedTimeStep(m_isProfiling);
-            break;
-#endif
         case VK_NUMPAD1:
-            Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_RawOneFrame);
+            Composition_Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_RawOneFrame);
             break;
         case VK_NUMPAD2:
-            Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_Denoised);
+            Composition_Args::CompositionMode.SetValue(CompositionType::AmbientOcclusionOnly_Denoised);
             break;
         case VK_NUMPAD3:
-            Args::CompositionMode.SetValue(CompositionType::PBRShading);
+            Composition_Args::CompositionMode.SetValue(CompositionType::PBRShading);
             break;
-        case VK_NUMPAD0:
-            Args::AOEnabled.Bang();
-            break;
-        case VK_NUMPAD9:
-            fValue = IsInRange(m_RTAO.GetMaxRayHitTime(), 3.9f, 4.1f) ? 22.f : 4.f;
+        case VK_NUMPAD4:
+            fValue = IsInRange(static_cast<float>(RTAO_Args::MaxRayHitTime), 3.9f, 4.1f) ? 22.f : 4.f;
             m_RTAO.SetMaxRayHitTime(fValue);
             break;
-#endif
+        case VK_NUMPAD5:
+            m_renderOnce = !m_renderOnce;
+            m_framesToRender = m_renderOnce ? 1 : 0;
+            break;
+            break;
+        case VK_NUMPAD7:
+            Denoiser_Args::LowTspp.SetValue(true);
+            break;
+        case VK_RETURN:
+            Composition_Args::AOEnabled.Bang();
+            break;
+
         default:
             break;
         }
@@ -488,6 +476,12 @@ namespace Sample
         {
             return;
         }
+
+        if (m_renderOnce && m_framesToRender == 0)
+        {
+            return;
+        }
+        m_framesToRender--;
 
         auto commandList = m_deviceResources->GetCommandList();
 

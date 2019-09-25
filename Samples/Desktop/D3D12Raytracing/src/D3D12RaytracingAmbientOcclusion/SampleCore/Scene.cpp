@@ -96,7 +96,9 @@ void Scene::CreateAuxilaryDeviceResources()
 
 void Scene::OnRender()
 {
+#if RENDER_GRASS_GEOMETRY
     GenerateGrassGeometry();
+#endif
     UpdateAccelerationStructure();
 }
 
@@ -160,6 +162,7 @@ void Scene::OnUpdate()
         float rotAngle2 = XMConvertToRadians((t + 12) * 360.0f / animationDuration);
         float rotAngle3 = XMConvertToRadians((t + 24) * 360.0f / animationDuration);
 
+#if !LOAD_ONLY_ONE_PBRT_MESH
         // Animated car.
         {
             float radius = 64;
@@ -176,6 +179,7 @@ void Scene::OnUpdate()
 
             m_accelerationStructure->GetBottomLevelASInstance(m_animatedCarInstanceIndex).SetTransform(mTransform);
         }
+#endif
     }
 
     // Rotate the camera around Y axis.
@@ -407,7 +411,9 @@ void Scene::InitializeScene()
 void Scene::LoadSceneGeometry()
 {
     LoadPBRTScene();
+#if RENDER_GRASS_GEOMETRY
     InitializeGrassGeometry();
+#endif
 }
 
 // Build geometry used in the sample.
@@ -670,6 +676,7 @@ void Scene::InitializeAccelerationStructures()
     }
 #endif
 
+#if RENDER_GRASS_GEOMETRY
     // Set up grass patches.
     UINT grassInstanceIndex = 0;
     for (int i = 0; i < NumGrassPatchesZ; i++)
@@ -686,7 +693,7 @@ void Scene::InitializeAccelerationStructures()
                 grassInstanceIndex++;
             }
         }
-
+#endif
     // Initialize the top-level AS.
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
     bool allowUpdate = false;

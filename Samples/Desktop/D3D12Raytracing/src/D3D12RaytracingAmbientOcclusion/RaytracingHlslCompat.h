@@ -89,6 +89,7 @@ Documentation
 #define ENABLE_PROFILING 0
 
 #define HitDistanceOnMiss 0
+#define RENDER_GRASS_GEOMETRY 1
 
 #define PRINT_OUT_CAMERA_CONFIG 1
 

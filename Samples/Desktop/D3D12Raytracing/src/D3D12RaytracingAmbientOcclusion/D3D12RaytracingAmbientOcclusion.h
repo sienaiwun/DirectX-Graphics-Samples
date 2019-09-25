@@ -105,6 +105,8 @@ namespace Sample
         float m_fps;
         bool m_isSceneInitializationRequested;
         bool m_isRecreateRaytracingResourcesRequested;
+        bool m_renderOnce = false;
+        int m_framesToRender = 0;
 
         // UI
         std::unique_ptr<UILayer> m_uiLayer;
