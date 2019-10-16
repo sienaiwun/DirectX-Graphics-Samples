@@ -882,9 +882,9 @@
     <None Include="Shaders\ColorSpaceUtility.hlsli">
       <Filter>Shaders\Misc</Filter>
     </None>
-    <None Include="packages.config" />
     <None Include="Shaders\BitonicSortCommon.hlsli">
       <Filter>Shaders\BitonicSort</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

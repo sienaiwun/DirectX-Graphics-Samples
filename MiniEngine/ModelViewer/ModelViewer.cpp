@@ -17,7 +17,7 @@
 #include "CameraController.h"
 #include "BufferManager.h"
 #include "Camera.h"
-#include "Model.h"
+#include "ModelAssimp.h"
 #include "GpuBuffer.h"
 #include "CommandContext.h"
 #include "SamplerManager.h"
@@ -96,7 +96,7 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE m_BiasedDefaultSampler;
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_ExtraTextures[6];
-    Model m_Model;
+    AssimpModel m_Model;
     std::vector<bool> m_pMaterialIsCutout;
 
     Vector3 m_SunDirection;
