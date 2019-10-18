@@ -51,6 +51,7 @@ bool AssimpModel::Load(const char *filename)
     {
     case format_none:
         rval = LoadAssimp(filename);
+		needToOptimize = false;
         break;
 
     case format_h3d:
@@ -400,7 +401,13 @@ bool AssimpModel::LoadAssimp(const char *filename)
         }
     }
 
+	m_VertexStride = m_pMesh[0].vertexStride;
+	m_VertexStrideDepth = m_pMesh[0].vertexStrideDepth;
+	m_VertexBuffer.Create(L"VertexBuffer", m_Header.vertexDataByteSize / m_VertexStride, m_VertexStride, m_pVertexData);
+	m_IndexBuffer.Create(L"IndexBuffer", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexData);
+	m_VertexBufferDepth.Create(L"VertexBufferDepth", m_Header.vertexDataByteSizeDepth / m_VertexStrideDepth, m_VertexStrideDepth, m_pVertexDataDepth);
+	m_IndexBufferDepth.Create(L"IndexBufferDepth", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexDataDepth);
     ComputeAllBoundingBoxes();
-
+	LoadTextures();
     return true;
 }

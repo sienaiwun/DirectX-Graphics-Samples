@@ -79,6 +79,7 @@
     <ClCompile Include="IndexOptimizePostTransform.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="ModelAssimp.cpp" />
+    <ClCompile Include="ModelConvert.cpp" />
     <ClCompile Include="ModelH3D.cpp" />
     <ClCompile Include="ModelOptimize.cpp" />
   </ItemGroup>

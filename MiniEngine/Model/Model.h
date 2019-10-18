@@ -197,6 +197,7 @@ public:
         return m_SRVs + materialIdx * 6;
     }
 
+	void PrintInfo() const;
 protected:
 
     bool LoadH3D(const char *filename);

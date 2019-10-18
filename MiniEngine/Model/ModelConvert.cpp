@@ -23,7 +23,7 @@ void PrintHelp()
     printf("model_convert input_file output_file\n");
 }
 
-void PrintModelStats(const Model *model)
+static void PrintModelStats(const Model *model)
 {
     printf("model stats:\n");
     
@@ -106,6 +106,7 @@ void PrintModelStats(const Model *model)
         const Model::Material *material = model->m_pMaterial + materialIndex;
 
         printf("material %u\n", materialIndex);
+		printf("material diffuse tex:%s", material->texDiffusePath);
     }
     printf("\n");
 }
