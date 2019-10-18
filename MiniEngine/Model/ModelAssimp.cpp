@@ -51,7 +51,7 @@ bool AssimpModel::Load(const char *filename)
     {
     case format_none:
         rval = LoadAssimp(filename);
-		needToOptimize = false;
+		needToOptimize = true;
         break;
 
     case format_h3d:
@@ -64,8 +64,10 @@ bool AssimpModel::Load(const char *filename)
         return false;
 
     if (needToOptimize)
+	{
         Optimize();
-
+		LoadAsDXModel();
+	}
     return true;
 }
 
@@ -87,6 +89,16 @@ bool AssimpModel::Save(const char *filename) const
     return rval;
 }
 
+void AssimpModel::LoadAsDXModel()
+{
+	m_VertexStride = m_pMesh[0].vertexStride;
+	m_VertexStrideDepth = m_pMesh[0].vertexStrideDepth;
+	m_VertexBuffer.Create(L"VertexBuffer", m_Header.vertexDataByteSize / m_VertexStride, m_VertexStride, m_pVertexData);
+	m_IndexBuffer.Create(L"IndexBuffer", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexData);
+	m_VertexBufferDepth.Create(L"VertexBufferDepth", m_Header.vertexDataByteSizeDepth / m_VertexStrideDepth, m_VertexStrideDepth, m_pVertexDataDepth);
+	m_IndexBufferDepth.Create(L"IndexBufferDepth", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexDataDepth);
+	LoadTextures();
+}
 
 bool AssimpModel::LoadAssimp(const char *filename)
 {
@@ -231,35 +243,35 @@ bool AssimpModel::LoadAssimp(const char *filename)
 
         // just store everything as float. Can quantize in Model::optimize()
         dstMesh->attribsEnabled |= attrib_mask_position;
-        dstMesh->attrib[attrib_position].offset = dstMesh->vertexStride;
+        dstMesh->attrib[attrib_position].offset = (uint16_t)dstMesh->vertexStride;
         dstMesh->attrib[attrib_position].normalized = 0;
         dstMesh->attrib[attrib_position].components = 3;
         dstMesh->attrib[attrib_position].format = attrib_format_float;
         dstMesh->vertexStride += sizeof(float) * 3;
 
         dstMesh->attribsEnabled |= attrib_mask_texcoord0;
-        dstMesh->attrib[attrib_texcoord0].offset = dstMesh->vertexStride;
+        dstMesh->attrib[attrib_texcoord0].offset = (uint16_t)dstMesh->vertexStride;
         dstMesh->attrib[attrib_texcoord0].normalized = 0;
         dstMesh->attrib[attrib_texcoord0].components = 2;
         dstMesh->attrib[attrib_texcoord0].format = attrib_format_float;
         dstMesh->vertexStride += sizeof(float) * 2;
 
         dstMesh->attribsEnabled |= attrib_mask_normal;
-        dstMesh->attrib[attrib_normal].offset = dstMesh->vertexStride;
+        dstMesh->attrib[attrib_normal].offset = (uint16_t)dstMesh->vertexStride;
         dstMesh->attrib[attrib_normal].normalized = 0;
         dstMesh->attrib[attrib_normal].components = 3;
         dstMesh->attrib[attrib_normal].format = attrib_format_float;
         dstMesh->vertexStride += sizeof(float) * 3;
 
         dstMesh->attribsEnabled |= attrib_mask_tangent;
-        dstMesh->attrib[attrib_tangent].offset = dstMesh->vertexStride;
+        dstMesh->attrib[attrib_tangent].offset = (uint16_t)dstMesh->vertexStride;
         dstMesh->attrib[attrib_tangent].normalized = 0;
         dstMesh->attrib[attrib_tangent].components = 3;
         dstMesh->attrib[attrib_tangent].format = attrib_format_float;
         dstMesh->vertexStride += sizeof(float) * 3;
 
         dstMesh->attribsEnabled |= attrib_mask_bitangent;
-        dstMesh->attrib[attrib_bitangent].offset = dstMesh->vertexStride;
+        dstMesh->attrib[attrib_bitangent].offset = (uint16_t)dstMesh->vertexStride;
         dstMesh->attrib[attrib_bitangent].normalized = 0;
         dstMesh->attrib[attrib_bitangent].components = 3;
         dstMesh->attrib[attrib_bitangent].format = attrib_format_float;
@@ -267,7 +279,7 @@ bool AssimpModel::LoadAssimp(const char *filename)
 
         // depth-only
         dstMesh->attribsEnabledDepth |= attrib_mask_position;
-        dstMesh->attribDepth[attrib_position].offset = dstMesh->vertexStrideDepth;
+        dstMesh->attribDepth[attrib_position].offset = (uint16_t)dstMesh->vertexStrideDepth;
         dstMesh->attribDepth[attrib_position].normalized = 0;
         dstMesh->attribDepth[attrib_position].components = 3;
         dstMesh->attribDepth[attrib_position].format = attrib_format_float;
@@ -391,23 +403,17 @@ bool AssimpModel::LoadAssimp(const char *filename)
         {
             assert(srcMesh->mFaces[f].mNumIndices == 3);
 
-            *dstIndex++ = srcMesh->mFaces[f].mIndices[0];
-            *dstIndex++ = srcMesh->mFaces[f].mIndices[1];
-            *dstIndex++ = srcMesh->mFaces[f].mIndices[2];
+            *dstIndex++ = (uint16_t)srcMesh->mFaces[f].mIndices[0];
+            *dstIndex++ = (uint16_t)srcMesh->mFaces[f].mIndices[1];
+            *dstIndex++ = (uint16_t)srcMesh->mFaces[f].mIndices[2];
 
-            *dstIndexDepth++ = srcMesh->mFaces[f].mIndices[0];
-            *dstIndexDepth++ = srcMesh->mFaces[f].mIndices[1];
-            *dstIndexDepth++ = srcMesh->mFaces[f].mIndices[2];
+            *dstIndexDepth++ = (uint16_t)srcMesh->mFaces[f].mIndices[0];
+            *dstIndexDepth++ = (uint16_t)srcMesh->mFaces[f].mIndices[1];
+            *dstIndexDepth++ = (uint16_t)srcMesh->mFaces[f].mIndices[2];
         }
     }
 
-	m_VertexStride = m_pMesh[0].vertexStride;
-	m_VertexStrideDepth = m_pMesh[0].vertexStrideDepth;
-	m_VertexBuffer.Create(L"VertexBuffer", m_Header.vertexDataByteSize / m_VertexStride, m_VertexStride, m_pVertexData);
-	m_IndexBuffer.Create(L"IndexBuffer", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexData);
-	m_VertexBufferDepth.Create(L"VertexBufferDepth", m_Header.vertexDataByteSizeDepth / m_VertexStrideDepth, m_VertexStrideDepth, m_pVertexDataDepth);
-	m_IndexBufferDepth.Create(L"IndexBufferDepth", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexDataDepth);
+
     ComputeAllBoundingBoxes();
-	LoadTextures();
     return true;
 }

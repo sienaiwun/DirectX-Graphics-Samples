@@ -33,7 +33,7 @@ public:
 private:
 
     bool LoadAssimp(const char *filename);
-
+	void LoadAsDXModel();
     void Optimize();
     void OptimizeRemoveDuplicateVertices(bool depth);
     void OptimizePostTransform(bool depth);
