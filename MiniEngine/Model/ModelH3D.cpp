@@ -303,4 +303,20 @@ void Model::LoadTextures(void)
         m_SRVs[materialIdx * 6 + 4] = MatTextures[0]->GetSRV();
         m_SRVs[materialIdx * 6 + 5] = MatTextures[0]->GetSRV();
     }
+	ASSERT(m_Header.meshCount > 0, "Model contains no meshes");
+	m_pMaterialIsCutout.resize(m_Header.materialCount);
+	for (uint32_t i = 0; i < m_Header.materialCount; ++i)
+	{
+		const Model::Material& mat = m_pMaterial[i];
+		if (std::string(mat.texDiffusePath).find("thorn") != std::string::npos ||
+			std::string(mat.texDiffusePath).find("plant") != std::string::npos ||
+			std::string(mat.texDiffusePath).find("chain") != std::string::npos)
+		{
+			m_pMaterialIsCutout[i] = true;
+		}
+		else
+		{
+			m_pMaterialIsCutout[i] = false;
+		}
+	}
 }

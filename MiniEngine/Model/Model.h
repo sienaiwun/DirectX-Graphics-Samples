@@ -198,6 +198,12 @@ public:
     }
 
 	void PrintInfo() const;
+
+	bool MaterialIsCutout(const int index) const
+	{
+		return m_pMaterialIsCutout[index];
+	}
+
 protected:
 
     bool LoadH3D(const char *filename);
@@ -210,4 +216,6 @@ protected:
     void ReleaseTextures();
     void LoadTextures();
     D3D12_CPU_DESCRIPTOR_HANDLE* m_SRVs;
+
+	std::vector<bool> m_pMaterialIsCutout;
 };

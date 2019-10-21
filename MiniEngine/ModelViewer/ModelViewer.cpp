@@ -52,6 +52,7 @@
 using namespace GameCore;
 using namespace Math;
 using namespace Graphics;
+#pragma warning(disable:4996)
 
 class ModelViewer : public GameCore::IGameApp
 {
@@ -97,7 +98,6 @@ private:
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_ExtraTextures[6];
     AssimpModel m_Model;
-    std::vector<bool> m_pMaterialIsCutout;
 
     Vector3 m_SunDirection;
     ShadowCamera m_SunShadow;
@@ -210,27 +210,11 @@ void ModelViewer::Startup( void )
     m_ExtraTextures[1] = g_ShadowBuffer.GetSRV();
 
     TextureManager::Initialize(L"Textures/");
-    ASSERT(m_Model.Load("Models/box.h3d"), "Failed to load model");
+    ASSERT(m_Model.Load("Models/box.obj"), "Failed to load model");
 	m_Model.PrintInfo();
-    ASSERT(m_Model.m_Header.meshCount > 0, "Model contains no meshes");
 
     // The caller of this function can override which materials are considered cutouts
-    m_pMaterialIsCutout.resize(m_Model.m_Header.materialCount);
-    for (uint32_t i = 0; i < m_Model.m_Header.materialCount; ++i)
-    {
-        const Model::Material& mat = m_Model.m_pMaterial[i];
-        if (std::string(mat.texDiffusePath).find("thorn") != std::string::npos ||
-            std::string(mat.texDiffusePath).find("plant") != std::string::npos ||
-            std::string(mat.texDiffusePath).find("chain") != std::string::npos)
-        {
-            m_pMaterialIsCutout[i] = true;
-        }
-        else
-        {
-            m_pMaterialIsCutout[i] = false;
-        }
-    }
-
+    
     CreateParticleEffects();
 
     float modelRadius = Length(m_Model.m_Header.boundingBox.max - m_Model.m_Header.boundingBox.min) * .5f;
@@ -332,8 +316,8 @@ void ModelViewer::RenderObjects( GraphicsContext& gfxContext, const Matrix4& Vie
 
         if (mesh.materialIndex != materialIdx)
         {
-            if ( m_pMaterialIsCutout[mesh.materialIndex] && !(Filter & kCutout) ||
-                !m_pMaterialIsCutout[mesh.materialIndex] && !(Filter & kOpaque) )
+            if (m_Model.MaterialIsCutout(mesh.materialIndex) && !(Filter & kCutout) ||
+                !m_Model.MaterialIsCutout(mesh.materialIndex) && !(Filter & kOpaque) )
                 continue;
 
             materialIdx = mesh.materialIndex;
