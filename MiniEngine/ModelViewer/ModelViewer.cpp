@@ -302,7 +302,7 @@ void ModelViewer::RenderObjects( GraphicsContext& gfxContext, const Matrix4& Vie
     gfxContext.SetDynamicConstantBufferView(0, sizeof(vsConstants), &vsConstants);
 
     uint32_t materialIdx = 0xFFFFFFFFul;
-	for (auto& model : m_world.m_models)
+	m_world.ForEach([&](Model &model)
 	{
 		uint32_t VertexStride = model.m_VertexStride;
 		gfxContext.SetRootSignature(m_RootSig);
@@ -332,7 +332,7 @@ void ModelViewer::RenderObjects( GraphicsContext& gfxContext, const Matrix4& Vie
 
 			gfxContext.DrawIndexed(indexCount, startIndex, baseVertex);
 		}
-	}
+	});
 }
 
 void ModelViewer::RenderLightShadows(GraphicsContext& gfxContext)
@@ -418,8 +418,8 @@ void ModelViewer::RenderScene( void )
     {
         gfxContext.SetRootSignature(m_RootSig);
         gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        gfxContext.SetIndexBuffer(m_world.m_models[2].m_IndexBuffer.IndexBufferView());
-        gfxContext.SetVertexBuffer(0, m_world.m_models[2].m_VertexBuffer.VertexBufferView());
+        gfxContext.SetIndexBuffer(m_world.m_models[0].m_IndexBuffer.IndexBufferView());
+        gfxContext.SetVertexBuffer(0, m_world.m_models[0].m_VertexBuffer.VertexBufferView());
     };
 
     pfnSetupGraphicsState();

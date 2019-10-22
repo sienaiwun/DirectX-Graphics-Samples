@@ -27,6 +27,13 @@ public:
     Model();
     ~Model();
 
+	Model(const Model& model) = delete;
+	Model(Model&& model) noexcept = default ;
+
+	Model& operator=(const Model& model) = delete;
+	Model& operator=(Model&& model) noexcept = default;
+
+
     void Clear();
 
     enum
@@ -119,7 +126,8 @@ public:
     };
     struct Mesh
     {
-        
+
+		BoundingBox boundingBox;
 
         unsigned int materialIndex;
 
@@ -138,7 +146,6 @@ public:
         unsigned int vertexDataByteOffsetDepth;
         unsigned int vertexCountDepth;
 
-		BoundingBox boundingBox;
     };
     Mesh *m_pMesh;
 

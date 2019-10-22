@@ -21,6 +21,15 @@ namespace SceneView
 
 		std::vector<AssimpModel> m_models;
 
+		template<typename ActionT >
+		void ForEach(ActionT&& action)
+		{
+			for (auto& model : m_models) 
+			{
+				action(model);
+			}
+		}
+
 	private:
 
 		void CaculateBoundingBox();

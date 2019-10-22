@@ -107,6 +107,8 @@ static void PrintModelStats(const Model *model)
 	printf("\n");
 }
 
+static std::string defaultDiffuseName = "white";
+
 void Model::PrintInfo() const
 {
 	PrintModelStats(this);
@@ -267,7 +269,7 @@ void Model::LoadTextures(void)
         // Load diffuse
         MatTextures[0] = TextureManager::LoadFromFile(pMaterial.texDiffusePath, true);
         if (!MatTextures[0]->IsValid())
-            MatTextures[0] = TextureManager::LoadFromFile("default", true);
+            MatTextures[0] = TextureManager::LoadFromFile(defaultDiffuseName.c_str(), true);
 
         // Load specular
         MatTextures[1] = TextureManager::LoadFromFile(pMaterial.texSpecularPath, true);

@@ -17,25 +17,31 @@ namespace SceneView
 
 	void World::Create()
 	{
-		m_models.resize(3);
+#if 0
+		m_models.resize(4);
 		AddModel("Models/box.obj",0);
 		AddModel("Models/sphere.obj",1);
 		AddModel("Models/capsule.obj", 2);
+		AddModel("Models/plane.obj", 2);
+#else
+		m_models.resize(1);
+		AddModel("Models/sponza.h3d", 0);
+#endif
 		CaculateBoundingBox();
 	}
 
 	void World::Clear()
 	{
-		for (auto& model : m_models) {
+		ForEach([&](Model& model) {
 			model.Clear();
-		}
+		});
 	}
 
 	void World::CaculateBoundingBox()
 	{
-		for (const auto& model : m_models) {
+		ForEach([&](Model& model) {
 			m_boundingbox.min = Min(m_boundingbox.min, model.GetBoundingBox().min);
 			m_boundingbox.max = Max(m_boundingbox.max, model.GetBoundingBox().max);
-		}
+		});
 	}
 }
