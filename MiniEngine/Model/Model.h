@@ -147,7 +147,7 @@ public:
         unsigned int vertexCountDepth;
 
     };
-    Mesh *m_pMesh;
+    std::unique_ptr< Mesh[]>m_pMesh;
 
     struct Material
     {
@@ -172,17 +172,17 @@ public:
         enum {maxMaterialName = 128};
         char name[maxMaterialName];
     };
-    Material *m_pMaterial;
+	std::unique_ptr< Material[]> m_pMaterial;
 
-    unsigned char *m_pVertexData;
-    unsigned char *m_pIndexData;
+	std::unique_ptr< unsigned char[]> m_pVertexData;
+	std::unique_ptr< unsigned char[]> m_pIndexData;
     StructuredBuffer m_VertexBuffer;
     ByteAddressBuffer m_IndexBuffer;
     uint32_t m_VertexStride;
 
     // optimized for depth-only rendering
-    unsigned char *m_pVertexDataDepth;
-    unsigned char *m_pIndexDataDepth;
+	std::unique_ptr< unsigned char[]> m_pVertexDataDepth;
+	std::unique_ptr< unsigned char[]> m_pIndexDataDepth;
     StructuredBuffer m_VertexBufferDepth;
     ByteAddressBuffer m_IndexBufferDepth;
     uint32_t m_VertexStrideDepth;

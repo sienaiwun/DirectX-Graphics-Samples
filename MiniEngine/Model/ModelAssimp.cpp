@@ -94,10 +94,14 @@ void AssimpModel::LoadAsDXModel()
 {
 	m_VertexStride = m_pMesh[0].vertexStride;
 	m_VertexStrideDepth = m_pMesh[0].vertexStrideDepth;
-	m_VertexBuffer.Create(L"VertexBuffer", m_Header.vertexDataByteSize / m_VertexStride, m_VertexStride, m_pVertexData);
-	m_IndexBuffer.Create(L"IndexBuffer", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexData);
-	m_VertexBufferDepth.Create(L"VertexBufferDepth", m_Header.vertexDataByteSizeDepth / m_VertexStrideDepth, m_VertexStrideDepth, m_pVertexDataDepth);
-	m_IndexBufferDepth.Create(L"IndexBufferDepth", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexDataDepth);
+	m_VertexBuffer.Create(L"VertexBuffer", m_Header.vertexDataByteSize / m_VertexStride, m_VertexStride, m_pVertexData.get());
+	m_IndexBuffer.Create(L"IndexBuffer", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexData.get());
+	m_VertexBufferDepth.Create(L"VertexBufferDepth", m_Header.vertexDataByteSizeDepth / m_VertexStrideDepth, m_VertexStrideDepth, m_pVertexDataDepth.get());
+	m_IndexBufferDepth.Create(L"IndexBufferDepth", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexDataDepth.get());
+	m_pVertexData = nullptr;
+	m_pIndexData = nullptr;
+	m_pVertexDataDepth = nullptr;
+	m_pIndexDataDepth = nullptr;
 	LoadTextures();
 }
 
@@ -147,12 +151,11 @@ bool AssimpModel::LoadAssimp(const char *filename)
     }
 
     m_Header.materialCount = scene->mNumMaterials;
-    m_pMaterial = new Material [m_Header.materialCount];
-    memset(m_pMaterial, 0, sizeof(Material) * m_Header.materialCount);
+    m_pMaterial = std::make_unique<Material[]>(m_Header.materialCount);
     for (unsigned int materialIndex = 0; materialIndex < scene->mNumMaterials; materialIndex++)
     {
         const aiMaterial *srcMat = scene->mMaterials[materialIndex];
-        Material *dstMat = m_pMaterial + materialIndex;
+        Material *dstMat = m_pMaterial.get() + materialIndex;
 
         aiColor3D diffuse(1.0f, 1.0f, 1.0f);
         aiColor3D specular(1.0f, 1.0f, 1.0f);
@@ -230,13 +233,12 @@ bool AssimpModel::LoadAssimp(const char *filename)
     }
 
     m_Header.meshCount = scene->mNumMeshes;
-    m_pMesh = new Mesh [m_Header.meshCount];
-    memset(m_pMesh, 0, sizeof(Mesh) * m_Header.meshCount);
+    m_pMesh = std::make_unique<Mesh[]>(m_Header.meshCount);
     // first pass, count everything
     for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; meshIndex++)
     {
         const aiMesh *srcMesh = scene->mMeshes[meshIndex];
-        Mesh *dstMesh = m_pMesh + meshIndex;
+        Mesh *dstMesh = m_pMesh.get() + meshIndex;
 
         assert(srcMesh->mPrimitiveTypes == aiPrimitiveType_TRIANGLE);
 
@@ -303,23 +305,23 @@ bool AssimpModel::LoadAssimp(const char *filename)
         m_Header.vertexDataByteSizeDepth += dstMesh->vertexStrideDepth * dstMesh->vertexCountDepth;
     }
     // allocate storage
-    m_pVertexData = new unsigned char [m_Header.vertexDataByteSize];
-    m_pIndexData = new unsigned char [m_Header.indexDataByteSize];
-    m_pVertexDataDepth = new unsigned char [m_Header.vertexDataByteSizeDepth];
-    m_pIndexDataDepth = new unsigned char [m_Header.indexDataByteSize];
+	m_pVertexData = std::make_unique<unsigned char[]>(m_Header.vertexDataByteSize);
+	m_pIndexData = std::make_unique<unsigned char[]>(m_Header.indexDataByteSize);
+    m_pVertexDataDepth = std::make_unique<unsigned char[]>(m_Header.vertexDataByteSizeDepth); 
+    m_pIndexDataDepth = std::make_unique<unsigned char[]>(m_Header.indexDataByteSize);
     // second pass, fill in vertex and index data
     for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; meshIndex++)
     {
         const aiMesh *srcMesh = scene->mMeshes[meshIndex];
-        Mesh *dstMesh = m_pMesh + meshIndex;
+        Mesh *dstMesh = m_pMesh.get() + meshIndex;
 
-        float *dstPos = (float*)(m_pVertexData + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_position].offset);
-        float *dstTexcoord0 = (float*)(m_pVertexData + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_texcoord0].offset);
-        float *dstNormal = (float*)(m_pVertexData + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_normal].offset);
-        float *dstTangent = (float*)(m_pVertexData + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_tangent].offset);
-        float *dstBitangent = (float*)(m_pVertexData + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_bitangent].offset);
+        float *dstPos = (float*)(m_pVertexData.get() + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_position].offset);
+        float *dstTexcoord0 = (float*)(m_pVertexData.get() + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_texcoord0].offset);
+        float *dstNormal = (float*)(m_pVertexData.get() + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_normal].offset);
+        float *dstTangent = (float*)(m_pVertexData.get() + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_tangent].offset);
+        float *dstBitangent = (float*)(m_pVertexData.get() + dstMesh->vertexDataByteOffset + dstMesh->attrib[attrib_bitangent].offset);
 
-        float *dstPosDepth = (float*)(m_pVertexDataDepth + dstMesh->vertexDataByteOffsetDepth + dstMesh->attribDepth[attrib_position].offset);
+        float *dstPosDepth = (float*)(m_pVertexDataDepth.get() + dstMesh->vertexDataByteOffsetDepth + dstMesh->attribDepth[attrib_position].offset);
 
         for (unsigned int v = 0; v < dstMesh->vertexCount; v++)
         {
@@ -398,8 +400,8 @@ bool AssimpModel::LoadAssimp(const char *filename)
             dstBitangent = (float*)((unsigned char*)dstBitangent + dstMesh->vertexStride);
         }
 
-        uint16_t *dstIndex = (uint16_t*)(m_pIndexData + dstMesh->indexDataByteOffset);
-        uint16_t *dstIndexDepth = (uint16_t*)(m_pIndexDataDepth + dstMesh->indexDataByteOffset);
+        uint16_t *dstIndex = (uint16_t*)(m_pIndexData.get() + dstMesh->indexDataByteOffset);
+        uint16_t *dstIndexDepth = (uint16_t*)(m_pIndexDataDepth.get() + dstMesh->indexDataByteOffset);
         for (unsigned int f = 0; f < srcMesh->mNumFaces; f++)
         {
             assert(srcMesh->mFaces[f].mNumIndices == 3);

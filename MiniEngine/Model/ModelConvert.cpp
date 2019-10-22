@@ -40,7 +40,7 @@ static void PrintModelStats(const Model *model)
     printf("mesh count: %u\n", model->m_Header.meshCount);
     for (unsigned int meshIndex = 0; meshIndex < model->m_Header.meshCount; meshIndex++)
     {
-        const Model::Mesh *mesh = model->m_pMesh + meshIndex;
+        const Model::Mesh *mesh = model->m_pMesh.get() + meshIndex;
 
         auto printAttribFormat = [](unsigned int format) -> void
         {
@@ -103,7 +103,7 @@ static void PrintModelStats(const Model *model)
     printf("material count: %u\n", model->m_Header.materialCount);
     for (unsigned int materialIndex = 0; materialIndex < model->m_Header.materialCount; materialIndex++)
     {
-        const Model::Material *material = model->m_pMaterial + materialIndex;
+        const Model::Material *material = model->m_pMaterial.get() + materialIndex;
 
         printf("material %u\n", materialIndex);
 		printf("material diffuse tex:%s", material->texDiffusePath);

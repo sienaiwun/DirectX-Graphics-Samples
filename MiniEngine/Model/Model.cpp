@@ -38,20 +38,12 @@ void Model::Clear()
     m_IndexBuffer.Destroy();
     m_VertexBufferDepth.Destroy();
     m_IndexBufferDepth.Destroy();
-
-    delete [] m_pMesh;
-    m_pMesh = nullptr;
-    m_Header.meshCount = 0;
-
-    delete [] m_pMaterial;
-    m_pMaterial = nullptr;
-    m_Header.materialCount = 0;
-
+	/*
     delete [] m_pVertexData;
     delete [] m_pIndexData;
     delete [] m_pVertexDataDepth;
     delete [] m_pIndexDataDepth;
-
+	*/
     m_pVertexData = nullptr;
     m_Header.vertexDataByteSize = 0;
     m_pIndexData = nullptr;
@@ -69,14 +61,14 @@ void Model::Clear()
 // assuming at least 3 floats for position
 void Model::ComputeMeshBoundingBox(unsigned int meshIndex, BoundingBox &bbox) const
 {
-    const Mesh *mesh = m_pMesh + meshIndex;
+    const Mesh *mesh = m_pMesh.get() + meshIndex;
 
     if (mesh->vertexCount > 0)
     {
         unsigned int vertexStride = mesh->vertexStride;
 
-        const float *p = (float*)(m_pVertexData + mesh->vertexDataByteOffset + mesh->attrib[attrib_position].offset);
-        const float *pEnd = (float*)(m_pVertexData + mesh->vertexDataByteOffset + mesh->vertexCount * mesh->vertexStride + mesh->attrib[attrib_position].offset);
+        const float *p = (float*)(m_pVertexData.get() + mesh->vertexDataByteOffset + mesh->attrib[attrib_position].offset);
+        const float *pEnd = (float*)(m_pVertexData.get()+ mesh->vertexDataByteOffset + mesh->vertexCount * mesh->vertexStride + mesh->attrib[attrib_position].offset);
         bbox.min = Scalar(FLT_MAX);
         bbox.max = Scalar(-FLT_MAX);
 
@@ -105,7 +97,7 @@ void Model::ComputeGlobalBoundingBox(BoundingBox &bbox) const
         bbox.max = Scalar(-FLT_MAX);
         for (unsigned int meshIndex = 0; meshIndex < m_Header.meshCount; meshIndex++)
         {
-            const Mesh *mesh = m_pMesh + meshIndex;
+            const Mesh *mesh = m_pMesh.get() + meshIndex;
 
             bbox.min = Min(bbox.min, mesh->boundingBox.min);
             bbox.max = Max(bbox.max, mesh->boundingBox.max);
@@ -122,7 +114,7 @@ void Model::ComputeAllBoundingBoxes()
 {
     for (unsigned int meshIndex = 0; meshIndex < m_Header.meshCount; meshIndex++)
     {
-        Mesh *mesh = m_pMesh + meshIndex;
+        Mesh *mesh = m_pMesh.get() + meshIndex;
         ComputeMeshBoundingBox(meshIndex, mesh->boundingBox);
     }
     ComputeGlobalBoundingBox(m_Header.boundingBox);

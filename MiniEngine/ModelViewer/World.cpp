@@ -8,24 +8,24 @@ namespace SceneView
 	:m_models()
 	{}
 
-	void World::AddModel(const std::string& filename, const std::size_t index)
+	void World::AddModel(const std::string& filename)
 	{
-		AssimpModel& model = m_models[index];
+		AssimpModel model;;
 		ASSERT(model.Load(filename.c_str()), "Failed to load model:" );
 		model.PrintInfo();
+		m_models.emplace_back(std::move(model));
+
 	}
 
 	void World::Create()
 	{
 #if 0
-		m_models.resize(4);
-		AddModel("Models/box.obj",0);
-		AddModel("Models/sphere.obj",1);
-		AddModel("Models/capsule.obj", 2);
-		AddModel("Models/plane.obj", 2);
+		AddModel("Models/box.obj");
+		AddModel("Models/sphere.obj");
+		AddModel("Models/capsule.obj");
+		AddModel("Models/plane.obj");
 #else
-		m_models.resize(1);
-		AddModel("Models/sponza.h3d", 0);
+		AddModel("Models/sponza.h3d");
 #endif
 		CaculateBoundingBox();
 	}

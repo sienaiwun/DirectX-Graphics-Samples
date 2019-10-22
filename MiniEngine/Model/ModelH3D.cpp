@@ -37,7 +37,7 @@ static void PrintModelStats(const Model *model)
 	printf("mesh count: %u\n", model->m_Header.meshCount);
 	for (unsigned int meshIndex = 0; meshIndex < model->m_Header.meshCount; meshIndex++)
 	{
-		const Model::Mesh *mesh = model->m_pMesh + meshIndex;
+		const Model::Mesh *mesh = model->m_pMesh.get() + meshIndex;
 
 		auto printAttribFormat = [](unsigned int format) -> void
 		{
@@ -100,7 +100,7 @@ static void PrintModelStats(const Model *model)
 	printf("material count: %u\n", model->m_Header.materialCount);
 	for (unsigned int materialIndex = 0; materialIndex < model->m_Header.materialCount; materialIndex++)
 	{
-		const Model::Material *material = model->m_pMaterial + materialIndex;
+		const Model::Material *material = model->m_pMaterial.get() + materialIndex;
 		printf("material diffuse tex:%s", material->texDiffusePath);
 		printf("material %u\n", materialIndex);
 	}
@@ -124,13 +124,13 @@ bool Model::LoadH3D(const char *filename)
 
     if (1 != fread(&m_Header, sizeof(Header), 1, file)) goto h3d_load_fail;
 
-    m_pMesh = new Mesh [m_Header.meshCount];
-    m_pMaterial = new Material [m_Header.materialCount];
+    m_pMesh = std::make_unique<Mesh[]>(m_Header.meshCount);
+    m_pMaterial = std::make_unique<Material[]>(m_Header.materialCount);;
 
     if (m_Header.meshCount > 0)
-        if (1 != fread(m_pMesh, sizeof(Mesh) * m_Header.meshCount, 1, file)) goto h3d_load_fail;
+        if (1 != fread(m_pMesh.get(), sizeof(Mesh) * m_Header.meshCount, 1, file)) goto h3d_load_fail;
     if (m_Header.materialCount > 0)
-        if (1 != fread(m_pMaterial, sizeof(Material) * m_Header.materialCount, 1, file)) goto h3d_load_fail;
+        if (1 != fread(m_pMaterial.get(), sizeof(Material) * m_Header.materialCount, 1, file)) goto h3d_load_fail;
 
     m_VertexStride = m_pMesh[0].vertexStride;
     m_VertexStrideDepth = m_pMesh[0].vertexStrideDepth;
@@ -159,35 +159,31 @@ bool Model::LoadH3D(const char *filename)
     }
 #endif
 
-    m_pVertexData = new unsigned char[ m_Header.vertexDataByteSize ];
-    m_pIndexData = new unsigned char[ m_Header.indexDataByteSize ];
-    m_pVertexDataDepth = new unsigned char[ m_Header.vertexDataByteSizeDepth ];
-    m_pIndexDataDepth = new unsigned char[ m_Header.indexDataByteSize ];
+	m_pVertexData = std::make_unique<unsigned char[]>(m_Header.vertexDataByteSize);
+    m_pIndexData = std::make_unique<unsigned char[]>(m_Header.indexDataByteSize); 
+    m_pVertexDataDepth = std::make_unique<unsigned char[]>(m_Header.vertexDataByteSizeDepth); 
+    m_pIndexDataDepth = std::make_unique<unsigned char[]>(m_Header.indexDataByteSize);
 
     if (m_Header.vertexDataByteSize > 0)
-        if (1 != fread(m_pVertexData, m_Header.vertexDataByteSize, 1, file)) goto h3d_load_fail;
+        if (1 != fread(m_pVertexData.get(), m_Header.vertexDataByteSize, 1, file)) goto h3d_load_fail;
     if (m_Header.indexDataByteSize > 0)
-        if (1 != fread(m_pIndexData, m_Header.indexDataByteSize, 1, file)) goto h3d_load_fail;
+        if (1 != fread(m_pIndexData.get(), m_Header.indexDataByteSize, 1, file)) goto h3d_load_fail;
 
     if (m_Header.vertexDataByteSizeDepth > 0)
-        if (1 != fread(m_pVertexDataDepth, m_Header.vertexDataByteSizeDepth, 1, file)) goto h3d_load_fail;
+        if (1 != fread(m_pVertexDataDepth.get(), m_Header.vertexDataByteSizeDepth, 1, file)) goto h3d_load_fail;
     if (m_Header.indexDataByteSize > 0)
-        if (1 != fread(m_pIndexDataDepth, m_Header.indexDataByteSize, 1, file)) goto h3d_load_fail;
+        if (1 != fread(m_pIndexDataDepth.get(), m_Header.indexDataByteSize, 1, file)) goto h3d_load_fail;
 
-    m_VertexBuffer.Create(L"VertexBuffer", m_Header.vertexDataByteSize / m_VertexStride, m_VertexStride, m_pVertexData);
-    m_IndexBuffer.Create(L"IndexBuffer", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexData);
-    delete [] m_pVertexData;
-    m_pVertexData = nullptr;
-    delete [] m_pIndexData;
-    m_pIndexData = nullptr;
+    m_VertexBuffer.Create(L"VertexBuffer", m_Header.vertexDataByteSize / m_VertexStride, m_VertexStride, m_pVertexData.get());
+    m_IndexBuffer.Create(L"IndexBuffer", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexData.get());
+ 
 
-    m_VertexBufferDepth.Create(L"VertexBufferDepth", m_Header.vertexDataByteSizeDepth / m_VertexStrideDepth, m_VertexStrideDepth, m_pVertexDataDepth);
-    m_IndexBufferDepth.Create(L"IndexBufferDepth", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexDataDepth);
-    delete [] m_pVertexDataDepth;
-    m_pVertexDataDepth = nullptr;
-    delete [] m_pIndexDataDepth;
-    m_pIndexDataDepth = nullptr;
-
+    m_VertexBufferDepth.Create(L"VertexBufferDepth", m_Header.vertexDataByteSizeDepth / m_VertexStrideDepth, m_VertexStrideDepth, m_pVertexDataDepth.get());
+    m_IndexBufferDepth.Create(L"IndexBufferDepth", m_Header.indexDataByteSize / sizeof(uint16_t), sizeof(uint16_t), m_pIndexDataDepth.get());
+	m_pVertexData = nullptr;
+	m_pIndexData = nullptr;
+	m_pVertexDataDepth = nullptr;
+	m_pIndexDataDepth = nullptr;
     LoadTextures();
 
     ok = true;
@@ -211,19 +207,19 @@ bool Model::SaveH3D(const char *filename) const
     if (1 != fwrite(&m_Header, sizeof(Header), 1, file)) goto h3d_save_fail;
 
     if (m_Header.meshCount > 0)
-        if (1 != fwrite(m_pMesh, sizeof(Mesh) * m_Header.meshCount, 1, file)) goto h3d_save_fail;
+        if (1 != fwrite(m_pMesh.get(), sizeof(Mesh) * m_Header.meshCount, 1, file)) goto h3d_save_fail;
     if (m_Header.materialCount > 0)
-        if (1 != fwrite(m_pMaterial, sizeof(Material) * m_Header.materialCount, 1, file)) goto h3d_save_fail;
+        if (1 != fwrite(m_pMaterial.get(), sizeof(Material) * m_Header.materialCount, 1, file)) goto h3d_save_fail;
 
     if (m_Header.vertexDataByteSize > 0)
-        if (1 != fwrite(m_pVertexData, m_Header.vertexDataByteSize, 1, file)) goto h3d_save_fail;
+        if (1 != fwrite(m_pVertexData.get(), m_Header.vertexDataByteSize, 1, file)) goto h3d_save_fail;
     if (m_Header.indexDataByteSize > 0)
-        if (1 != fwrite(m_pIndexData, m_Header.indexDataByteSize, 1, file)) goto h3d_save_fail;
+        if (1 != fwrite(m_pIndexData.get(), m_Header.indexDataByteSize, 1, file)) goto h3d_save_fail;
 
     if (m_Header.vertexDataByteSizeDepth > 0)
-        if (1 != fwrite(m_pVertexDataDepth, m_Header.vertexDataByteSizeDepth, 1, file)) goto h3d_save_fail;
+        if (1 != fwrite(m_pVertexDataDepth.get(), m_Header.vertexDataByteSizeDepth, 1, file)) goto h3d_save_fail;
     if (m_Header.indexDataByteSize > 0)
-        if (1 != fwrite(m_pIndexDataDepth, m_Header.indexDataByteSize, 1, file)) goto h3d_save_fail;
+        if (1 != fwrite(m_pIndexDataDepth.get(), m_Header.indexDataByteSize, 1, file)) goto h3d_save_fail;
 
     ok = true;
 

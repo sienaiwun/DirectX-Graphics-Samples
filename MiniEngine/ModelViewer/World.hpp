@@ -11,7 +11,7 @@ namespace SceneView
 
 		World();
 
-		void AddModel(const std::string& filename,const std::size_t index);
+		void AddModel(const std::string& filename);
 
 		void Create();
 
