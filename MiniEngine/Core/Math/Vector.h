@@ -28,7 +28,7 @@ namespace Math
         INLINE Vector3() {}
         INLINE Vector3( float x, float y, float z ) { m_vec = XMVectorSet(x, y, z, z); }
         INLINE Vector3( const XMFLOAT3& v ) { m_vec = XMLoadFloat3(&v); }
-        INLINE Vector3( const Vector3& v ) { m_vec = v; }
+        INLINE Vector3( const XMVECTORI32& v ) { m_vec = v; }
         INLINE Vector3( Scalar s ) { m_vec = s; }
         INLINE explicit Vector3( Vector4 v );
         INLINE explicit Vector3( FXMVECTOR vec ) { m_vec = vec; }

@@ -97,11 +97,7 @@ public:
         attrib_formats
     };
 
-    struct BoundingBox
-    {
-        Vector3 min;
-        Vector3 max;
-    };
+    
 
     struct Header
     {
@@ -123,7 +119,7 @@ public:
     };
     struct Mesh
     {
-        BoundingBox boundingBox;
+        
 
         unsigned int materialIndex;
 
@@ -141,6 +137,8 @@ public:
 
         unsigned int vertexDataByteOffsetDepth;
         unsigned int vertexCountDepth;
+
+		BoundingBox boundingBox;
     };
     Mesh *m_pMesh;
 

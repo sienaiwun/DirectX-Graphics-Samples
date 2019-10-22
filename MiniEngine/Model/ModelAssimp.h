@@ -31,7 +31,7 @@ public:
     bool Save(const char* filename) const;
 
 private:
-
+	std::string model_name;
     bool LoadAssimp(const char *filename);
 	void LoadAsDXModel();
     void Optimize();

@@ -104,6 +104,7 @@
     <ClInclude Include="GraphRenderer.h" />
     <ClInclude Include="Hash.h" />
     <ClInclude Include="LinearAllocator.h" />
+    <ClInclude Include="Math\BoundingBox.hpp" />
     <ClInclude Include="Math\BoundingPlane.h" />
     <ClInclude Include="Math\BoundingSphere.h" />
     <ClInclude Include="Math\Common.h" />

@@ -220,6 +220,9 @@
     <ClCompile Include="ForwardPlusLighting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\ModelViewerVS.hlsl">
@@ -252,6 +255,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ForwardPlusLighting.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="World.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

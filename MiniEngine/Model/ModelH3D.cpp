@@ -24,7 +24,7 @@ static void PrintModelStats(const Model *model)
 {
 	printf("model stats:\n");
 
-	Model::BoundingBox bbox = model->GetBoundingBox();
+	BoundingBox bbox = model->GetBoundingBox();
 	printf("bounding box: <%f, %f, %f> <%f, %f, %f>\n"
 		, (float)bbox.min.GetX(), (float)bbox.min.GetY(), (float)bbox.min.GetZ()
 		, (float)bbox.max.GetX(), (float)bbox.max.GetY(), (float)bbox.max.GetZ());

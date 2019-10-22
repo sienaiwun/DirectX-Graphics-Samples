@@ -41,6 +41,7 @@ int AssimpModel::FormatFromFilename(const char *filename)
 
 bool AssimpModel::Load(const char *filename)
 {
+	model_name = std::string(filename);
     Clear();
 
     int format = FormatFromFilename(filename);

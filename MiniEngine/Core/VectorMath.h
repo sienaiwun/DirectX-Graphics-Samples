@@ -53,6 +53,7 @@
 
 #include "Math/Scalar.h"
 #include "Math/Vector.h"
+#include "Math/BoundingBox.hpp"
 #include "Math/Quaternion.h"
 #include "Math/Matrix3.h"
 #include "Math/Transform.h"
