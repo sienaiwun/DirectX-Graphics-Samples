@@ -20,3 +20,7 @@ platform:
 build:
   project: MiniEngine\ModelViewer\ModelViewer_VS15.sln
   verbosity: normal
+
+# Execute script before build
+before_build:
+ - nuget restore MiniEngine\ModelViewer\ModelViewer_VS15.sln
