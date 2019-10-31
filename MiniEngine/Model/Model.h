@@ -14,9 +14,11 @@
 
 #pragma once
 
+#pragma region
 #include "VectorMath.h"
 #include "TextureManager.h"
 #include "GpuBuffer.h"
+#pragma endregion
 
 using namespace Math;
 
