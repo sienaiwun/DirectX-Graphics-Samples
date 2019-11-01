@@ -1,4 +1,3 @@
-
 #include "ModelViewerRS.hlsli"
 
 // outdated warning about for-loop variable scope

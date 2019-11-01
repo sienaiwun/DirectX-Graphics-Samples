@@ -436,8 +436,6 @@ void ModelViewer::RenderScene( void )
     {
         gfxContext.SetRootSignature(m_RootSig);
         gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        gfxContext.SetIndexBuffer(m_world.m_models[0].m_IndexBuffer.IndexBufferView());
-        gfxContext.SetVertexBuffer(0, m_world.m_models[0].m_VertexBuffer.VertexBufferView());
     };
 
     pfnSetupGraphicsState();
