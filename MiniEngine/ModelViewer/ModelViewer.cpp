@@ -127,7 +127,7 @@ void ModelViewer::Startup( void )
     SamplerDesc DefaultSamplerDesc;
     DefaultSamplerDesc.MaxAnisotropy = 8;
 
-    m_RootSig.Reset(5, 2);
+    m_RootSig.Reset(6, 2);
     m_RootSig.InitStaticSampler(0, DefaultSamplerDesc, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig.InitStaticSampler(1, SamplerShadowDesc, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -135,6 +135,7 @@ void ModelViewer::Startup( void )
     m_RootSig[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 64, 6, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[4].InitAsConstants(1, 2, D3D12_SHADER_VISIBILITY_VERTEX);
+	m_RootSig[5].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig.Finalize(L"ModelViewer", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
@@ -447,6 +448,7 @@ void ModelViewer::RenderScene( void )
         ScopedTimer _prof(L"Z PrePass", gfxContext);
 
         gfxContext.SetDynamicConstantBufferView(1, sizeof(psConstants), &psConstants);
+		gfxContext.SetDynamicConstantBufferView(5, sizeof(psWireFrameColorConstants), &psWireFrameColorConstants);
 
         {
             ScopedTimer _prof1(L"Opaque", gfxContext);

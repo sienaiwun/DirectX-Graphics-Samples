@@ -462,7 +462,7 @@ inline void GraphicsContext::SetConstantBuffer( UINT RootIndex, D3D12_GPU_VIRTUA
 
 inline void GraphicsContext::SetDynamicConstantBufferView( UINT RootIndex, size_t BufferSize, const void* BufferData )
 {
-    ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
+    ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16)&& BufferSize %16 == 0);
     DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
     //SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
     memcpy(cb.DataPtr, BufferData, BufferSize);
