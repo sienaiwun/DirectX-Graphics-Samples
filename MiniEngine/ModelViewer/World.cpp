@@ -33,9 +33,7 @@ namespace SceneView
 
 	void World::Clear()
 	{
-		ForEach([&](Model& model) {
-			model.Clear();
-		});
+		
 	}
 
 	void World::CaculateBoundingBox()

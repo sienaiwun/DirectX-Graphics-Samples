@@ -36,8 +36,7 @@ public:
 	Model& operator=(Model&& model) noexcept = default;
 
 
-    void Clear();
-
+  
     enum
     {
         attrib_mask_0 = (1 << 0),
@@ -110,11 +109,11 @@ public:
 
     struct Header
     {
-        uint32_t meshCount;
-        uint32_t materialCount;
-        uint32_t vertexDataByteSize;
-        uint32_t indexDataByteSize;
-        uint32_t vertexDataByteSizeDepth;
+        uint32_t meshCount = 0 ;
+        uint32_t materialCount = 0;
+        uint32_t vertexDataByteSize = 0;
+        uint32_t indexDataByteSize = 0;
+        uint32_t vertexDataByteSizeDepth = 0;
         BoundingBox boundingBox;
     };
     Header m_Header;

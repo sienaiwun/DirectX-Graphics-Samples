@@ -24,32 +24,15 @@ Model::Model()
     , m_pIndexDataDepth(nullptr)
     , m_SRVs(nullptr)
 {
-    Clear();
+  
 }
 
 Model::~Model()
 {
-    Clear();
-}
-
-void Model::Clear()
-{
-    m_VertexBuffer.Destroy();
-    m_IndexBuffer.Destroy();
-    m_VertexBufferDepth.Destroy();
-    m_IndexBufferDepth.Destroy();
-    m_pVertexData = nullptr;
-    m_Header.vertexDataByteSize = 0;
-    m_pIndexData = nullptr;
-    m_Header.indexDataByteSize = 0;
-    m_pVertexDataDepth = nullptr;
-    m_Header.vertexDataByteSizeDepth = 0;
-    m_pIndexDataDepth = nullptr;
-
-    ReleaseTextures();
-
-    m_Header.boundingBox.min = Vector3(0.0f);
-    m_Header.boundingBox.max = Vector3(0.0f);
+	m_VertexBuffer.Destroy();
+	m_IndexBuffer.Destroy();
+	m_VertexBufferDepth.Destroy();
+	m_IndexBufferDepth.Destroy();
 }
 
 // assuming at least 3 floats for position
