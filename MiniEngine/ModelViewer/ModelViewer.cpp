@@ -43,6 +43,7 @@
 #include "CompiledShaders/ModelViewerVS.h"
 #include "CompiledShaders/ModelViewerPS.h"
 #include "CompiledShaders/ConstantColorPS.h"
+#include "CompiledShaders/ForwardPS.h"
 #ifdef _WAVE_OP
 #include "CompiledShaders/DepthViewerVS_SM6.h"
 #include "CompiledShaders/ModelViewerVS_SM6.h"
@@ -83,7 +84,8 @@ private:
     RootSignature m_RootSig;
     GraphicsPSO m_DepthPSO;
     GraphicsPSO m_CutoutDepthPSO;
-    GraphicsPSO m_ModelPSO;
+    GraphicsPSO m_ForwardPlusPSO;
+	GraphicsPSO m_ForwardPSO;
 	GraphicsPSO m_ModelWireFramePSO;
 #ifdef _WAVE_OP
     GraphicsPSO m_DepthWaveOpsPSO;
@@ -106,6 +108,10 @@ private:
 };
 
 CREATE_APPLICATION( ModelViewer )
+enum LightingType { kForward, kForward_plus, kDeferred ,kNumLightingModels};
+const char* LightingModelLabels[kNumLightingModels] = { "Forward", "Forward+", "Deferred"};
+EnumVar g_LightingModel("Graphics/LightingModel", kForward, kNumLightingModels, LightingModelLabels);
+
 
 ExpVar m_SunLightIntensity("Application/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16.0f, 0.1f);
 ExpVar m_AmbientIntensity("Application/Lighting/Ambient Intensity", 0.1f, -16.0f, 16.0f, 0.1f);
@@ -180,38 +186,42 @@ void ModelViewer::Startup( void )
     m_CutoutShadowPSO.Finalize();
 
     // Full color pass
-    m_ModelPSO = m_DepthPSO;
-    m_ModelPSO.SetBlendState(BlendDisable);
-    m_ModelPSO.SetDepthStencilState(DepthStateTestEqual);
-    m_ModelPSO.SetRenderTargetFormats(1, &ColorFormat, DepthFormat);
-    m_ModelPSO.SetVertexShader( g_pModelViewerVS, sizeof(g_pModelViewerVS) );
-    m_ModelPSO.SetPixelShader( g_pModelViewerPS, sizeof(g_pModelViewerPS) );
-    m_ModelPSO.Finalize();
+    m_ForwardPlusPSO = m_DepthPSO;
+    m_ForwardPlusPSO.SetBlendState(BlendDisable);
+    m_ForwardPlusPSO.SetDepthStencilState(DepthStateTestEqual);
+    m_ForwardPlusPSO.SetRenderTargetFormats(1, &ColorFormat, DepthFormat);
+    m_ForwardPlusPSO.SetVertexShader( g_pModelViewerVS, sizeof(g_pModelViewerVS) );
+    m_ForwardPlusPSO.SetPixelShader( g_pModelViewerPS, sizeof(g_pModelViewerPS) );
+    m_ForwardPlusPSO.Finalize();
+
+	m_ForwardPSO = m_ForwardPlusPSO;
+	m_ForwardPSO.SetPixelShader(g_pForwardPS, sizeof(g_pForwardPS));
+	m_ForwardPSO.Finalize();
 
 #ifdef _WAVE_OP
     m_DepthWaveOpsPSO = m_DepthPSO;
     m_DepthWaveOpsPSO.SetVertexShader( g_pDepthViewerVS_SM6, sizeof(g_pDepthViewerVS_SM6) );
     m_DepthWaveOpsPSO.Finalize();
 
-    m_ModelWaveOpsPSO = m_ModelPSO;
+    m_ModelWaveOpsPSO = m_ForwardPlusPSO;
     m_ModelWaveOpsPSO.SetVertexShader( g_pModelViewerVS_SM6, sizeof(g_pModelViewerVS_SM6) );
     m_ModelWaveOpsPSO.SetPixelShader( g_pModelViewerPS_SM6, sizeof(g_pModelViewerPS_SM6) );
     m_ModelWaveOpsPSO.Finalize();
 #endif
 
 	// Full color pass
-	m_ModelWireFramePSO = m_ModelPSO;
+	m_ModelWireFramePSO = m_ForwardPlusPSO;
 	m_ModelWireFramePSO.SetRasterizerState(RasterizerDefaultWireFrame);
 	m_ModelWireFramePSO.SetDepthStencilState(DepthStateGreatEqual);
 	m_ModelWireFramePSO.SetPixelShader(g_pConstantColorPS, sizeof(g_pConstantColorPS));
 	m_ModelWireFramePSO.Finalize();
 
-    m_CutoutModelPSO = m_ModelPSO;
+    m_CutoutModelPSO = m_ForwardPlusPSO;
     m_CutoutModelPSO.SetRasterizerState(RasterizerTwoSided);
     m_CutoutModelPSO.Finalize();
 
     // A debug shader for counting lights in a tile
-    m_WaveTileCountPSO = m_ModelPSO;
+    m_WaveTileCountPSO = m_ForwardPlusPSO;
     m_WaveTileCountPSO.SetPixelShader(g_pWaveTileCountPS, sizeof(g_pWaveTileCountPS));
     m_WaveTileCountPSO.Finalize();
 
@@ -472,7 +482,8 @@ void ModelViewer::RenderScene( void )
 
     SSAO::Render(gfxContext, m_Camera);
 
-    Lighting::FillLightGrid(gfxContext, m_Camera);
+	if (g_LightingModel == LightingType::kForward_plus)
+		Lighting::FillLightGrid(gfxContext, m_Camera);
 
     if (!SSAO::DebugDraw)
     {
@@ -514,9 +525,12 @@ void ModelViewer::RenderScene( void )
             gfxContext.SetDynamicDescriptors(3, 0, _countof(m_ExtraTextures), m_ExtraTextures);
             gfxContext.SetDynamicConstantBufferView(1, sizeof(psConstants), &psConstants);
 #ifdef _WAVE_OP
-            gfxContext.SetPipelineState(EnableWaveOps ? m_ModelWaveOpsPSO : m_ModelPSO );
+            gfxContext.SetPipelineState(EnableWaveOps ? m_ModelWaveOpsPSO : m_ForwardPlusPSO );
 #else
-            gfxContext.SetPipelineState(ShowWaveTileCounts ? m_WaveTileCountPSO : m_ModelPSO);
+			if(g_LightingModel == LightingType::kForward_plus)
+				gfxContext.SetPipelineState(ShowWaveTileCounts ? m_WaveTileCountPSO : m_ForwardPlusPSO);
+			else
+				gfxContext.SetPipelineState(m_ForwardPSO);
 #endif
             gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
             gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
