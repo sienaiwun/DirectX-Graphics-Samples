@@ -42,6 +42,7 @@
 #include "CompiledShaders/DepthViewerPS.h"
 #include "CompiledShaders/ModelViewerVS.h"
 #include "CompiledShaders/ModelViewerPS.h"
+#include "CompiledShaders/ConstantColorPS.h"
 #ifdef _WAVE_OP
 #include "CompiledShaders/DepthViewerVS_SM6.h"
 #include "CompiledShaders/ModelViewerVS_SM6.h"
@@ -83,6 +84,7 @@ private:
     GraphicsPSO m_DepthPSO;
     GraphicsPSO m_CutoutDepthPSO;
     GraphicsPSO m_ModelPSO;
+	GraphicsPSO m_ModelWireFramePSO;
 #ifdef _WAVE_OP
     GraphicsPSO m_DepthWaveOpsPSO;
     GraphicsPSO m_ModelWaveOpsPSO;
@@ -114,6 +116,7 @@ NumVar ShadowDimY("Application/Lighting/Shadow Dim Y", 3000, 1000, 10000, 100 );
 NumVar ShadowDimZ("Application/Lighting/Shadow Dim Z", 3000, 1000, 10000, 100 );
 
 BoolVar ShowWaveTileCounts("Application/Forward+/Show Wave Tile Counts", false);
+BoolVar ShowWireFrame("Application/Forward+/Show WireFrame", true);
 #ifdef _WAVE_OP
 BoolVar EnableWaveOps("Application/Forward+/Enable Wave Ops", true);
 #endif
@@ -194,6 +197,13 @@ void ModelViewer::Startup( void )
     m_ModelWaveOpsPSO.SetPixelShader( g_pModelViewerPS_SM6, sizeof(g_pModelViewerPS_SM6) );
     m_ModelWaveOpsPSO.Finalize();
 #endif
+
+	// Full color pass
+	m_ModelWireFramePSO = m_ModelPSO;
+	m_ModelWireFramePSO.SetRasterizerState(RasterizerDefaultWireFrame);
+	m_ModelWireFramePSO.SetDepthStencilState(DepthStateGreatEqual);
+	m_ModelWireFramePSO.SetPixelShader(g_pConstantColorPS, sizeof(g_pConstantColorPS));
+	m_ModelWireFramePSO.Finalize();
 
     m_CutoutModelPSO = m_ModelPSO;
     m_CutoutModelPSO.SetRasterizerState(RasterizerTwoSided);
@@ -401,6 +411,13 @@ void ModelViewer::RenderScene( void )
         uint32_t FrameIndexMod2;
     } psConstants;
 
+	__declspec(align(16)) struct
+	{
+		Vector3 wireFrameColor;
+	}psWireFrameColorConstants;
+
+	psWireFrameColorConstants.wireFrameColor = Vector3(0, 0, 1);
+
     psConstants.sunDirection = m_SunDirection;
     psConstants.sunLight = Vector3(1.0f, 1.0f, 1.0f) * m_SunLightIntensity;
     psConstants.ambientLight = Vector3(1.0f, 1.0f, 1.0f) * m_AmbientIntensity;
@@ -512,6 +529,12 @@ void ModelViewer::RenderScene( void )
                 gfxContext.SetPipelineState(m_CutoutModelPSO);
                 RenderObjects( gfxContext, m_ViewProjMatrix, kCutout );
             }
+
+			if(ShowWireFrame)
+			{
+				gfxContext.SetPipelineState(m_ModelWireFramePSO);
+				RenderObjects(gfxContext, m_ViewProjMatrix, kOpaque);
+			}
         }
 
     }

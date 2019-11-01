@@ -42,7 +42,7 @@ namespace EngineTuning
     void RegisterVariable( const string& path, EngineVar& var );
 
     EngineVar* sm_SelectedVariable = nullptr;
-    bool sm_IsVisible = false;
+    bool sm_IsVisible = true;
 }
 
 // Not open to the public.  Groups are auto-created when a tweaker's path includes the group name.

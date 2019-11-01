@@ -19,11 +19,12 @@ namespace SceneView
 
 	void World::Create()
 	{
-#if 0
+#if 1
 		AddModel("Models/box.obj");
 		AddModel("Models/sphere.obj");
 		AddModel("Models/capsule.obj");
 		AddModel("Models/plane.obj");
+		AddModel("Models/sponza.h3d");
 #else
 		AddModel("Models/sponza.h3d");
 #endif

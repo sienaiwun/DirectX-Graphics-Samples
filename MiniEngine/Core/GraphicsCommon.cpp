@@ -46,6 +46,7 @@ namespace Graphics
     D3D12_RASTERIZER_DESC RasterizerShadow;
     D3D12_RASTERIZER_DESC RasterizerShadowCW;
     D3D12_RASTERIZER_DESC RasterizerShadowTwoSided;
+	D3D12_RASTERIZER_DESC RasterizerDefaultWireFrame;    // Counter-clockwise
 
     D3D12_BLEND_DESC BlendNoColorWrite;
     D3D12_BLEND_DESC BlendDisable;
@@ -59,6 +60,7 @@ namespace Graphics
     D3D12_DEPTH_STENCIL_DESC DepthStateReadOnly;
     D3D12_DEPTH_STENCIL_DESC DepthStateReadOnlyReversed;
     D3D12_DEPTH_STENCIL_DESC DepthStateTestEqual;
+	D3D12_DEPTH_STENCIL_DESC DepthStateGreatEqual;
 
     CommandSignature DispatchIndirectCommandSignature(1);
     CommandSignature DrawIndirectCommandSignature(1);
@@ -126,6 +128,11 @@ void Graphics::InitializeCommonState(void)
     RasterizerDefaultCwMsaa = RasterizerDefaultCw;
     RasterizerDefaultCwMsaa.MultisampleEnable = TRUE;
 
+	RasterizerDefaultWireFrame = RasterizerDefault;
+	RasterizerDefaultWireFrame.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	RasterizerDefaultWireFrame.MultisampleEnable = TRUE;
+	RasterizerDefault.AntialiasedLineEnable = TRUE;
+
     RasterizerTwoSided = RasterizerDefault;
     RasterizerTwoSided.CullMode = D3D12_CULL_MODE_NONE;
 
@@ -169,6 +176,9 @@ void Graphics::InitializeCommonState(void)
 
     DepthStateTestEqual = DepthStateReadOnly;
     DepthStateTestEqual.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
+
+	DepthStateGreatEqual = DepthStateReadOnly;
+	DepthStateGreatEqual.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 
     D3D12_BLEND_DESC alphaBlend = {};
     alphaBlend.IndependentBlendEnable = FALSE;
