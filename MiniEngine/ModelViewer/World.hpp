@@ -2,6 +2,11 @@
 #pragma once
 #include "ModelAssimp.h"
 #include "GameCore.h"
+#include "CameraController.h"
+#include "Camera.h"
+
+using namespace Math;
+using namespace GameCore;
 
 namespace SceneView
 {
@@ -17,7 +22,13 @@ namespace SceneView
 
 		void Clear();
 
+		void Update(const float delta);
+
 		inline const BoundingBox& GetBoundingBox() const noexcept { return m_boundingbox; }
+
+		inline const Camera& GetMainCamera() const noexcept { return m_Camera; }
+
+		inline Camera& GetMainCamera() noexcept { return m_Camera; }
 
 		std::vector<AssimpModel> m_models;
 
@@ -34,7 +45,9 @@ namespace SceneView
 
 		void CaculateBoundingBox();
 
-		
+		Camera m_Camera;
+
+		std::unique_ptr<CameraController> m_CameraController;
 
 		BoundingBox m_boundingbox;
 	};

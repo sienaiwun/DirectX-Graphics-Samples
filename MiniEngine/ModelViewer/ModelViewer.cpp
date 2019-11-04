@@ -73,11 +73,10 @@ private:
     void RenderLightShadows(GraphicsContext& gfxContext);
 
     enum eObjectFilter { kOpaque = 0x1, kCutout = 0x2, kTransparent = 0x4, kAll = 0xF, kNone = 0x0 };
-    void RenderObjects( GraphicsContext& Context, const Matrix4& ViewProjMat, eObjectFilter Filter = kAll );
+    void RenderObjects( GraphicsContext& Context, const Matrix4& ViewProjMat, eObjectFilter Filter = kAll);
     void CreateParticleEffects();
-    Camera m_Camera;
-    std::auto_ptr<CameraController> m_CameraController;
-    Matrix4 m_ViewProjMatrix;
+  
+
     D3D12_VIEWPORT m_MainViewport;
     D3D12_RECT m_MainScissor;
 
@@ -110,7 +109,7 @@ private:
 CREATE_APPLICATION( ModelViewer )
 enum LightingType { kForward, kForward_plus, kDeferred ,kNumLightingModels};
 const char* LightingModelLabels[kNumLightingModels] = { "Forward", "Forward+", "Deferred"};
-EnumVar g_LightingModel("Graphics/LightingModel", kForward, kNumLightingModels, LightingModelLabels);
+EnumVar g_LightingModel("Graphics/LightingModel", kForward_plus, kNumLightingModels, LightingModelLabels);
 
 
 ExpVar m_SunLightIntensity("Application/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16.0f, 0.1f);
@@ -237,12 +236,6 @@ void ModelViewer::Startup( void )
     
     CreateParticleEffects();
 
-    float modelRadius = Length(m_world.GetBoundingBox().max - m_world.GetBoundingBox().min) * .5f;
-    const Vector3 eye = (m_world.GetBoundingBox().min + m_world.GetBoundingBox().max) * .5f + Vector3(modelRadius * .5f, 0.0f, 0.0f);
-    m_Camera.SetEyeAtUp( eye, Vector3(kZero), Vector3(kYUnitVector) );
-    m_Camera.SetZRange( 1.0f, 10000.0f );
-    m_CameraController.reset(new CameraController(m_Camera, Vector3(kYUnitVector)));
-
     MotionBlur::Enable = true;
     TemporalEffects::EnableTAA = true;
     FXAA::Enable = false;
@@ -278,8 +271,7 @@ void ModelViewer::Update( float deltaT )
     else if (GameInput::IsFirstPressed(GameInput::kRShoulder))
         DebugZoom.Increment();
 
-    m_CameraController->Update(deltaT);
-    m_ViewProjMatrix = m_Camera.GetViewProjMatrix();
+	m_world.Update(deltaT);
 
     float costheta = cosf(m_SunOrientation);
     float sintheta = sinf(m_SunOrientation);
@@ -308,21 +300,23 @@ void ModelViewer::Update( float deltaT )
     m_MainScissor.bottom = (LONG)g_SceneColorBuffer.GetHeight();
 }
 
-void ModelViewer::RenderObjects( GraphicsContext& gfxContext, const Matrix4& ViewProjMat, eObjectFilter Filter )
+
+void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& viewProjMat, eObjectFilter Filter)
 {
-    struct VSConstants
-    {
-        Matrix4 modelToProjection;
-        Matrix4 modelToShadow;
-        XMFLOAT3 viewerPos;
-    } vsConstants;
-    vsConstants.modelToProjection = ViewProjMat;
-    vsConstants.modelToShadow = m_SunShadow.GetShadowMatrix();
-    XMStoreFloat3(&vsConstants.viewerPos, m_Camera.GetPosition());
+	__declspec(align(16))struct VSConstants
+	{
+		Matrix4 modelToProjection;
+		Matrix4 modelToShadow;
+		XMFLOAT3 viewerPos;
+	} vsConstants;
+	const Camera& cam = m_world.GetMainCamera();
+	vsConstants.modelToProjection = viewProjMat;
+	vsConstants.modelToShadow = m_SunShadow.GetShadowMatrix();
+	XMStoreFloat3(&vsConstants.viewerPos, cam.GetPosition());
 
-    gfxContext.SetDynamicConstantBufferView(0, sizeof(vsConstants), &vsConstants);
+	gfxContext.SetDynamicConstantBufferView(0, sizeof(vsConstants), &vsConstants);
 
-    uint32_t materialIdx = 0xFFFFFFFFul;
+	uint32_t materialIdx = 0xFFFFFFFFul;
 	m_world.ForEach([&](Model &model)
 	{
 		uint32_t VertexStride = model.m_VertexStride;
@@ -403,6 +397,8 @@ void ModelViewer::RenderScene( void )
         s_ShowLightCounts = ShowWaveTileCounts;
     }
 
+	const Matrix4& camViewProjMat = m_world.GetMainCamera().GetViewProjMatrix();
+
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
 
     ParticleEffects::Update(gfxContext.GetComputeContext(), Graphics::GetFrameTime());
@@ -470,20 +466,20 @@ void ModelViewer::RenderScene( void )
 #endif
             gfxContext.SetDepthStencilTarget(g_SceneDepthBuffer.GetDSV());
             gfxContext.SetViewportAndScissor(m_MainViewport, m_MainScissor);
-            RenderObjects(gfxContext, m_ViewProjMatrix, kOpaque );
+            RenderObjects(gfxContext, camViewProjMat, kOpaque );
         }
 
         {
             ScopedTimer _prof2(L"Cutout", gfxContext);
             gfxContext.SetPipelineState(m_CutoutDepthPSO);
-            RenderObjects(gfxContext, m_ViewProjMatrix, kCutout );
+            RenderObjects(gfxContext, camViewProjMat, kCutout );
         }
     }
 
-    SSAO::Render(gfxContext, m_Camera);
+    SSAO::Render(gfxContext, m_world.GetMainCamera());
 
 	if (g_LightingModel == LightingType::kForward_plus)
-		Lighting::FillLightGrid(gfxContext, m_Camera);
+		Lighting::FillLightGrid(gfxContext, m_world.GetMainCamera());
 
     if (!SSAO::DebugDraw)
     {
@@ -536,18 +532,18 @@ void ModelViewer::RenderScene( void )
             gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
             gfxContext.SetViewportAndScissor(m_MainViewport, m_MainScissor);
 
-            RenderObjects( gfxContext, m_ViewProjMatrix, kOpaque );
+            RenderObjects( gfxContext, camViewProjMat, kOpaque );
 
             if (!ShowWaveTileCounts)
             {
                 gfxContext.SetPipelineState(m_CutoutModelPSO);
-                RenderObjects( gfxContext, m_ViewProjMatrix, kCutout );
+                RenderObjects( gfxContext, camViewProjMat, kCutout );
             }
 
 			if(ShowWireFrame)
 			{
 				gfxContext.SetPipelineState(m_ModelWireFramePSO);
-				RenderObjects(gfxContext, m_ViewProjMatrix, kOpaque);
+				RenderObjects(gfxContext, camViewProjMat, kOpaque);
 			}
         }
 
@@ -556,15 +552,15 @@ void ModelViewer::RenderScene( void )
     // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
     // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
     // is necessary for all temporal effects (and motion blur).
-    MotionBlur::GenerateCameraVelocityBuffer(gfxContext, m_Camera, true);
+    MotionBlur::GenerateCameraVelocityBuffer(gfxContext, m_world.GetMainCamera(), true);
 
     TemporalEffects::ResolveImage(gfxContext);
 
-    ParticleEffects::Render(gfxContext, m_Camera, g_SceneColorBuffer, g_SceneDepthBuffer,  g_LinearDepth[FrameIndex]);
+    ParticleEffects::Render(gfxContext, m_world.GetMainCamera(), g_SceneColorBuffer, g_SceneDepthBuffer,  g_LinearDepth[FrameIndex]);
 
     // Until I work out how to couple these two, it's "either-or".
     if (DepthOfField::Enable)
-        DepthOfField::Render(gfxContext, m_Camera.GetNearClip(), m_Camera.GetFarClip());
+        DepthOfField::Render(gfxContext, m_world.GetMainCamera().GetNearClip(), m_world.GetMainCamera().GetFarClip());
     else
         MotionBlur::RenderObjectBlur(gfxContext, g_VelocityBuffer);
 
