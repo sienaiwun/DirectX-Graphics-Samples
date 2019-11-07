@@ -4,11 +4,14 @@
 
 namespace SceneView
 {
+	World* World::s_world = nullptr;
+
 	World::World()
 	:m_models(), 
-	m_CameraController (new CameraController(m_Camera, Vector3(kYUnitVector)))
+	m_CameraController (std::make_unique <CameraController>(m_Camera, Vector3(kYUnitVector))),
+	m_lighting(std::make_unique <Lighting>())
 	{
-		
+		s_world = this;
 	}
 
 	void World::AddModel(const std::string& filename)
@@ -32,7 +35,10 @@ namespace SceneView
 		AddModel("Models/sponza.h3d");
 #endif
 		CaculateBoundingBox();
-
+		//lights 
+		m_lighting->InitializeResources();
+		m_lighting->CreateRandomLights(GetBoundingBox().min, GetBoundingBox().max);
+		//camera
 		float modelRadius = Length(GetBoundingBox().max - GetBoundingBox().min) * .5f;
 		const Vector3 eye = (GetBoundingBox().min + GetBoundingBox().max) * .5f + Vector3(modelRadius * .5f, 0.0f, 0.0f);
 		m_Camera.SetEyeAtUp(eye, Vector3(kZero), Vector3(kYUnitVector));
@@ -48,7 +54,7 @@ namespace SceneView
 
 	void World::Clear()
 	{
-		
+		m_lighting->Shutdown();
 	}
 
 	void World::CaculateBoundingBox()

@@ -32,7 +32,6 @@
 #include "ShadowCamera.h"
 #include "ParticleEffectManager.h"
 #include "GameInput.h"
-#include "./ForwardPlusLighting.h"
 
 // To enable wave intrinsics, uncomment this macro and #define DXIL in Core/GraphcisCore.cpp.
 // Run CompileSM6Test.bat to compile the relevant shaders with DXC.
@@ -224,7 +223,7 @@ void ModelViewer::Startup( void )
     m_WaveTileCountPSO.SetPixelShader(g_pWaveTileCountPS, sizeof(g_pWaveTileCountPS));
     m_WaveTileCountPSO.Finalize();
 
-    Lighting::InitializeResources();
+  
 
     m_ExtraTextures[0] = g_SSAOFullScreen.GetSRV();
     m_ExtraTextures[1] = g_ShadowBuffer.GetSRV();
@@ -243,18 +242,16 @@ void ModelViewer::Startup( void )
     PostEffects::EnableAdaptation = true;
     SSAO::Enable = true;
 
-    Lighting::CreateRandomLights(m_world.GetBoundingBox().min, m_world.GetBoundingBox().max);
-
-    m_ExtraTextures[2] = Lighting::m_LightBuffer.GetSRV();
-    m_ExtraTextures[3] = Lighting::m_LightShadowArray.GetSRV();
-    m_ExtraTextures[4] = Lighting::m_LightGrid.GetSRV();
-    m_ExtraTextures[5] = Lighting::m_LightGridBitMask.GetSRV();
+	SceneView::Lighting * light = SceneView::World::Get()->GetLighting();
+    m_ExtraTextures[2] = light->GetLightBuffer().GetSRV();
+    m_ExtraTextures[3] = light->GetLightShadowArray().GetSRV();
+    m_ExtraTextures[4] = light->GetLightGrid().GetSRV();
+    m_ExtraTextures[5] = light->GetLightGridBitMask().GetSRV();
 }
 
 void ModelViewer::Cleanup( void )
 {
     m_world.Clear();
-    Lighting::Shutdown();
 }
 
 namespace Graphics
@@ -352,29 +349,28 @@ void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& view
 
 void ModelViewer::RenderLightShadows(GraphicsContext& gfxContext)
 {
-    using namespace Lighting;
 
     ScopedTimer _prof(L"RenderLightShadows", gfxContext);
 
     static uint32_t LightIndex = 0;
-    if (LightIndex >= MaxLights)
+    if (LightIndex >= SceneView::MaxLights)
         return;
-
-    m_LightShadowTempBuffer.BeginRendering(gfxContext);
+	SceneView::Lighting * light = SceneView::World::Get()->GetLighting();
+	light->GetLightShadowTempBuffer().BeginRendering(gfxContext);
     {
         gfxContext.SetPipelineState(m_ShadowPSO);
-        RenderObjects(gfxContext, m_LightShadowMatrix[LightIndex], kOpaque);
+        RenderObjects(gfxContext, light->LightShadowMatrix(LightIndex), kOpaque);
         gfxContext.SetPipelineState(m_CutoutShadowPSO);
-        RenderObjects(gfxContext, m_LightShadowMatrix[LightIndex], kCutout);
+        RenderObjects(gfxContext, light->LightShadowMatrix(LightIndex), kCutout);
     }
-    m_LightShadowTempBuffer.EndRendering(gfxContext);
+	light->GetLightShadowTempBuffer().EndRendering(gfxContext);
 
-    gfxContext.TransitionResource(m_LightShadowTempBuffer, D3D12_RESOURCE_STATE_GENERIC_READ);
-    gfxContext.TransitionResource(m_LightShadowArray, D3D12_RESOURCE_STATE_COPY_DEST);
+    gfxContext.TransitionResource(light->GetLightShadowTempBuffer(), D3D12_RESOURCE_STATE_GENERIC_READ);
+    gfxContext.TransitionResource(light->GetLightShadowArray(), D3D12_RESOURCE_STATE_COPY_DEST);
 
-    gfxContext.CopySubresource(m_LightShadowArray, LightIndex, m_LightShadowTempBuffer, 0);
+    gfxContext.CopySubresource(light->GetLightShadowArray(), LightIndex, light->GetLightShadowTempBuffer(), 0);
 
-    gfxContext.TransitionResource(m_LightShadowArray, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    gfxContext.TransitionResource(light->GetLightShadowArray(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     ++LightIndex;
 }
@@ -425,16 +421,18 @@ void ModelViewer::RenderScene( void )
 
 	psWireFrameColorConstants.wireFrameColor = Vector3(0, 0, 1);
 
+	const SceneView::Lighting* lighting = SceneView::World::Get()->GetLighting();
+
     psConstants.sunDirection = m_SunDirection;
     psConstants.sunLight = Vector3(1.0f, 1.0f, 1.0f) * m_SunLightIntensity;
     psConstants.ambientLight = Vector3(1.0f, 1.0f, 1.0f) * m_AmbientIntensity;
     psConstants.ShadowTexelSize[0] = 1.0f / g_ShadowBuffer.GetWidth();
-    psConstants.InvTileDim[0] = 1.0f / Lighting::LightGridDim;
-    psConstants.InvTileDim[1] = 1.0f / Lighting::LightGridDim;
-    psConstants.TileCount[0] = Math::DivideByMultiple(g_SceneColorBuffer.GetWidth(), Lighting::LightGridDim);
-    psConstants.TileCount[1] = Math::DivideByMultiple(g_SceneColorBuffer.GetHeight(), Lighting::LightGridDim);
-    psConstants.FirstLightIndex[0] = Lighting::m_FirstConeLight;
-    psConstants.FirstLightIndex[1] = Lighting::m_FirstConeShadowedLight;
+    psConstants.InvTileDim[0] = 1.0f / SceneView::LightGridDim;
+    psConstants.InvTileDim[1] = 1.0f / SceneView::LightGridDim;
+    psConstants.TileCount[0] = Math::DivideByMultiple(g_SceneColorBuffer.GetWidth(), SceneView::LightGridDim);
+    psConstants.TileCount[1] = Math::DivideByMultiple(g_SceneColorBuffer.GetHeight(), SceneView::LightGridDim);
+    psConstants.FirstLightIndex[0] = lighting->GetFirstConeLight();
+    psConstants.FirstLightIndex[1] = lighting->GetFirstConeShadowedLight();
     psConstants.FrameIndexMod2 = FrameIndex;
 
     // Set the default state for command lists
@@ -479,7 +477,7 @@ void ModelViewer::RenderScene( void )
     SSAO::Render(gfxContext, m_world.GetMainCamera());
 
 	if (g_LightingModel == LightingType::kForward_plus)
-		Lighting::FillLightGrid(gfxContext, m_world.GetMainCamera());
+		m_world.GenerateLightBuffer(gfxContext, m_world.GetMainCamera());
 
     if (!SSAO::DebugDraw)
     {

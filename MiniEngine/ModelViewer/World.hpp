@@ -4,6 +4,7 @@
 #include "GameCore.h"
 #include "CameraController.h"
 #include "Camera.h"
+#include "Light.hpp"
 
 using namespace Math;
 using namespace GameCore;
@@ -13,6 +14,11 @@ namespace SceneView
 	class World final
 	{
 	public:
+
+		static World *Get() noexcept {
+			return s_world;
+		}
+
 
 		World();
 
@@ -24,11 +30,18 @@ namespace SceneView
 
 		void Update(const float delta);
 
+		void GenerateLightBuffer(GraphicsContext& gfxContext, const Math::Camera& camera)
+		{
+			m_lighting->FillLightGrid(gfxContext, camera);
+		}
+
 		inline const BoundingBox& GetBoundingBox() const noexcept { return m_boundingbox; }
 
 		inline const Camera& GetMainCamera() const noexcept { return m_Camera; }
 
 		inline Camera& GetMainCamera() noexcept { return m_Camera; }
+
+		Lighting* GetLighting() noexcept { return m_lighting.get(); }
 
 		std::vector<AssimpModel> m_models;
 
@@ -47,8 +60,12 @@ namespace SceneView
 
 		Camera m_Camera;
 
+		const std::unique_ptr<Lighting> m_lighting;
+
 		std::unique_ptr<CameraController> m_CameraController;
 
 		BoundingBox m_boundingbox;
+
+		static World* s_world;
 	};
 }
