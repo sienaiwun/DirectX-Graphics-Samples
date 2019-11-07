@@ -15,8 +15,8 @@ namespace SceneView
 	{
 	public:
 
-		static World *Get() noexcept {
-			return s_world;
+		static NotNull<World*> Get() noexcept {
+			return NotNull<World*>(s_world);
 		}
 
 
@@ -41,7 +41,7 @@ namespace SceneView
 
 		inline Camera& GetMainCamera() noexcept { return m_Camera; }
 
-		Lighting* GetLighting() noexcept { return m_lighting.get(); }
+		NotNull<Lighting*> GetLighting() noexcept { return NotNull<Lighting*>(m_lighting.get()); }
 
 		std::vector<AssimpModel> m_models;
 

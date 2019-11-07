@@ -46,8 +46,12 @@
 
 #include <wrl.h>
 #include <ppltasks.h>
+#include <gsl\gsl>
 
 #include "Utility.h"
 #include "VectorMath.h"
 #include "EngineTuning.h"
 #include "EngineProfiling.h"
+
+template< typename T >
+using NotNull = gsl::not_null< T >;

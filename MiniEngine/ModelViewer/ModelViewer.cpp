@@ -242,11 +242,11 @@ void ModelViewer::Startup( void )
     PostEffects::EnableAdaptation = true;
     SSAO::Enable = true;
 
-	SceneView::Lighting * light = SceneView::World::Get()->GetLighting();
-    m_ExtraTextures[2] = light->GetLightBuffer().GetSRV();
-    m_ExtraTextures[3] = light->GetLightShadowArray().GetSRV();
-    m_ExtraTextures[4] = light->GetLightGrid().GetSRV();
-    m_ExtraTextures[5] = light->GetLightGridBitMask().GetSRV();
+	auto lighting = SceneView::World::Get()->GetLighting();
+    m_ExtraTextures[2] = lighting->GetLightBuffer().GetSRV();
+    m_ExtraTextures[3] = lighting->GetLightShadowArray().GetSRV();
+    m_ExtraTextures[4] = lighting->GetLightGrid().GetSRV();
+    m_ExtraTextures[5] = lighting->GetLightGridBitMask().GetSRV();
 }
 
 void ModelViewer::Cleanup( void )
@@ -355,7 +355,7 @@ void ModelViewer::RenderLightShadows(GraphicsContext& gfxContext)
     static uint32_t LightIndex = 0;
     if (LightIndex >= SceneView::MaxLights)
         return;
-	SceneView::Lighting * light = SceneView::World::Get()->GetLighting();
+	auto light = SceneView::World::Get()->GetLighting();
 	light->GetLightShadowTempBuffer().BeginRendering(gfxContext);
     {
         gfxContext.SetPipelineState(m_ShadowPSO);
@@ -421,7 +421,7 @@ void ModelViewer::RenderScene( void )
 
 	psWireFrameColorConstants.wireFrameColor = Vector3(0, 0, 1);
 
-	const SceneView::Lighting* lighting = SceneView::World::Get()->GetLighting();
+	const auto lighting = SceneView::World::Get()->GetLighting();
 
     psConstants.sunDirection = m_SunDirection;
     psConstants.sunLight = Vector3(1.0f, 1.0f, 1.0f) * m_SunLightIntensity;
