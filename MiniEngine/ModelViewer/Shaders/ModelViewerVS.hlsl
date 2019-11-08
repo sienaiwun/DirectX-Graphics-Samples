@@ -21,6 +21,12 @@ cbuffer VSConstants : register(b0)
     float3 ViewerPos;
 };
 
+cbuffer modelInfo: register(b1)
+{
+	uint basevertex;
+	uint materialId;
+};
+
 struct VSInput
 {
     float3 position : POSITION;

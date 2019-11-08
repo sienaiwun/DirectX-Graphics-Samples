@@ -55,6 +55,18 @@ using namespace Math;
 using namespace Graphics;
 #pragma warning(disable:4996)
 
+
+enum RootParams
+{
+	VSCBuffer,
+	PSCBuffer,
+	MaterialsSRVs,
+	LightingSRVs,
+	PerModelConstant,
+	PSGameCBuffer,
+	NumPassRootParams,
+};
+
 class ModelViewer : public GameCore::IGameApp
 {
 public:
@@ -83,6 +95,7 @@ private:
     GraphicsPSO m_DepthPSO;
     GraphicsPSO m_CutoutDepthPSO;
     GraphicsPSO m_ForwardPlusPSO;
+	GraphicsPSO m_GBufferPSO;
 	GraphicsPSO m_ForwardPSO;
 	GraphicsPSO m_ModelWireFramePSO;
 #ifdef _WAVE_OP
@@ -131,15 +144,15 @@ void ModelViewer::Startup( void )
     SamplerDesc DefaultSamplerDesc;
     DefaultSamplerDesc.MaxAnisotropy = 8;
 
-    m_RootSig.Reset(6, 2);
+    m_RootSig.Reset(RootParams::NumPassRootParams, 2);
     m_RootSig.InitStaticSampler(0, DefaultSamplerDesc, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig.InitStaticSampler(1, SamplerShadowDesc, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
-    m_RootSig[1].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 64, 6, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[4].InitAsConstants(1, 2, D3D12_SHADER_VISIBILITY_VERTEX);
-	m_RootSig[5].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[RootParams::VSCBuffer].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
+    m_RootSig[RootParams::PSCBuffer].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[RootParams::MaterialsSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6, D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[RootParams::LightingSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 64, 6, D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[RootParams::PerModelConstant].InitAsConstants(1, 2, D3D12_SHADER_VISIBILITY_VERTEX);
+	m_RootSig[RootParams::PSGameCBuffer].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig.Finalize(L"ModelViewer", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
@@ -311,7 +324,7 @@ void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& view
 	vsConstants.modelToShadow = m_SunShadow.GetShadowMatrix();
 	XMStoreFloat3(&vsConstants.viewerPos, cam.GetPosition());
 
-	gfxContext.SetDynamicConstantBufferView(0, sizeof(vsConstants), &vsConstants);
+	gfxContext.SetDynamicConstantBufferView(RootParams::VSCBuffer, sizeof(vsConstants), &vsConstants);
 
 	uint32_t materialIdx = 0xFFFFFFFFul;
 	m_world.ForEach([&](Model &model)
@@ -337,10 +350,10 @@ void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& view
 					continue;
 
 				materialIdx = mesh.materialIndex;
-				gfxContext.SetDynamicDescriptors(2, 0, 6, model.GetSRVs(materialIdx));
+				gfxContext.SetDynamicDescriptors(RootParams::MaterialsSRVs, 0, 6, model.GetSRVs(materialIdx));
 			}
 
-			gfxContext.SetConstants(4, baseVertex, materialIdx);
+			gfxContext.SetConstants(RootParams::PerModelConstant, baseVertex, materialIdx);
 
 			gfxContext.DrawIndexed(indexCount, startIndex, baseVertex);
 		}
@@ -449,8 +462,8 @@ void ModelViewer::RenderScene( void )
     {
         ScopedTimer _prof(L"Z PrePass", gfxContext);
 
-        gfxContext.SetDynamicConstantBufferView(1, sizeof(psConstants), &psConstants);
-		gfxContext.SetDynamicConstantBufferView(5, sizeof(psWireFrameColorConstants), &psWireFrameColorConstants);
+        gfxContext.SetDynamicConstantBufferView(RootParams::VSCBuffer, sizeof(psConstants), &psConstants);
+		gfxContext.SetDynamicConstantBufferView(RootParams::PSGameCBuffer, sizeof(psWireFrameColorConstants), &psWireFrameColorConstants);
 
         {
             ScopedTimer _prof1(L"Opaque", gfxContext);
@@ -516,8 +529,8 @@ void ModelViewer::RenderScene( void )
 
             gfxContext.TransitionResource(g_SSAOFullScreen, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-            gfxContext.SetDynamicDescriptors(3, 0, _countof(m_ExtraTextures), m_ExtraTextures);
-            gfxContext.SetDynamicConstantBufferView(1, sizeof(psConstants), &psConstants);
+            gfxContext.SetDynamicDescriptors(RootParams::LightingSRVs, 0, _countof(m_ExtraTextures), m_ExtraTextures);
+            gfxContext.SetDynamicConstantBufferView(RootParams::PSCBuffer, sizeof(psConstants), &psConstants);
 #ifdef _WAVE_OP
             gfxContext.SetPipelineState(EnableWaveOps ? m_ModelWaveOpsPSO : m_ForwardPlusPSO );
 #else
