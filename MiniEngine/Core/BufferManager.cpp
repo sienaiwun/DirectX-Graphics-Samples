@@ -27,6 +27,10 @@ namespace Graphics
     ColorBuffer g_OverlayBuffer;
     ColorBuffer g_HorizontalBuffer;
 
+	ColorBuffer g_GBufferColorBuffer;
+	ColorBuffer g_GBufferNormalBuffer;
+	ColorBuffer g_GBufferMaterialBuffer;
+
     ShadowBuffer g_ShadowBuffer;
 
     ColorBuffer g_SSAOFullScreen(Color(1.0f, 1.0f, 1.0f));
@@ -111,6 +115,9 @@ void Graphics::InitializeRenderingBuffers( uint32_t bufferWidth, uint32_t buffer
         g_SceneColorBuffer.Create( L"Main Color Buffer", bufferWidth, bufferHeight, 1, DefaultHdrColorFormat, esram );
         g_VelocityBuffer.Create( L"Motion Vectors", bufferWidth, bufferHeight, 1, DXGI_FORMAT_R32_UINT );
         g_PostEffectsBuffer.Create( L"Post Effects Buffer", bufferWidth, bufferHeight, 1, DXGI_FORMAT_R32_UINT );
+		g_GBufferColorBuffer.Create(L"Gbuffer_color", bufferWidth, bufferHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, esram);
+		g_GBufferNormalBuffer.Create(L"Gbuffer_normal", bufferWidth, bufferHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM, esram);
+		g_GBufferMaterialBuffer.Create(L"Gbuffer_material", bufferWidth, bufferHeight, 1, DXGI_FORMAT_R16G16_UNORM, esram);
 
         esram.PushStack();    // Render HDR image
 

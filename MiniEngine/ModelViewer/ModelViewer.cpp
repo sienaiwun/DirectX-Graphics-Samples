@@ -43,6 +43,7 @@
 #include "CompiledShaders/ModelViewerPS.h"
 #include "CompiledShaders/ConstantColorPS.h"
 #include "CompiledShaders/ForwardPS.h"
+#include "CompiledShaders/GBufferPS.h"
 #ifdef _WAVE_OP
 #include "CompiledShaders/DepthViewerVS_SM6.h"
 #include "CompiledShaders/ModelViewerVS_SM6.h"
@@ -204,6 +205,12 @@ void ModelViewer::Startup( void )
     m_ForwardPlusPSO.SetVertexShader( g_pModelViewerVS, sizeof(g_pModelViewerVS) );
     m_ForwardPlusPSO.SetPixelShader( g_pModelViewerPS, sizeof(g_pModelViewerPS) );
     m_ForwardPlusPSO.Finalize();
+
+	m_GBufferPSO = m_ForwardPlusPSO;
+	DXGI_FORMAT gBufferFormats[] = { g_GBufferNormalBuffer.GetFormat(), g_GBufferNormalBuffer.GetFormat(), g_GBufferMaterialBuffer.GetFormat()};
+	m_GBufferPSO.SetRenderTargetFormats(3, gBufferFormats, DepthFormat);
+	m_GBufferPSO.SetPixelShader(g_pGBufferPS,sizeof(g_pGBufferPS));
+	m_GBufferPSO.Finalize();
 
 	m_ForwardPSO = m_ForwardPlusPSO;
 	m_ForwardPSO.SetPixelShader(g_pForwardPS, sizeof(g_pForwardPS));
