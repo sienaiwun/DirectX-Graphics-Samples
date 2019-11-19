@@ -326,7 +326,11 @@ uint PullNextBit( inout uint bits )
     bits ^= 1 << bitIndex;
     return bitIndex;
 }
-
+float2 EncodeUnitVector_CryEngine(float3 u)
+{
+	//https://aras-p.info/texts/CompactNormalStorage.html
+	return normalize(u.xy)*sqrt(u.z*0.5f + 0.5f);
+}
 [RootSignature(ModelViewer_RootSig)]
 float3 main(VSOutput vsOutput) : SV_Target0
 {
@@ -346,7 +350,6 @@ float3 main(VSOutput vsOutput) : SV_Target0
         float3x3 tbn = float3x3(normalize(vsOutput.tangent), normalize(vsOutput.bitangent), normalize(vsOutput.normal));
         normal = normalize(mul(normal, tbn));
     }
-
     float3 specularAlbedo = float3( 0.56, 0.56, 0.56 );
     float specularMask = texSpecular.Sample(sampler0, vsOutput.uv).g;
     float3 viewDir = normalize(vsOutput.viewDir);

@@ -44,6 +44,8 @@
 #include "CompiledShaders/ConstantColorPS.h"
 #include "CompiledShaders/ForwardPS.h"
 #include "CompiledShaders/GBufferPS.h"
+#include "CompiledShaders/DeferredShading.h"
+#include "CompiledShaders/ScreenQuadVS.h"
 #ifdef _WAVE_OP
 #include "CompiledShaders/DepthViewerVS_SM6.h"
 #include "CompiledShaders/ModelViewerVS_SM6.h"
@@ -65,6 +67,7 @@ enum RootParams
 	LightingSRVs,
 	PerModelConstant,
 	PSGameCBuffer,
+	GBufferSRVs,
 	NumPassRootParams,
 };
 
@@ -97,6 +100,7 @@ private:
     GraphicsPSO m_CutoutDepthPSO;
     GraphicsPSO m_ForwardPlusPSO;
 	GraphicsPSO m_GBufferPSO;
+	GraphicsPSO m_DefferedShadingPSO;
 	GraphicsPSO m_ForwardPSO;
 	GraphicsPSO m_ModelWireFramePSO;
 #ifdef _WAVE_OP
@@ -134,7 +138,7 @@ NumVar ShadowDimY("Application/Lighting/Shadow Dim Y", 3000, 1000, 10000, 100 );
 NumVar ShadowDimZ("Application/Lighting/Shadow Dim Z", 3000, 1000, 10000, 100 );
 
 BoolVar ShowWaveTileCounts("Application/Forward+/Show Wave Tile Counts", false);
-BoolVar ShowWireFrame("Application/Forward+/Show WireFrame", true);
+BoolVar ShowWireFrame("Application/Forward+/Show WireFrame", false);
 #ifdef _WAVE_OP
 BoolVar EnableWaveOps("Application/Forward+/Enable Wave Ops", true);
 #endif
@@ -152,6 +156,7 @@ void ModelViewer::Startup( void )
     m_RootSig[RootParams::PSCBuffer].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::MaterialsSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::LightingSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 64, 6, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_RootSig[RootParams::GBufferSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 32, 3, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::PerModelConstant].InitAsConstants(1, 2, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_RootSig[RootParams::PSGameCBuffer].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig.Finalize(L"ModelViewer", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -202,8 +207,8 @@ void ModelViewer::Startup( void )
     m_ForwardPlusPSO.SetBlendState(BlendDisable);
     m_ForwardPlusPSO.SetDepthStencilState(DepthStateTestEqual);
     m_ForwardPlusPSO.SetRenderTargetFormats(1, &ColorFormat, DepthFormat);
-    m_ForwardPlusPSO.SetVertexShader( g_pModelViewerVS, sizeof(g_pModelViewerVS) );
-    m_ForwardPlusPSO.SetPixelShader( g_pModelViewerPS, sizeof(g_pModelViewerPS) );
+	m_ForwardPlusPSO.SetVertexShader(SHADER_ARGS(g_pModelViewerVS));
+	m_ForwardPlusPSO.SetPixelShader(SHADER_ARGS(g_pModelViewerPS));
     m_ForwardPlusPSO.Finalize();
 
 	m_GBufferPSO = m_ForwardPlusPSO;
@@ -212,8 +217,13 @@ void ModelViewer::Startup( void )
 	m_GBufferPSO.SetPixelShader(g_pGBufferPS,sizeof(g_pGBufferPS));
 	m_GBufferPSO.Finalize();
 
+	m_DefferedShadingPSO = m_ForwardPlusPSO;
+	m_DefferedShadingPSO.SetVertexShader(SHADER_ARGS(g_pScreenQuadVS));
+	m_DefferedShadingPSO.SetPixelShader(SHADER_ARGS(g_pDeferredShading));
+	m_DefferedShadingPSO.Finalize();
+
 	m_ForwardPSO = m_ForwardPlusPSO;
-	m_ForwardPSO.SetPixelShader(g_pForwardPS, sizeof(g_pForwardPS));
+	m_ForwardPSO.SetPixelShader(SHADER_ARGS(g_pForwardPS));
 	m_ForwardPSO.Finalize();
 
 #ifdef _WAVE_OP
@@ -503,8 +513,7 @@ void ModelViewer::RenderScene( void )
     {
         ScopedTimer _prof(L"Main Render", gfxContext);
 
-        gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-        gfxContext.ClearColor(g_SceneColorBuffer);
+    
 
         pfnSetupGraphicsState();
 
@@ -538,31 +547,83 @@ void ModelViewer::RenderScene( void )
 
             gfxContext.SetDynamicDescriptors(RootParams::LightingSRVs, 0, _countof(m_ExtraTextures), m_ExtraTextures);
             gfxContext.SetDynamicConstantBufferView(RootParams::PSCBuffer, sizeof(psConstants), &psConstants);
-#ifdef _WAVE_OP
-            gfxContext.SetPipelineState(EnableWaveOps ? m_ModelWaveOpsPSO : m_ForwardPlusPSO );
-#else
-			if(g_LightingModel == LightingType::kForward_plus)
-				gfxContext.SetPipelineState(ShowWaveTileCounts ? m_WaveTileCountPSO : m_ForwardPlusPSO);
-			else
-				gfxContext.SetPipelineState(m_ForwardPSO);
-#endif
-            gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
-            gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
-            gfxContext.SetViewportAndScissor(m_MainViewport, m_MainScissor);
-
-            RenderObjects( gfxContext, camViewProjMat, kOpaque );
-
-            if (!ShowWaveTileCounts)
-            {
-                gfxContext.SetPipelineState(m_CutoutModelPSO);
-                RenderObjects( gfxContext, camViewProjMat, kCutout );
-            }
-
-			if(ShowWireFrame)
+			if (g_LightingModel == LightingType::kDeferred)
 			{
-				gfxContext.SetPipelineState(m_ModelWireFramePSO);
+				gfxContext.TransitionResource(g_GBufferColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+				gfxContext.TransitionResource(g_GBufferNormalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+				gfxContext.TransitionResource(g_GBufferMaterialBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+				gfxContext.ClearColor(g_GBufferColorBuffer);
+				gfxContext.ClearColor(g_GBufferNormalBuffer);
+				gfxContext.ClearColor(g_GBufferMaterialBuffer);
+
+				gfxContext.SetPipelineState(m_GBufferPSO);
+				D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] = { g_GBufferColorBuffer.GetRTV(),g_GBufferNormalBuffer.GetRTV(),g_GBufferMaterialBuffer.GetRTV() };
+				gfxContext.SetRenderTargets(3, RTVs, g_SceneDepthBuffer.GetDSV_DepthReadOnly());
+				gfxContext.SetViewportAndScissor(m_MainViewport, m_MainScissor);
 				RenderObjects(gfxContext, camViewProjMat, kOpaque);
+
+
+				gfxContext.TransitionResource(g_GBufferColorBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+				gfxContext.TransitionResource(g_GBufferNormalBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+				gfxContext.TransitionResource(g_GBufferMaterialBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true); 
+				D3D12_CPU_DESCRIPTOR_HANDLE GBuffers[3] = { g_GBufferColorBuffer.GetSRV(),g_GBufferNormalBuffer.GetSRV(),g_GBufferMaterialBuffer.GetSRV() };
+				gfxContext.SetDynamicDescriptors(RootParams::GBufferSRVs, 0, _countof(GBuffers), GBuffers);
+				gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+				gfxContext.ClearColor(g_SceneColorBuffer);
+				gfxContext.SetPipelineState(m_DefferedShadingPSO);
+				gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV());
+				gfxContext.SetViewportAndScissor(m_MainViewport, m_MainScissor);
+				gfxContext.Draw(3);
+				// deferred shading
+				/* Context.TransitionResource(g_HorizontalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		Context.SetRenderTarget(g_HorizontalBuffer.GetRTV());
+		Context.SetViewportAndScissor(0, 0, g_DisplayWidth, g_NativeHeight);
+		Context.SetPipelineState(BicubicHorizontalUpsamplePS);
+		Context.SetConstants(1, g_NativeWidth, g_NativeHeight, (float)BicubicUpsampleWeight);
+		Context.Draw(3);
+
+		Context.TransitionResource(g_HorizontalBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		Context.TransitionResource(UpsampleDest, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		Context.SetRenderTarget(UpsampleDest.GetRTV());
+		Context.SetViewportAndScissor(0, 0, g_DisplayWidth, g_DisplayHeight);
+		Context.SetPipelineState(BicubicVerticalUpsamplePS);
+		Context.SetConstants(1, g_DisplayWidth, g_NativeHeight, (float)BicubicUpsampleWeight);
+		Context.SetDynamicDescriptor(0, 0, g_HorizontalBuffer.GetSRV());
+		Context.Draw(3);
+				*/
+
 			}
+			else
+			{
+				gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+				gfxContext.ClearColor(g_SceneColorBuffer);
+#ifdef _WAVE_OP
+				gfxContext.SetPipelineState(EnableWaveOps ? m_ModelWaveOpsPSO : m_ForwardPlusPSO);
+#else
+				if (g_LightingModel == LightingType::kForward_plus)
+					gfxContext.SetPipelineState(ShowWaveTileCounts ? m_WaveTileCountPSO : m_ForwardPlusPSO);
+				else
+					gfxContext.SetPipelineState(m_ForwardPSO);
+#endif
+				gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
+				gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV(), g_SceneDepthBuffer.GetDSV_DepthReadOnly());
+				gfxContext.SetViewportAndScissor(m_MainViewport, m_MainScissor);
+
+				RenderObjects(gfxContext, camViewProjMat, kOpaque);
+
+				if (!ShowWaveTileCounts)
+				{
+					gfxContext.SetPipelineState(m_CutoutModelPSO);
+					RenderObjects(gfxContext, camViewProjMat, kCutout);
+				}
+				if (ShowWireFrame)
+				{
+					gfxContext.SetPipelineState(m_ModelWireFramePSO);
+					RenderObjects(gfxContext, camViewProjMat, kOpaque);
+				}
+			}
+
+			
         }
 
     }

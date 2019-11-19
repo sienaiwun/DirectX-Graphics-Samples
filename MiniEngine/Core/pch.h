@@ -55,3 +55,6 @@
 
 template< typename T >
 using NotNull = gsl::not_null< T >;
+
+#define SHADER_ARGS(shader) (shader), \
+								 sizeof(shader)

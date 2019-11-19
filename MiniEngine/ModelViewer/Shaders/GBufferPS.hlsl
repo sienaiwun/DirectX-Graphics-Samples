@@ -333,8 +333,10 @@ struct OMInputDeferred {
 	float4 material			: SV_Target2;
 };
 
+
 float2 EncodeUnitVector_CryEngine(float3 u)
 {
+	//https://aras-p.info/texts/CompactNormalStorage.html
 	return normalize(u.xy)*sqrt(u.z*0.5f+0.5f);
 }
 
