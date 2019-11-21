@@ -68,6 +68,7 @@ enum RootParams
 	PerModelConstant,
 	PSGameCBuffer,
 	GBufferSRVs,
+	CameraCBuffer,
 	NumPassRootParams,
 };
 
@@ -126,7 +127,7 @@ private:
 CREATE_APPLICATION( ModelViewer )
 enum LightingType { kForward, kForward_plus, kDeferred ,kNumLightingModels};
 const char* LightingModelLabels[kNumLightingModels] = { "Forward", "Forward+", "Deferred"};
-EnumVar g_LightingModel("Graphics/LightingModel", kForward_plus, kNumLightingModels, LightingModelLabels);
+EnumVar g_LightingModel("LightingModel", kDeferred, kNumLightingModels, LightingModelLabels);
 
 
 ExpVar m_SunLightIntensity("Application/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16.0f, 0.1f);
@@ -156,9 +157,10 @@ void ModelViewer::Startup( void )
     m_RootSig[RootParams::PSCBuffer].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::MaterialsSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::LightingSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 64, 6, D3D12_SHADER_VISIBILITY_PIXEL);
-	m_RootSig[RootParams::GBufferSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 32, 3, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_RootSig[RootParams::GBufferSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 32, 4, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::PerModelConstant].InitAsConstants(1, 2, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_RootSig[RootParams::PSGameCBuffer].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_RootSig[RootParams::CameraCBuffer].InitAsConstantBuffer(2, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig.Finalize(L"ModelViewer", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
@@ -214,7 +216,7 @@ void ModelViewer::Startup( void )
 	m_GBufferPSO = m_ForwardPlusPSO;
 	DXGI_FORMAT gBufferFormats[] = { g_GBufferNormalBuffer.GetFormat(), g_GBufferNormalBuffer.GetFormat(), g_GBufferMaterialBuffer.GetFormat()};
 	m_GBufferPSO.SetRenderTargetFormats(3, gBufferFormats, DepthFormat);
-	m_GBufferPSO.SetPixelShader(g_pGBufferPS,sizeof(g_pGBufferPS));
+	m_GBufferPSO.SetPixelShader(SHADER_ARGS(g_pGBufferPS));
 	m_GBufferPSO.Finalize();
 
 	m_DefferedShadingPSO = m_ForwardPlusPSO;
@@ -337,11 +339,29 @@ void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& view
 		XMFLOAT3 viewerPos;
 	} vsConstants;
 	const Camera& cam = m_world.GetMainCamera();
+	const Matrix4 invProjMat = Invert(cam.GetProjMatrix());
+	const Matrix4 invViewMat = Invert(cam.GetViewMatrix());
+	__declspec(align(16))struct CameraBufferConstants
+	{
+		Matrix4 projection_to_camera;
+		Matrix4 camera_to_world;
+		Matrix4 projection_to_world;
+		Matrix4 model_to_shadow;
+		XMFLOAT4 invViewport;
+		XMFLOAT3 cameraPos;
+	} cameraBufferConstant;
+	cameraBufferConstant.projection_to_camera = std::move(invProjMat);
+	cameraBufferConstant.camera_to_world = std::move(invViewMat);
+	cameraBufferConstant.projection_to_world = Invert(viewProjMat);
+	cameraBufferConstant.model_to_shadow = m_SunShadow.GetShadowMatrix();
+	XMStoreFloat3(&cameraBufferConstant.cameraPos, cam.GetPosition());
+	XMStoreFloat4(&cameraBufferConstant.invViewport, {1.0f/m_MainViewport.Width,1.0f / m_MainViewport.Height,0.0f,0.0f});
 	vsConstants.modelToProjection = viewProjMat;
 	vsConstants.modelToShadow = m_SunShadow.GetShadowMatrix();
 	XMStoreFloat3(&vsConstants.viewerPos, cam.GetPosition());
 
 	gfxContext.SetDynamicConstantBufferView(RootParams::VSCBuffer, sizeof(vsConstants), &vsConstants);
+	gfxContext.SetDynamicConstantBufferView(RootParams::CameraCBuffer, sizeof(cameraBufferConstant), &cameraBufferConstant);
 
 	uint32_t materialIdx = 0xFFFFFFFFul;
 	m_world.ForEach([&](Model &model)
@@ -506,8 +526,7 @@ void ModelViewer::RenderScene( void )
 
     SSAO::Render(gfxContext, m_world.GetMainCamera());
 
-	if (g_LightingModel == LightingType::kForward_plus)
-		m_world.GenerateLightBuffer(gfxContext, m_world.GetMainCamera());
+	m_world.GenerateLightBuffer(gfxContext, m_world.GetMainCamera());
 
     if (!SSAO::DebugDraw)
     {
@@ -565,8 +584,9 @@ void ModelViewer::RenderScene( void )
 
 				gfxContext.TransitionResource(g_GBufferColorBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 				gfxContext.TransitionResource(g_GBufferNormalBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
-				gfxContext.TransitionResource(g_GBufferMaterialBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true); 
-				D3D12_CPU_DESCRIPTOR_HANDLE GBuffers[3] = { g_GBufferColorBuffer.GetSRV(),g_GBufferNormalBuffer.GetSRV(),g_GBufferMaterialBuffer.GetSRV() };
+				gfxContext.TransitionResource(g_GBufferMaterialBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+				gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+				D3D12_CPU_DESCRIPTOR_HANDLE GBuffers[4] = { g_GBufferColorBuffer.GetSRV(),g_GBufferNormalBuffer.GetSRV(),g_GBufferMaterialBuffer.GetSRV(),g_SceneDepthBuffer.GetDepthSRV() };
 				gfxContext.SetDynamicDescriptors(RootParams::GBufferSRVs, 0, _countof(GBuffers), GBuffers);
 				gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 				gfxContext.ClearColor(g_SceneColorBuffer);
@@ -574,23 +594,6 @@ void ModelViewer::RenderScene( void )
 				gfxContext.SetRenderTarget(g_SceneColorBuffer.GetRTV());
 				gfxContext.SetViewportAndScissor(m_MainViewport, m_MainScissor);
 				gfxContext.Draw(3);
-				// deferred shading
-				/* Context.TransitionResource(g_HorizontalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		Context.SetRenderTarget(g_HorizontalBuffer.GetRTV());
-		Context.SetViewportAndScissor(0, 0, g_DisplayWidth, g_NativeHeight);
-		Context.SetPipelineState(BicubicHorizontalUpsamplePS);
-		Context.SetConstants(1, g_NativeWidth, g_NativeHeight, (float)BicubicUpsampleWeight);
-		Context.Draw(3);
-
-		Context.TransitionResource(g_HorizontalBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		Context.TransitionResource(UpsampleDest, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		Context.SetRenderTarget(UpsampleDest.GetRTV());
-		Context.SetViewportAndScissor(0, 0, g_DisplayWidth, g_DisplayHeight);
-		Context.SetPipelineState(BicubicVerticalUpsamplePS);
-		Context.SetConstants(1, g_DisplayWidth, g_NativeHeight, (float)BicubicUpsampleWeight);
-		Context.SetDynamicDescriptor(0, 0, g_HorizontalBuffer.GetSRV());
-		Context.Draw(3);
-				*/
 
 			}
 			else
