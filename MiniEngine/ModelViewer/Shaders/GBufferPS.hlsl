@@ -330,7 +330,7 @@ uint PullNextBit( inout uint bits )
 struct OMInputDeferred {
 	float4 base_color		: SV_Target0;
 	float4 n				: SV_Target1;
-	float4 material			: SV_Target2;
+	float2 material			: SV_Target2;
 };
 
 
@@ -357,9 +357,9 @@ OMInputDeferred main(VSOutput vsOutput)
     float specularMask = texSpecular.Sample(sampler0, vsOutput.uv).g;
 
 	output.base_color = float4(diffuseAlbedo, 1.0f);
-#pragma warning( disable : 3578 ) // Partial initialization.
 	output.n.xy = EncodeUnitVector_CryEngine(normal);
 	output.material.x = specularMask;
+	output.material.y = 0.0f;
 
     return output;
 }

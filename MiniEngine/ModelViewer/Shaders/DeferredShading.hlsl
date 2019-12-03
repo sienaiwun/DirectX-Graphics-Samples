@@ -32,9 +32,9 @@ uint GetTileOffset(uint tileIndex)
 }
 
 #include "Lighting.hlsli"
-Texture2D<float3> ColorTex : register(t32);
-Texture2D<float2> NormalTex : register(t33);
-Texture2D<float3> MaterialTex:register(t34);
+Texture2D<float4> ColorTex : register(t32);
+Texture2D<float4> NormalTex : register(t33);
+Texture2D<float2> MaterialTex:register(t34);
 Texture2D<float> DepthTex:register(t35);
 
 cbuffer PrimaryCamera:register(b2)
@@ -87,14 +87,14 @@ float3 main(float4 position : SV_Position) : SV_Target0
 {
 	uint2 pixelPos = position.xy;
 	float3 colorSum = 0;
-	float3 diffuseAlbedo = ColorTex[pixelPos];
+	float3 diffuseAlbedo = ColorTex[pixelPos].xyz;
 	float depth = DepthTex[pixelPos];
 	{
 		 float ao = texSSAO[pixelPos];
 		 colorSum += ApplyAmbientLight(diffuseAlbedo, ao, AmbientColor);
 	}
 	float gloss = 128.0;
-	float3 normal = DecodeNormal_CryEngine(NormalTex[pixelPos]);
+	float3 normal = DecodeNormal_CryEngine(NormalTex[pixelPos].xy);
 	float3 specularAlbedo = float3(0.56, 0.56, 0.56);
 	float specularMask = MaterialTex[pixelPos].x;
 	

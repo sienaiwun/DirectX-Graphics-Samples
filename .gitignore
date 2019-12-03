@@ -1,4 +1,4 @@
-﻿################################################################################
+################################################################################
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
@@ -37,3 +37,4 @@
 /Samples/Desktop/D3D12Raytracing/src/D3D12RaytracingSimpleLighting/D3D12RaytracingSimpleLighting.vcxproj.user
 /Samples/Desktop/D3D12Raytracing/src/D3D12RaytracingSimpleLighting/bin/x64
 /Samples/Desktop/D3D12Raytracing/src/.vs/D3D12Raytracing/v15
+Samples/Desktop/
