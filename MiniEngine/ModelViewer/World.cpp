@@ -44,7 +44,8 @@ namespace SceneView
 		m_Camera.SetEyeAtUp(eye, Vector3(kZero), Vector3(kYUnitVector));
 		m_Camera.SetZRange(1.0f, 10000.0f);
 		m_CameraController.reset(new CameraController(m_Camera, Vector3(kYUnitVector)));
-
+        std::shared_ptr<const ManagedTexture> sky_texture(TextureManager::LoadFromFile(L"sky/sky", true));
+        m_Camera.GetSky().SetTexture(std::move(sky_texture));
 	}
 
 	void World::Update(const float deltaT)

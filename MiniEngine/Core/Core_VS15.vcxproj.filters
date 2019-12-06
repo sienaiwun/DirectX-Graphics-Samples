@@ -202,6 +202,12 @@
     <ClInclude Include="Math\BoundingBox.hpp">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="Sky.hpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyPass.hpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SystemTime.cpp">
@@ -354,6 +360,9 @@
     <ClCompile Include="ReadbackBuffer.cpp">
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="SkyPass.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
@@ -406,6 +415,9 @@
     </Filter>
     <Filter Include="Shaders\BitonicSort">
       <UniqueIdentifier>{29bbd948-3d9f-4b00-a170-52bc3e18d6ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Sky">
+      <UniqueIdentifier>{06769961-5248-4cc2-b3e1-d5429801c403}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -808,6 +820,12 @@
     <FxCompile Include="Shaders\FXAAPass2VDebug2CS.hlsl">
       <Filter>Shaders\FXAA</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\SkyPS.hlsl">
+      <Filter>Shaders\Sky</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SkyVS.hlsl">
+      <Filter>Shaders\Sky</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
@@ -889,5 +907,11 @@
       <Filter>Shaders\BitonicSort</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="Shaders\SkyRS.hlsli">
+      <Filter>Shaders\Sky</Filter>
+    </None>
+    <None Include="Shaders\icosphere.hlsli">
+      <Filter>Shaders\Sky</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -15,6 +15,7 @@
 
 #include "VectorMath.h"
 #include "Math/Frustum.h"
+#include "Sky.hpp"
 
 namespace Math
 {
@@ -102,6 +103,14 @@ namespace Math
         float GetFarClip() const { return m_FarClip; }
         float GetClearDepth() const { return m_ReverseZ ? 0.0f : 1.0f; }
 
+        Sky& GetSky() noexcept {
+            return m_sky;
+        }
+
+        const Sky& GetSky() const noexcept {
+            return m_sky;
+        }
+
     private:
 
         void UpdateProjMatrix( void );
@@ -111,6 +120,8 @@ namespace Math
         float m_NearClip;
         float m_FarClip;
         bool m_ReverseZ;                // Invert near and far clip distances so that Z=0 is the far plane
+
+        Sky m_sky;
     };
 
     inline void BaseCamera::SetEyeAtUp( Vector3 eye, Vector3 at, Vector3 up )

@@ -27,6 +27,7 @@
 #include "PostEffects.h"
 #include "SSAO.h"
 #include "FXAA.h"
+#include "SkyPass.hpp"
 #include "SystemTime.h"
 #include "TextRenderer.h"
 #include "ShadowCamera.h"
@@ -127,7 +128,7 @@ private:
 CREATE_APPLICATION( ModelViewer )
 enum LightingType { kForward, kForward_plus, kDeferred ,kNumLightingModels};
 const char* LightingModelLabels[kNumLightingModels] = { "Forward", "Forward+", "Deferred"};
-EnumVar g_LightingModel("LightingModel", kDeferred, kNumLightingModels, LightingModelLabels);
+EnumVar g_LightingModel("LightingModel", kForward_plus, kNumLightingModels, LightingModelLabels);
 
 
 ExpVar m_SunLightIntensity("Application/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16.0f, 0.1f);
@@ -174,13 +175,14 @@ void ModelViewer::Startup( void )
         { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
+    gsl::span<const D3D12_INPUT_ELEMENT_DESC> input_element_decs = gsl::make_span(vertElem);
 
     // Depth-only (2x rate)
     m_DepthPSO.SetRootSignature(m_RootSig);
     m_DepthPSO.SetRasterizerState(RasterizerDefault);
     m_DepthPSO.SetBlendState(BlendNoColorWrite);
     m_DepthPSO.SetDepthStencilState(DepthStateReadWrite);
-    m_DepthPSO.SetInputLayout(_countof(vertElem), vertElem);
+    m_DepthPSO.SetInputLayout(input_element_decs.size(), input_element_decs.data());
     m_DepthPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
     m_DepthPSO.SetRenderTargetFormats(0, nullptr, DepthFormat);
     m_DepthPSO.SetVertexShader(g_pDepthViewerVS, sizeof(g_pDepthViewerVS));
@@ -273,6 +275,8 @@ void ModelViewer::Startup( void )
     PostEffects::EnableHDR = true;
     PostEffects::EnableAdaptation = true;
     SSAO::Enable = true;
+
+    SkyPass::Initialize();
 
 	auto lighting = SceneView::World::Get()->GetLighting();
     m_ExtraTextures[2] = lighting->GetLightBuffer().GetSRV();
@@ -630,6 +634,7 @@ void ModelViewer::RenderScene( void )
         }
 
     }
+    SkyPass::Render(gfxContext, m_world.GetMainCamera());
 
     // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
     // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
