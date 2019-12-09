@@ -41,6 +41,7 @@ namespace SceneView
 
 		inline Camera& GetMainCamera() noexcept { return m_Camera; }
 
+        [[nodiscard]]
 		NotNull<Lighting*> GetLighting() noexcept { return NotNull<Lighting*>(m_lighting.get()); }
 
 		std::vector<AssimpModel> m_models;

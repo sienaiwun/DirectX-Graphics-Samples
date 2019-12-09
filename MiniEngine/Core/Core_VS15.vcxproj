@@ -111,6 +111,7 @@
     <ClInclude Include="GraphicsCore.h" />
     <ClInclude Include="GraphRenderer.h" />
     <ClInclude Include="Hash.h" />
+    <ClInclude Include="hlsl.hpp" />
     <ClInclude Include="LinearAllocator.h" />
     <ClInclude Include="Math\BoundingBox.hpp" />
     <ClInclude Include="Math\BoundingPlane.h" />
@@ -426,6 +427,9 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp17</LanguageStandard>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">stdcpp17</LanguageStandard>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdcpp17</LanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
   <ImportGroup Label="ExtensionTargets">

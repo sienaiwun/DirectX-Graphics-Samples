@@ -18,6 +18,7 @@ public:
 
     Sky& operator=(Sky&& sky) noexcept = default;
 
+    [[nodiscard]]
     inline float GetScaleZ() const noexcept {
         return m_scale_z;
     }
@@ -26,6 +27,7 @@ public:
         m_texture = std::move(texture);
     }
 
+    [[nodiscard]]
     std::shared_ptr<const ManagedTexture> GetTexture() const noexcept
     {
         return m_texture;

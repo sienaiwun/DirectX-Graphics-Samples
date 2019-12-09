@@ -208,6 +208,9 @@
     <ClInclude Include="SkyPass.hpp">
       <Filter>Source Files\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="hlsl.hpp">
+      <Filter>Shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SystemTime.cpp">
