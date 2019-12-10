@@ -19,7 +19,8 @@ namespace
     GraphicsPSO s_skypassPSO;
     enum RootParams
     {
-        VSCameraCBuffer,
+        CameraParam,
+        WorldParam,
         SkyTextureSRVs,
         NumPassRootParams,
     };
@@ -32,10 +33,11 @@ namespace SkyPass
 {
     void Initialize(void)
     {
-        s_RootSignature.Reset(NumPassRootParams, NumPassRootParams);
+        s_RootSignature.Reset(NumPassRootParams, 2);
         s_RootSignature.InitStaticSampler(SAMPLER_TEXTURE, SamplerLinearClampDesc);
         s_RootSignature.InitStaticSampler(SAMPLER_SHADOWMAP, SamplerLinearBorderDesc);
-        s_RootSignature[VSCameraCBuffer].InitAsConstantBuffer(SLOT_CBUFFER_CAMERA, D3D12_SHADER_VISIBILITY_VERTEX);
+        s_RootSignature[CameraParam].InitAsConstantBuffer(SLOT_CBUFFER_CAMERA, D3D12_SHADER_VISIBILITY_VERTEX);
+        s_RootSignature[WorldParam].InitAsConstantBuffer(SLOT_CBUFFER_WORLD, D3D12_SHADER_VISIBILITY_VERTEX);
         s_RootSignature[SkyTextureSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
         s_RootSignature.Finalize(L"SkyPass");
 

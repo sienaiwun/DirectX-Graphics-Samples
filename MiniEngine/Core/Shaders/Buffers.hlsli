@@ -13,8 +13,9 @@ CBUFFER(WorldConstant, SLOT_CBUFFER_WORLD)
     float4x4 g_camera_to_world			: packoffset(c4);
     float4x4 g_projection_to_world		: packoffset(c8);
     float4x4 g_model_to_shadow			: packoffset(c12);
-    float4 g_inv_viewport				: packoffset(c16);
-    float3 g_viewer_pos				: packoffset(c17);
+    float4  g_inv_viewport				: packoffset(c16);
+    float3 g_viewer_pos				    : packoffset(c17);
+    float g_scene_lengh                 : packoffset(c17.w);
 };
 
 CBUFFER(LightConstant, SLOT_CBUFFER_LIGHT)

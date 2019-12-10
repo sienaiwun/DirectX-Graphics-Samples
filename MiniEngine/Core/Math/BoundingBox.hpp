@@ -1,6 +1,5 @@
 #pragma once
-#include "Vector.h"
-
+#include "VectorMath.h"
 
 namespace Math
 {
@@ -16,5 +15,17 @@ namespace Math
 		BoundingBox() noexcept :max(-g_XMInfinity), min(g_XMInfinity)
 		{
 		}
+
+        [[nodiscard]]
+        Scalar Length()
+        {
+            return Scalar(XMVector3Length(max - min));
+        }
+
+        [[nodiscard]]
+        const Scalar Length() const
+        {
+            return Scalar(XMVector3Length(max - min));
+        }
 	};
 }

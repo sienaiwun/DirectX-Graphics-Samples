@@ -86,9 +86,13 @@ public:
     virtual void Update( float deltaT ) override;
     virtual void RenderScene( void ) override;
 
+ 
+
 private:
 
     void RenderLightShadows(GraphicsContext& gfxContext);
+
+    void UpdateGpuWorld(GraphicsContext& gfxContext);
 
     enum eObjectFilter { kOpaque = 0x1, kCutout = 0x2, kTransparent = 0x4, kAll = 0xF, kNone = 0x0 };
     void RenderObjects( GraphicsContext& Context, const Matrix4& ViewProjMat, eObjectFilter Filter = kAll);
@@ -347,6 +351,7 @@ __declspec(align(16))struct WorldBufferConstants
     Matrix4 model_to_shadow;
     XMFLOAT4 invViewport;
     XMFLOAT3 cameraPos;
+    float scene_length;
 } worldConstant;
 
 __declspec(align(16)) struct
@@ -362,24 +367,40 @@ __declspec(align(16)) struct
     uint32_t FrameIndexMod2;
 } lightingConstants;
 
+__declspec(align(16)) struct
+{
+    Vector3 wireFrameColor;
+}psWireFrameColorConstants;
+
+
+void ModelViewer::UpdateGpuWorld(GraphicsContext& gfxContext)
+{
+    const Camera& cam = m_world.GetMainCamera();
+    const Matrix4 invProjMat = Invert(cam.GetProjMatrix());
+    const Matrix4 invViewMat = Invert(cam.GetViewMatrix());
+
+    worldConstant.projection_to_camera = std::move(invProjMat);
+    worldConstant.camera_to_world = std::move(invViewMat);
+    worldConstant.projection_to_world = Invert(cam.GetViewProjMatrix());
+    worldConstant.model_to_shadow = m_SunShadow.GetShadowMatrix();
+    XMStoreFloat3(&worldConstant.cameraPos, cam.GetPosition());
+    XMStoreFloat4(&worldConstant.invViewport, { 1.0f / m_MainViewport.Width,1.0f / m_MainViewport.Height,0.0f,0.0f });
+    worldConstant.scene_length = m_world.GetBoundingBox().Length();
+    gfxContext.SetDynamicConstantBufferView(RootParams::WorldParam, sizeof(worldConstant), &worldConstant);
+
+
+
+    psWireFrameColorConstants.wireFrameColor = Vector3(0, 0, 1);
+    gfxContext.SetDynamicConstantBufferView(RootParams::PSGameCBuffer, sizeof(psWireFrameColorConstants), &psWireFrameColorConstants);
+
+}
 
 void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& viewProjMat, eObjectFilter Filter)
 {
-	
-	const Camera& cam = m_world.GetMainCamera();
-	const Matrix4 invProjMat = Invert(cam.GetProjMatrix());
-	const Matrix4 invViewMat = Invert(cam.GetViewMatrix());
-	
-	worldConstant.projection_to_camera = std::move(invProjMat);
-	worldConstant.camera_to_world = std::move(invViewMat);
-	worldConstant.projection_to_world = Invert(viewProjMat);
-	worldConstant.model_to_shadow = m_SunShadow.GetShadowMatrix();
-	XMStoreFloat3(&worldConstant.cameraPos, cam.GetPosition());
-	XMStoreFloat4(&worldConstant.invViewport, {1.0f/m_MainViewport.Width,1.0f / m_MainViewport.Height,0.0f,0.0f});
+
 	cameraConstant.modelToProjection = viewProjMat;
 
 	gfxContext.SetDynamicConstantBufferView(RootParams::CameraParam, sizeof(cameraConstant), &cameraConstant);
-	gfxContext.SetDynamicConstantBufferView(RootParams::WorldParam, sizeof(worldConstant), &worldConstant);
 
 	uint32_t materialIdx = 0xFFFFFFFFul;
 	m_world.ForEach([&](Model &model)
@@ -417,7 +438,6 @@ void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& view
 
 void ModelViewer::RenderLightShadows(GraphicsContext& gfxContext)
 {
-
     ScopedTimer _prof(L"RenderLightShadows", gfxContext);
 
     static uint32_t LightIndex = 0;
@@ -465,18 +485,15 @@ void ModelViewer::RenderScene( void )
 
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
 
+
+
     ParticleEffects::Update(gfxContext.GetComputeContext(), Graphics::GetFrameTime());
 
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
 
    
 
-	__declspec(align(16)) struct
-	{
-		Vector3 wireFrameColor;
-	}psWireFrameColorConstants;
-
-	psWireFrameColorConstants.wireFrameColor = Vector3(0, 0, 1);
+   
 
 	const auto lighting = SceneView::World::Get()->GetLighting();
 
@@ -501,14 +518,15 @@ void ModelViewer::RenderScene( void )
 
     pfnSetupGraphicsState();
 
+    UpdateGpuWorld(gfxContext);
+
     RenderLightShadows(gfxContext);
 
     {
         ScopedTimer _prof(L"Z PrePass", gfxContext);
 
         gfxContext.SetDynamicConstantBufferView(RootParams::CameraParam, sizeof(lightingConstants), &lightingConstants);
-		gfxContext.SetDynamicConstantBufferView(RootParams::PSGameCBuffer, sizeof(psWireFrameColorConstants), &psWireFrameColorConstants);
-
+		
         {
             ScopedTimer _prof1(L"Opaque", gfxContext);
             gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
