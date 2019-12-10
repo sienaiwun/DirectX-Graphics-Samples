@@ -1,3 +1,4 @@
+#include "../../Core/Shaders/Buffers.hlsli"
 Texture2D<float> texSSAO            : register(t64);
 Texture2D<float> texShadow            : register(t65);
 
@@ -6,17 +7,6 @@ Texture2DArray<float> lightShadowArrayTex : register(t67);
 ByteAddressBuffer lightGrid : register(t68);
 ByteAddressBuffer lightGridBitMask : register(t69);
 
-cbuffer PSConstants : register(b0)
-{
-	float3 SunDirection;
-	float3 SunColor;
-	float3 AmbientColor;
-	float4 ShadowTexelSize;
-
-	float4 InvTileDim;
-	uint4 TileCount;
-	uint4 FirstLightIndex;
-}
 
 SamplerState sampler0 : register(s0);
 SamplerComparisonState shadowSampler : register(s1);

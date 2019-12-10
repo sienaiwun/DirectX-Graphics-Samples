@@ -191,6 +191,9 @@
     </FxCompile>
     <FxCompile Include="Shaders\DepthViewerVS.hlsl">
       <ShaderType>Vertex</ShaderType>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../Core/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../Core/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">../../Core/</AdditionalIncludeDirectories>
     </FxCompile>
     <FxCompile Include="Shaders\FillLightGridCS_16.hlsl" />
     <FxCompile Include="Shaders\FillLightGridCS_24.hlsl" />
@@ -255,7 +258,7 @@
     <Import Project="..\..\Packages\WinPixEventRuntime.1.0.190604001\build\WinPixEventRuntime.targets" Condition="Exists('..\..\Packages\WinPixEventRuntime.1.0.190604001\build\WinPixEventRuntime.targets')" />
     <Import Project="..\..\Packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets" Condition="Exists('..\..\Packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets')" />
     <Import Project="..\..\Packages\Assimp.3.0.0\build\native\Assimp.targets" Condition="Exists('..\..\Packages\Assimp.3.0.0\build\native\Assimp.targets')" />
-    </ImportGroup>
+  </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
@@ -264,5 +267,5 @@
     <Error Condition="!Exists('..\..\Packages\WinPixEventRuntime.1.0.190604001\build\WinPixEventRuntime.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Packages\WinPixEventRuntime.1.0.190604001\build\WinPixEventRuntime.targets'))" />
     <Error Condition="!Exists('..\..\Packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets'))" />
     <Error Condition="!Exists('..\..\Packages\Assimp.3.0.0\build\native\Assimp.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Packages\Assimp.3.0.0\build\native\Assimp.targets'))" />
-    </Target>
+  </Target>
 </Project>

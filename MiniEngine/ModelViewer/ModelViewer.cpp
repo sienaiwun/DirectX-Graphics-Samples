@@ -14,6 +14,7 @@
 
 #include "GameCore.h"
 #include "GraphicsCore.h"
+#include "hlsl.hpp"
 #include "CameraController.h"
 #include "BufferManager.h"
 #include "Camera.h"
@@ -62,14 +63,14 @@ using namespace Graphics;
 
 enum RootParams
 {
-	VSCBuffer,
-	PSCBuffer,
+	CameraParam,
+	LightingParam,
 	MaterialsSRVs,
 	LightingSRVs,
 	PerModelConstant,
 	PSGameCBuffer,
 	GBufferSRVs,
-	CameraCBuffer,
+	WorldParam,
 	NumPassRootParams,
 };
 
@@ -154,14 +155,14 @@ void ModelViewer::Startup( void )
     m_RootSig.Reset(RootParams::NumPassRootParams, 2);
     m_RootSig.InitStaticSampler(0, DefaultSamplerDesc, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig.InitStaticSampler(1, SamplerShadowDesc, D3D12_SHADER_VISIBILITY_PIXEL);
-    m_RootSig[RootParams::VSCBuffer].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
-    m_RootSig[RootParams::PSCBuffer].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_PIXEL);
+    m_RootSig[RootParams::CameraParam].InitAsConstantBuffer(SLOT_CBUFFER_CAMERA, D3D12_SHADER_VISIBILITY_VERTEX);
+    m_RootSig[RootParams::LightingParam].InitAsConstantBuffer(SLOT_CBUFFER_LIGHT, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::MaterialsSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::LightingSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 64, 6, D3D12_SHADER_VISIBILITY_PIXEL);
 	m_RootSig[RootParams::GBufferSRVs].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 32, 4, D3D12_SHADER_VISIBILITY_PIXEL);
     m_RootSig[RootParams::PerModelConstant].InitAsConstants(1, 2, D3D12_SHADER_VISIBILITY_VERTEX);
-	m_RootSig[RootParams::PSGameCBuffer].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_PIXEL);
-	m_RootSig[RootParams::CameraCBuffer].InitAsConstantBuffer(2, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_RootSig[RootParams::PSGameCBuffer].InitAsConstantBuffer(SLOT_CBUFFER_GAME, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_RootSig[RootParams::WorldParam].InitAsConstantBuffer(SLOT_CBUFFER_WORLD, D3D12_SHADER_VISIBILITY_ALL);
     m_RootSig.Finalize(L"ModelViewer", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
@@ -245,7 +246,7 @@ void ModelViewer::Startup( void )
 	m_ModelWireFramePSO = m_ForwardPlusPSO;
 	m_ModelWireFramePSO.SetRasterizerState(RasterizerDefaultWireFrame);
 	m_ModelWireFramePSO.SetDepthStencilState(DepthStateGreatEqual);
-	m_ModelWireFramePSO.SetPixelShader(g_pConstantColorPS, sizeof(g_pConstantColorPS));
+	m_ModelWireFramePSO.SetPixelShader(SHADER_ARGS(g_pConstantColorPS));
 	m_ModelWireFramePSO.Finalize();
 
     m_CutoutModelPSO = m_ForwardPlusPSO;
@@ -254,7 +255,7 @@ void ModelViewer::Startup( void )
 
     // A debug shader for counting lights in a tile
     m_WaveTileCountPSO = m_ForwardPlusPSO;
-    m_WaveTileCountPSO.SetPixelShader(g_pWaveTileCountPS, sizeof(g_pWaveTileCountPS));
+    m_WaveTileCountPSO.SetPixelShader(SHADER_ARGS(g_pWaveTileCountPS));
     m_WaveTileCountPSO.Finalize();
 
   
@@ -333,39 +334,52 @@ void ModelViewer::Update( float deltaT )
     m_MainScissor.bottom = (LONG)g_SceneColorBuffer.GetHeight();
 }
 
+__declspec(align(16))struct CameraBufferConstant
+{
+    Matrix4 modelToProjection;
+} cameraConstant;
+
+__declspec(align(16))struct WorldBufferConstants
+{
+    Matrix4 projection_to_camera;
+    Matrix4 camera_to_world;
+    Matrix4 projection_to_world;
+    Matrix4 model_to_shadow;
+    XMFLOAT4 invViewport;
+    XMFLOAT3 cameraPos;
+} worldConstant;
+
+__declspec(align(16)) struct
+{
+    Vector3 sunDirection;
+    Vector3 sunLight;
+    Vector3 ambientLight;
+    float ShadowTexelSize[4];
+
+    float InvTileDim[4];
+    uint32_t TileCount[4];
+    uint32_t FirstLightIndex[4];
+    uint32_t FrameIndexMod2;
+} lightingConstants;
+
 
 void ModelViewer::RenderObjects(GraphicsContext& gfxContext, const Matrix4& viewProjMat, eObjectFilter Filter)
 {
-	__declspec(align(16))struct VSConstants
-	{
-		Matrix4 modelToProjection;
-		Matrix4 modelToShadow;
-		XMFLOAT3 viewerPos;
-	} vsConstants;
+	
 	const Camera& cam = m_world.GetMainCamera();
 	const Matrix4 invProjMat = Invert(cam.GetProjMatrix());
 	const Matrix4 invViewMat = Invert(cam.GetViewMatrix());
-	__declspec(align(16))struct CameraBufferConstants
-	{
-		Matrix4 projection_to_camera;
-		Matrix4 camera_to_world;
-		Matrix4 projection_to_world;
-		Matrix4 model_to_shadow;
-		XMFLOAT4 invViewport;
-		XMFLOAT3 cameraPos;
-	} cameraBufferConstant;
-	cameraBufferConstant.projection_to_camera = std::move(invProjMat);
-	cameraBufferConstant.camera_to_world = std::move(invViewMat);
-	cameraBufferConstant.projection_to_world = Invert(viewProjMat);
-	cameraBufferConstant.model_to_shadow = m_SunShadow.GetShadowMatrix();
-	XMStoreFloat3(&cameraBufferConstant.cameraPos, cam.GetPosition());
-	XMStoreFloat4(&cameraBufferConstant.invViewport, {1.0f/m_MainViewport.Width,1.0f / m_MainViewport.Height,0.0f,0.0f});
-	vsConstants.modelToProjection = viewProjMat;
-	vsConstants.modelToShadow = m_SunShadow.GetShadowMatrix();
-	XMStoreFloat3(&vsConstants.viewerPos, cam.GetPosition());
+	
+	worldConstant.projection_to_camera = std::move(invProjMat);
+	worldConstant.camera_to_world = std::move(invViewMat);
+	worldConstant.projection_to_world = Invert(viewProjMat);
+	worldConstant.model_to_shadow = m_SunShadow.GetShadowMatrix();
+	XMStoreFloat3(&worldConstant.cameraPos, cam.GetPosition());
+	XMStoreFloat4(&worldConstant.invViewport, {1.0f/m_MainViewport.Width,1.0f / m_MainViewport.Height,0.0f,0.0f});
+	cameraConstant.modelToProjection = viewProjMat;
 
-	gfxContext.SetDynamicConstantBufferView(RootParams::VSCBuffer, sizeof(vsConstants), &vsConstants);
-	gfxContext.SetDynamicConstantBufferView(RootParams::CameraCBuffer, sizeof(cameraBufferConstant), &cameraBufferConstant);
+	gfxContext.SetDynamicConstantBufferView(RootParams::CameraParam, sizeof(cameraConstant), &cameraConstant);
+	gfxContext.SetDynamicConstantBufferView(RootParams::WorldParam, sizeof(worldConstant), &worldConstant);
 
 	uint32_t materialIdx = 0xFFFFFFFFul;
 	m_world.ForEach([&](Model &model)
@@ -455,18 +469,7 @@ void ModelViewer::RenderScene( void )
 
     uint32_t FrameIndex = TemporalEffects::GetFrameIndexMod2();
 
-    __declspec(align(16)) struct
-    {
-        Vector3 sunDirection;
-        Vector3 sunLight;
-        Vector3 ambientLight;
-        float ShadowTexelSize[4];
-
-        float InvTileDim[4];
-        uint32_t TileCount[4];
-        uint32_t FirstLightIndex[4];
-        uint32_t FrameIndexMod2;
-    } psConstants;
+   
 
 	__declspec(align(16)) struct
 	{
@@ -477,17 +480,17 @@ void ModelViewer::RenderScene( void )
 
 	const auto lighting = SceneView::World::Get()->GetLighting();
 
-    psConstants.sunDirection = m_SunDirection;
-    psConstants.sunLight = Vector3(1.0f, 1.0f, 1.0f) * m_SunLightIntensity;
-    psConstants.ambientLight = Vector3(1.0f, 1.0f, 1.0f) * m_AmbientIntensity;
-    psConstants.ShadowTexelSize[0] = 1.0f / g_ShadowBuffer.GetWidth();
-    psConstants.InvTileDim[0] = 1.0f / SceneView::LightGridDim;
-    psConstants.InvTileDim[1] = 1.0f / SceneView::LightGridDim;
-    psConstants.TileCount[0] = Math::DivideByMultiple(g_SceneColorBuffer.GetWidth(), SceneView::LightGridDim);
-    psConstants.TileCount[1] = Math::DivideByMultiple(g_SceneColorBuffer.GetHeight(), SceneView::LightGridDim);
-    psConstants.FirstLightIndex[0] = lighting->GetFirstConeLight();
-    psConstants.FirstLightIndex[1] = lighting->GetFirstConeShadowedLight();
-    psConstants.FrameIndexMod2 = FrameIndex;
+    lightingConstants.sunDirection = m_SunDirection;
+    lightingConstants.sunLight = Vector3(1.0f, 1.0f, 1.0f) * m_SunLightIntensity;
+    lightingConstants.ambientLight = Vector3(1.0f, 1.0f, 1.0f) * m_AmbientIntensity;
+    lightingConstants.ShadowTexelSize[0] = 1.0f / g_ShadowBuffer.GetWidth();
+    lightingConstants.InvTileDim[0] = 1.0f / SceneView::LightGridDim;
+    lightingConstants.InvTileDim[1] = 1.0f / SceneView::LightGridDim;
+    lightingConstants.TileCount[0] = Math::DivideByMultiple(g_SceneColorBuffer.GetWidth(), SceneView::LightGridDim);
+    lightingConstants.TileCount[1] = Math::DivideByMultiple(g_SceneColorBuffer.GetHeight(), SceneView::LightGridDim);
+    lightingConstants.FirstLightIndex[0] = lighting->GetFirstConeLight();
+    lightingConstants.FirstLightIndex[1] = lighting->GetFirstConeShadowedLight();
+    lightingConstants.FrameIndexMod2 = FrameIndex;
 
     // Set the default state for command lists
     auto pfnSetupGraphicsState = [&](void)
@@ -503,7 +506,7 @@ void ModelViewer::RenderScene( void )
     {
         ScopedTimer _prof(L"Z PrePass", gfxContext);
 
-        gfxContext.SetDynamicConstantBufferView(RootParams::VSCBuffer, sizeof(psConstants), &psConstants);
+        gfxContext.SetDynamicConstantBufferView(RootParams::CameraParam, sizeof(lightingConstants), &lightingConstants);
 		gfxContext.SetDynamicConstantBufferView(RootParams::PSGameCBuffer, sizeof(psWireFrameColorConstants), &psWireFrameColorConstants);
 
         {
@@ -569,7 +572,7 @@ void ModelViewer::RenderScene( void )
             gfxContext.TransitionResource(g_SSAOFullScreen, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
             gfxContext.SetDynamicDescriptors(RootParams::LightingSRVs, 0, _countof(m_ExtraTextures), m_ExtraTextures);
-            gfxContext.SetDynamicConstantBufferView(RootParams::PSCBuffer, sizeof(psConstants), &psConstants);
+            gfxContext.SetDynamicConstantBufferView(RootParams::LightingParam, sizeof(lightingConstants), &lightingConstants);
 			if (g_LightingModel == LightingType::kDeferred)
 			{
 				gfxContext.TransitionResource(g_GBufferColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);

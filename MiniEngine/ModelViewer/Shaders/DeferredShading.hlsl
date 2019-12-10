@@ -1,4 +1,5 @@
 #include "ModelViewerRS.hlsli"
+#include "../../Core/Shaders/Buffers.hlsli"
 
 // keep in sync with C code
 #define MAX_LIGHTS 256
@@ -37,16 +38,6 @@ Texture2D<float4> NormalTex : register(t33);
 Texture2D<float2> MaterialTex:register(t34);
 Texture2D<float> DepthTex:register(t35);
 
-cbuffer PrimaryCamera:register(b2)
-{
-	
-	float4x4 g_projection_to_camera		: packoffset(c0);
-	float4x4 g_camera_to_world			: packoffset(c4);
-	float4x4 g_projection_to_world		: packoffset(c8);
-	float4x4 g_model_to_shadow			: packoffset(c12);
-	float4 g_inv_viewport				: packoffset(c16);
-	float3 ViewerPos				: packoffset(c17);
-};
 
 
 float3 DecodeNormal_CryEngine(float2 G)
@@ -100,7 +91,7 @@ float3 main(float4 position : SV_Position) : SV_Target0
 	
 	float3 viewpos = SSDisplayToCamera(pixelPos, depth);
 	float3 worldpos = HomogeneousDivide(mul(g_camera_to_world, float4(viewpos, 1.0f)));
-	float3 viewDir = normalize(worldpos - ViewerPos);
+	float3 viewDir = normalize(worldpos - g_viewer_pos);
 	float3 shadowCoord = mul(g_model_to_shadow, float4(worldpos, 1.0)).xyz;
 	colorSum += ApplyDirectionalLight(diffuseAlbedo, specularAlbedo, specularMask, gloss, normal, viewDir, SunDirection, SunColor, shadowCoord);
 

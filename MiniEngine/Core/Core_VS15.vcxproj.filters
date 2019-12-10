@@ -916,5 +916,8 @@
     <None Include="Shaders\icosphere.hlsli">
       <Filter>Shaders\Sky</Filter>
     </None>
+    <None Include="Shaders\Buffers.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

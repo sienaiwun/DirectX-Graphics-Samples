@@ -14,6 +14,7 @@
 // Thanks to Michal Drobot for his feedback.
 
 #include "ModelViewerRS.hlsli"
+#include "../../Core/Shaders/Buffers.hlsli"
 #include "LightGrid.hlsli"
 
 // outdated warning about for-loop variable scope
@@ -47,17 +48,6 @@ Texture2DArray<float> lightShadowArrayTex : register(t67);
 ByteAddressBuffer lightGrid : register(t68);
 ByteAddressBuffer lightGridBitMask : register(t69);
 
-cbuffer PSConstants : register(b0)
-{
-	float3 SunDirection;
-	float3 SunColor;
-	float3 AmbientColor;
-	float4 ShadowTexelSize;
-
-	float4 InvTileDim;
-	uint4 TileCount;
-	uint4 FirstLightIndex;
-}
 
 SamplerState sampler0 : register(s0);
 SamplerComparisonState shadowSampler : register(s1);

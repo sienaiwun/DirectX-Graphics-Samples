@@ -1,17 +1,10 @@
 #include "icosphere.hlsli"
 #include "SkyRS.hlsli"
-#include "../hlsl.hpp"
+#include "Buffers.hlsli"
 
 struct PSInputWorldPosition {
     float4 p            : SV_POSITION;
     float3 p_world      : POSITION0;
-};
-
-CBUFFER(VSConstants, SLOT_CBUFFER_CAMERA)
-{
-    float4x4 modelToProjection;
-    float4x4 modelToShadow;
-    float3 ViewerPos;
 };
 
 

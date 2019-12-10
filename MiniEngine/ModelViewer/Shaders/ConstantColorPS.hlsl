@@ -1,4 +1,5 @@
 #include "ModelViewerRS.hlsli"
+#include "../../Core/Shaders/Buffers.hlsli"
 
 // outdated warning about for-loop variable scope
 #pragma warning (disable: 3078)
@@ -17,15 +18,10 @@ struct VSOutput
 	sample float3 bitangent : Bitangent;
 };
 
-cbuffer PSConstants : register(b1)
-{
-	float3 color;
-	
-}
 
 
 [RootSignature(ModelViewer_RootSig)]
 float3 main(VSOutput vsOutput) : SV_Target0
 {
-	return color;
+	return wireframe_color;
 }

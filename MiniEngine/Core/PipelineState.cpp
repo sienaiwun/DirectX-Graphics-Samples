@@ -92,9 +92,9 @@ void GraphicsPSO::SetRenderTargetFormats( UINT NumRTVs, const DXGI_FORMAT* RTVFo
     m_PSODesc.SampleDesc.Quality = MsaaQuality;
 }
 
-void GraphicsPSO::SetInputLayout( UINT NumElements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs )
+void GraphicsPSO::SetInputLayout(size_t NumElements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs )
 {
-    m_PSODesc.InputLayout.NumElements = NumElements;
+    m_PSODesc.InputLayout.NumElements = (UINT)NumElements;
 
     if (NumElements > 0)
     {

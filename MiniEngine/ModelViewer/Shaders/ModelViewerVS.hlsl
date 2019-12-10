@@ -11,15 +11,8 @@
 // Author(s):  James Stanard
 //             Alex Nankervis
 //
-
 #include "ModelViewerRS.hlsli"
-
-cbuffer VSConstants : register(b0)
-{
-    float4x4 modelToProjection;
-    float4x4 modelToShadow;
-    float3 ViewerPos;
-};
+#include "../../Core/Shaders/Buffers.hlsli"
 
 cbuffer modelInfo: register(b1)
 {
@@ -56,8 +49,8 @@ VSOutput main(VSInput vsInput)
     vsOutput.position = mul(modelToProjection, float4(vsInput.position, 1.0));
     vsOutput.worldPos = vsInput.position;
     vsOutput.texCoord = vsInput.texcoord0;
-    vsOutput.viewDir = vsInput.position - ViewerPos;
-    vsOutput.shadowCoord = mul(modelToShadow, float4(vsInput.position, 1.0)).xyz;
+    vsOutput.viewDir = vsInput.position - g_viewer_pos;
+    vsOutput.shadowCoord = mul(g_model_to_shadow, float4(vsInput.position, 1.0)).xyz;
 
     vsOutput.normal = vsInput.normal;
     vsOutput.tangent = vsInput.tangent;
