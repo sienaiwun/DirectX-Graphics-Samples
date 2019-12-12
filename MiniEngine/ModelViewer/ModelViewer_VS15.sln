@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core", "..\Core\Core_VS15.v
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Model", "..\Model\Model_VS15.vcxproj", "{5D3AEEFB-8789-48E5-9BD9-09C667052D09}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Transformation", "..\Transformation\Transformation.vcxproj", "{8AB76A21-C401-4799-9925-927C30D85E30}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Compute", "..\Compute\Compute.vcxproj", "{8AB76A21-C401-4799-9925-927C30D85E30}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
