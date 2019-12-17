@@ -10,12 +10,13 @@ namespace {
     RootSignature  s_ComputeSig;
     RootSignature s_GraphicsSig;
     GraphicsPSO s_GraphicsPSO;
-    ComputePSO s_computePSO;
+    ComputePSO s_ComputePSO;
 
     D3D12_VIEWPORT s_MainViewport;
     D3D12_RECT s_MainScissor;
     ColorBuffer s_PixelBuffer(Color(1.0f, 1.0f, 1.0f));
 
+    uint32_t s_ThreadGroupSize[2] = { 8,8 };
     enum ComputeRootParams :unsigned char
     {
         UniformBufferParam,
@@ -66,9 +67,9 @@ void Compute::Startup(void)
         s_ComputeSig[ComputeRootParams::UniformBufferParam].InitAsConstantBuffer(SLOT::COMPUTE_BUFFER_SLOT, D3D12_SHADER_VISIBILITY_ALL);
         s_ComputeSig[ComputeRootParams::UAVParam].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UAV_SLOT, 1);
         s_ComputeSig.Finalize(L"Compute");
-        s_computePSO.SetRootSignature(s_ComputeSig);
-        s_computePSO.SetComputeShader(SHADER_ARGS(g_pcompute));
-        s_computePSO.Finalize();
+        s_ComputePSO.SetRootSignature(s_ComputeSig);
+        s_ComputePSO.SetComputeShader(SHADER_ARGS(g_pcompute));
+        s_ComputePSO.Finalize();
     }
     {
         SamplerDesc DefaultSamplerDesc;
@@ -93,6 +94,12 @@ void Compute::Startup(void)
         s_GraphicsPSO.SetVertexShader(SHADER_ARGS(g_pdisplayVS));
         s_GraphicsPSO.SetPixelShader(SHADER_ARGS(g_pdisplayPS));
         s_GraphicsPSO.Finalize();
+        ID3D12ShaderReflection* d3d12reflection = NULL;
+        D3DReflect(SHADER_ARGS(g_pcompute), IID_PPV_ARGS(&d3d12reflection));
+        D3D12_SHADER_DESC shaderDesc;
+        d3d12reflection->GetDesc(&shaderDesc);
+        d3d12reflection->GetThreadGroupSize(
+            &s_ThreadGroupSize[0], &s_ThreadGroupSize[1], &s_ThreadGroupSize[2]);
        
     }
    
@@ -114,7 +121,6 @@ void Compute::Update(float _delta)
     s_time += _delta;
 }
 
-uint32_t ThreadGroupSize[2] = { 16,16 };
 void Compute::RenderScene(void)
 {
 
@@ -130,12 +136,12 @@ void Compute::RenderScene(void)
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Compute");
     ComputeContext& computeContext = gfxContext.GetComputeContext();
     computeContext.SetRootSignature(s_ComputeSig);
-    computeContext.SetPipelineState(s_computePSO);
+    computeContext.SetPipelineState(s_ComputePSO);
    
     computeContext.TransitionResource(s_PixelBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
     computeContext.SetDynamicDescriptor(ComputeRootParams::UAVParam, 0, s_PixelBuffer.GetUAV());
     computeContext.SetDynamicConstantBufferView(ComputeRootParams::UniformBufferParam, sizeof(gUniformData), &gUniformData);
-    computeContext.Dispatch2D(s_PixelBuffer.GetWidth(), s_PixelBuffer.GetHeight(),16, 16);
+    computeContext.Dispatch2D(s_PixelBuffer.GetWidth(), s_PixelBuffer.GetHeight(), s_ThreadGroupSize[0], s_ThreadGroupSize[1]);
     
     
 

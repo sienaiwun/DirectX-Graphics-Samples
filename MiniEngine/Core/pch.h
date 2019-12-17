@@ -34,7 +34,19 @@
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
-#include "d3dx12.h"
+
+#pragma region
+#include <d3dx12.h>
+#include <d3d12shader.h>
+#include <d3dcompiler.h>
+#pragma endregion
+
+
+#pragma region
+
+#pragma comment (lib, "d3dcompiler.lib")
+
+#pragma endregion
 
 #include <cstdint>
 #include <cstdio>
