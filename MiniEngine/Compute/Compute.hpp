@@ -1,6 +1,5 @@
 #pragma once
 
-#define Noise_B 0x1000
 
 #include "pch.h"
 
