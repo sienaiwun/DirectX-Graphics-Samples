@@ -40,19 +40,18 @@ namespace {
 
     __declspec(align(16))struct WorldBufferConstants
     {
-        
         int mWidth;
         int mHeight;
         int mRenderSoftShadows;
-        int tap;
+        float mSpeed;
         float mEpsilon;
         float time;
     } gUniformData;
 
-
-
-    int   gRenderSoftShadows = 1;
-    float gEpsilon = 0.003f;
+    NumVar Epsilon("Application/Epsilon", 0.003, 0.0, 1.0, 0.001);
+    NumVar Speed("Application/Speed", 0.1, 0.0, 5.0, 0.1);
+    BoolVar RenderShadow("Application/RenderShadow", true);
+    float s_time = 0;
 
 
 };
@@ -99,7 +98,6 @@ void Compute::Startup(void)
    
 
   
-    const Vector3 eye = Vector3(.5f, 0.0f, 0.0f);
     s_PixelBuffer.Create(L"pixel buffer", g_SceneColorBuffer.GetWidth(), g_SceneColorBuffer.GetHeight(), 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 }
 
@@ -111,18 +109,21 @@ void Compute::Cleanup(void)
 
 }
 
-void Compute::Update(float)
+void Compute::Update(float _delta)
 {
+    s_time += _delta;
 }
 
 uint32_t ThreadGroupSize[2] = { 16,16 };
 void Compute::RenderScene(void)
 {
 
-    gUniformData.mRenderSoftShadows = gRenderSoftShadows;
-    gUniformData.mEpsilon = gEpsilon;
+    gUniformData.mRenderSoftShadows = RenderShadow;
+    gUniformData.mEpsilon = Epsilon;
+    gUniformData.mSpeed = Speed;
     gUniformData.mWidth = g_SceneColorBuffer.GetWidth();
     gUniformData.mHeight = g_SceneColorBuffer.GetHeight();
+    gUniformData.time = s_time;
     
 
    

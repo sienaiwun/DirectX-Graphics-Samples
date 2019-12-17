@@ -6,7 +6,7 @@ cbuffer uniformBlock : register(b0)
     int c_width            : packoffset(c0.x);
     int c_height           : packoffset(c0.y);
     int c_renderSoftShadows: packoffset(c0.z);
-    int tap                : packoffset(c0.w);
+    float c_speed                : packoffset(c0.w);
     float c_epsilon        : packoffset(c1.x);
     float c_time           : packoffset(c1.y);;
 }
@@ -66,7 +66,7 @@ float GearShadow(float2 uv, Gear g)
 void DrawGear(inout float3 color, float2 uv, Gear g, float eps)
 {
     float d = smoothstep(eps, -eps, GearDe(uv, g));
-    float s = 1.0 - 0.7*GearShadow(uv, g);
+    float s = 1.0 - 0.7*GearShadow(uv, g)*c_renderSoftShadows;
     color = lerp(s*color, g.color, d);
 }
 
@@ -77,14 +77,14 @@ void DrawGear(inout float3 color, float2 uv, Gear g, float eps)
 [numthreads(16, 16, 1)]
 void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint GI : SV_GroupIndex)
 {
-    float t = 0.0f;
+    float t = c_speed *c_time;
     float4 coord = float4((float)DTid.x, (float)DTid.y, 0.0f, 0.0f);
     float2 size = float2((float)c_width, (float)c_height);
 
     float2 uv = coord.xy / size.xy;
     uv.y = 1.0f - uv.y;
     uv = uv * 2.0f - 1.0f;
-    float eps = 2.0 / c_height;
+    float eps = c_epsilon;
 
     // Scene parameters;
     float3 base = float3(0.95, 0.7, 0.2);
