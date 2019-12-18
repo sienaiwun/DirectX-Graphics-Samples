@@ -16,7 +16,7 @@ namespace {
     D3D12_RECT s_MainScissor;
     ColorBuffer s_PixelBuffer(Color(1.0f, 1.0f, 1.0f));
 
-    uint32_t s_ThreadGroupSize[2] = { 8,8 };
+    uint32_t s_ThreadGroupSize[3] = { 8, 8, 8};
     enum ComputeRootParams :unsigned char
     {
         UniformBufferParam,
