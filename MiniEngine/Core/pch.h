@@ -55,7 +55,7 @@
 #include <memory>
 #include <string>
 #include <exception>
-
+#include <numeric>
 #include <wrl.h>
 #include <ppltasks.h>
 #include <gsl\gsl>
@@ -70,3 +70,20 @@ using NotNull = gsl::not_null< T >;
 
 #define SHADER_ARGS(shader) (shader), \
 								 sizeof(shader)
+
+template<typename T, std::size_t N>
+struct Array :public std::array<T, N>
+{
+public:
+    T product()
+    {
+        auto multiply = [](T priview, T current) {
+            return priview * current;
+        };
+        return std::accumulate(begin(), end(), 1, multiply);
+    }
+};
+
+using U32x2 = Array<uint32_t, 2>;
+using U32x3 = Array<uint32_t, 3>;
+using F32x3 = Array<float, 3>;

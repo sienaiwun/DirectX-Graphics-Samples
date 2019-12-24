@@ -41,3 +41,16 @@ public:
     virtual void Update(float deltaT) override ;
     virtual void RenderScene(void) override ;
 };
+
+
+
+void RandomColor(float v[4])
+{
+    do
+    {
+        v[0] = 2.0f * rand() / (float)RAND_MAX - 1.0f;
+        v[1] = 2.0f * rand() / (float)RAND_MAX - 1.0f;
+        v[2] = 2.0f * rand() / (float)RAND_MAX - 1.0f;
+    } while (v[0] < 0 && v[1] < 0 && v[2] < 0);    // prevent black colors
+    v[3] = 1.0f;
+}

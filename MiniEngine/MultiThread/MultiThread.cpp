@@ -6,17 +6,44 @@
 #pragma endregion
 
 
+
+
+struct BufferElement
+{
+    U32x2 StartIndex;
+    F32x3 color;
+};
+
+struct PerThreadData
+{
+    ColorBuffer quadBuffer;
+    Color quadColor;
+    size_t index;
+    U32x2 StartIndex;
+    BufferElement GetGpuElement()
+    {
+        BufferElement element;
+        element.StartIndex = StartIndex,
+        element.color = {quadColor.R(), quadColor.G(),quadColor.B()};
+        return element;
+    }
+};
+
 namespace {
     RootSignature  s_ComputeSig;
     RootSignature s_GraphicsSig;
     GraphicsPSO s_GraphicsPSO;
     ComputePSO s_ComputePSO;
-
+    uint32_t s_width, s_height;
     D3D12_VIEWPORT s_MainViewport;
     D3D12_RECT s_MainScissor;
-    ColorBuffer s_PixelBuffer(Color(1.0f, 1.0f, 1.0f));
-
-    std::array<uint32_t, 2> s_ThreadGroupSize = { 8,8 };
+    U32x2 s_TileNum;
+    U32x3 s_ThreadGroupSize = { 8,8,8 };
+    std::vector<PerThreadData> s_workLoads;
+    std::vector<BufferElement> s_bufferElements;
+    StructuredBuffer s_mappedBuffer;
+    ColorBuffer s_PixelBuffer;
+    
     enum ComputeRootParams :unsigned char
     {
         UniformBufferParam,
@@ -95,17 +122,29 @@ void MultiThread::Startup(void)
             &s_ThreadGroupSize[0], &s_ThreadGroupSize[1], &s_ThreadGroupSize[2]);
 
     }
-
+    {
+        s_width = g_SceneColorBuffer.GetWidth();
+        s_height = g_SceneColorBuffer.GetHeight();
+        s_TileNum = { Math::DivideByMultiple(s_width,s_ThreadGroupSize[0]), Math::DivideByMultiple(s_height,s_ThreadGroupSize[1]) };
+        const uint32_t jobs_num = s_TileNum.product();
+        s_workLoads = std::vector<PerThreadData>(jobs_num);
+        s_bufferElements = std::vector<BufferElement>(jobs_num);
+        for (size_t n = 0; n < s_workLoads.size(); n++)
+        {
+            s_workLoads[n].index = n;
+            s_workLoads[n].StartIndex = { (uint32_t)n % s_TileNum[0], (uint32_t)n / s_TileNum[0] };
+            s_workLoads[n].quadBuffer.Create(L"Quad Buffer" + n, s_ThreadGroupSize[0], s_ThreadGroupSize[1], 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+            RandomColor((float*)&s_workLoads[n].quadColor);
+            s_bufferElements[n] = s_workLoads[n].GetGpuElement();
+        }
+        s_mappedBuffer.Create(L"mapped buffer", jobs_num, sizeof(BufferElement), s_bufferElements.data());
+    }
 
 
 }
 
 void MultiThread::Cleanup(void)
 {
-
-
-
-
 }
 
 void MultiThread::Update(float )
