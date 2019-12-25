@@ -64,7 +64,7 @@ namespace {
         UAV_SLOT,
         NumSlotParams,
     };
-
+#pragma warning( disable : 4324 ) // Added padding.
     __declspec(align(16))struct WorldBufferConstants
     {
         F32x3 c_color;
