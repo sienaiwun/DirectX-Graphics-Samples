@@ -54,7 +54,9 @@ namespace {
 
     enum GraphicRootParams :unsigned char
     {
+        UniformBufferParamCBv,
         InputTextureSRV,
+        StructBufferParamSRV,
         NumGraphicsParams,
     };
 
@@ -65,11 +67,13 @@ namespace {
         NumSlotParams,
     };
 #pragma warning( disable : 4324 ) // Added padding.
+
     __declspec(align(16))struct WorldBufferConstants
     {
-        F32x3 c_color;
-        float tap;
+        F32x2 screen_res;
+        F32x2 padding;
         U32x2 tile_num;
+        U32x2 tile_res;
     } gUniformData;
 };
 
@@ -95,7 +99,9 @@ void MultiThread::Startup(void)
         DefaultSamplerDesc.MaxAnisotropy = 8;
         s_GraphicsSig.Reset(GraphicRootParams::NumGraphicsParams, 1);
         s_GraphicsSig.InitStaticSampler(0, DefaultSamplerDesc, D3D12_SHADER_VISIBILITY_PIXEL);
+        s_GraphicsSig[GraphicRootParams::UniformBufferParamCBv].InitAsConstantBuffer(SLOT::COMPUTE_BUFFER_SLOT, D3D12_SHADER_VISIBILITY_VERTEX);
         s_GraphicsSig[GraphicRootParams::InputTextureSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+        s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
         s_GraphicsSig.Finalize(L"Graphic");
 
 
@@ -154,9 +160,9 @@ void MultiThread::Update(float )
 void MultiThread::RenderScene(void)
 {
 
-    gUniformData.c_color = { 0, 1, 0 };
+    gUniformData.tile_res = { s_ThreadGroupSize[0], s_ThreadGroupSize[1] };
     gUniformData.tile_num = s_tileNum;
-
+    gUniformData.screen_res = { (float)s_width,(float)s_height };
 
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Compute");
     ComputeContext& computeContext = gfxContext.GetComputeContext();
@@ -183,7 +189,8 @@ void MultiThread::RenderScene(void)
 
     gfxContext.TransitionResource(s_PixelBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
     gfxContext.SetDynamicDescriptor(GraphicRootParams::InputTextureSRV, 0, s_PixelBuffer.GetSRV());
-
+    gfxContext.SetDynamicDescriptor(GraphicRootParams::StructBufferParamSRV, 0, s_mappedBuffer.GetSRV());
+    gfxContext.SetDynamicConstantBufferView(GraphicRootParams::UniformBufferParamCBv, sizeof(gUniformData), &gUniformData);
 
     s_MainViewport.Width = (float)g_SceneColorBuffer.GetWidth();
     s_MainViewport.Height = (float)g_SceneColorBuffer.GetHeight();
@@ -198,7 +205,7 @@ void MultiThread::RenderScene(void)
     s_MainScissor.bottom = (LONG)g_SceneColorBuffer.GetHeight();
 
     gfxContext.SetViewportAndScissor(s_MainViewport, s_MainScissor);
-    gfxContext.Draw(4); // draw quad
+    gfxContext.DrawInstanced(4, s_tileNum.product(),0,0); // draw quad
     gfxContext.Finish();
 
 
