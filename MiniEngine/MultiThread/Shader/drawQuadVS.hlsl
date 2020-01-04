@@ -1,12 +1,18 @@
 
-struct ElementData
+cbuffer ElementData: register(b1)
 {
-    uint2 index;
-    float3 color;
+    uint2 index;       // : packoffset(c0);
+    uint  index1d;     // : packoffset(c0.z);
+    uint  _;
+    float3 c_color;      // : packoffset(c1);
+    float __;
+    float4 tap1;       //  : packoffset(c2);
+    float4 tap2;        // : packoffset(c3);
+    float4 tap_array[12];
 };
 
 
-StructuredBuffer<ElementData> g_ElementBuffer : register(t1);
+//StructuredBuffer<ElementData> g_ElementBuffer : register(t1);
 
 cbuffer uniformBlock : register(b0)
 {
@@ -33,9 +39,9 @@ void main(
     // Texture coordinates range [0, 2], but only [0, 1] appears on screen.
     Tex = float2(VertID % 2, (VertID % 4) >> 1);
     Pos = float4((Tex.x - 0.5f) * 2, -(Tex.y - 0.5f) * 2, 0, 1);
-    int x = InstanceID % tile_num.x;
-    int y = InstanceID / tile_num.x;
+    int x = index1d % tile_num.x;
+    int y = index1d / tile_num.x;
     Pos.xy = DrawQuad(Pos.xy, float2(x, y));
-    color = g_ElementBuffer[InstanceID].color;
+    color = c_color;
 }
 

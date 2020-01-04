@@ -84,6 +84,9 @@ public:
     }
 };
 
-using U32x2 = Array<uint32_t, 2>;
-using U32x3 = Array<uint32_t, 3>;
+using U32 = uint32_t;
+using U32x1 = U32;
+using U32x2 = Array<U32, 2>;
+using U32x3 = Array<U32, 3>;
 using F32x3 = Array<float, 3>;
+using F32x2 = Array<float, 2>;

@@ -8,23 +8,27 @@
 
 
 
-struct BufferElement
+__declspec(align(256)) struct BufferElement
 {
     U32x2 StartIndex;
+    U32 index;
+    U32 _;
     F32x3 color;
+    
 };
 
 struct PerThreadData
 {
     ColorBuffer quadBuffer;
     Color quadColor;
-    size_t index;
+    U32 index;
     U32x2 StartIndex;
     BufferElement GetGpuElement()
     {
         BufferElement element;
         element.StartIndex = StartIndex,
         element.color = {quadColor.R(), quadColor.G(),quadColor.B()};
+        element.index = index;
         return element;
     }
 };
@@ -41,6 +45,7 @@ namespace {
     U32x3 s_ThreadGroupSize = { 8,8,8 };
     std::vector<PerThreadData> s_workLoads;
     std::vector<BufferElement> s_bufferElements;
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> s_constants_handles;
     StructuredBuffer s_mappedBuffer;
     ColorBuffer s_PixelBuffer;
     
@@ -75,6 +80,14 @@ namespace {
         U32x2 tile_num;
         U32x2 tile_res;
     } gUniformData;
+
+    __declspec(align(256))struct WorldBufferConstantsCBV
+    {
+        F32x2 screen_res;
+        F32x2 padding;
+        U32x2 tile_num;
+        U32x2 tile_res;
+    } gUniformDataCBV;
 };
 
 
@@ -84,6 +97,19 @@ void MultiThread::Startup(void)
 {
 
     s_PixelBuffer.Create(L"temp pixel buffer", g_SceneColorBuffer.GetWidth(), g_SceneColorBuffer.GetHeight(), 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    {
+        ID3D12ShaderReflection* d3d12reflection = NULL;
+        D3DReflect(SHADER_ARGS(g_pfillCS), IID_PPV_ARGS(&d3d12reflection));
+        D3D12_SHADER_DESC shaderDesc;
+        d3d12reflection->GetDesc(&shaderDesc);
+        d3d12reflection->GetThreadGroupSize(
+            &s_ThreadGroupSize[0], &s_ThreadGroupSize[1], &s_ThreadGroupSize[2]);
+        s_width = g_SceneColorBuffer.GetWidth();
+        s_height = g_SceneColorBuffer.GetHeight();
+        s_tileNum = { Math::DivideByMultiple(s_width,s_ThreadGroupSize[0]), Math::DivideByMultiple(s_height,s_ThreadGroupSize[1]) };
+        
+
+    }
     {
         s_ComputeSig.Reset(ComputeRootParams::NumComputeParams, 0);
         s_ComputeSig[ComputeRootParams::UniformBufferParam].InitAsConstantBuffer(SLOT::COMPUTE_BUFFER_SLOT, D3D12_SHADER_VISIBILITY_ALL);
@@ -98,10 +124,12 @@ void MultiThread::Startup(void)
         SamplerDesc DefaultSamplerDesc;
         DefaultSamplerDesc.MaxAnisotropy = 8;
         s_GraphicsSig.Reset(GraphicRootParams::NumGraphicsParams, 1);
-        s_GraphicsSig.InitStaticSampler(0, DefaultSamplerDesc, D3D12_SHADER_VISIBILITY_PIXEL);
-        s_GraphicsSig[GraphicRootParams::UniformBufferParamCBv].InitAsConstantBuffer(SLOT::COMPUTE_BUFFER_SLOT, D3D12_SHADER_VISIBILITY_VERTEX);
-        s_GraphicsSig[GraphicRootParams::InputTextureSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
-        s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+        s_GraphicsSig.InitStaticSampler(0, DefaultSamplerDesc, D3D12_SHADER_VISIBILITY_ALL);
+        s_GraphicsSig[GraphicRootParams::UniformBufferParamCBv].InitAsConstantBuffer(SLOT::COMPUTE_BUFFER_SLOT, D3D12_SHADER_VISIBILITY_ALL);
+        s_GraphicsSig[GraphicRootParams::InputTextureSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_ALL);
+        s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,1, 1, D3D12_SHADER_VISIBILITY_ALL);
+
+        //s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
         s_GraphicsSig.Finalize(L"Graphic");
 
 
@@ -119,31 +147,27 @@ void MultiThread::Startup(void)
         s_graphicsPSO.SetVertexShader(SHADER_ARGS(g_pdrawQuadVS));
         s_graphicsPSO.SetPixelShader(SHADER_ARGS(g_pdrawQuadPS));
         s_graphicsPSO.Finalize();
-        ID3D12ShaderReflection* d3d12reflection = NULL;
-        D3DReflect(SHADER_ARGS(g_pfillCS), IID_PPV_ARGS(&d3d12reflection));
-        D3D12_SHADER_DESC shaderDesc;
-        d3d12reflection->GetDesc(&shaderDesc);
-        d3d12reflection->GetThreadGroupSize(
-            &s_ThreadGroupSize[0], &s_ThreadGroupSize[1], &s_ThreadGroupSize[2]);
+       
 
     }
     {
-        s_width = g_SceneColorBuffer.GetWidth();
-        s_height = g_SceneColorBuffer.GetHeight();
-        s_tileNum = { Math::DivideByMultiple(s_width,s_ThreadGroupSize[0]), Math::DivideByMultiple(s_height,s_ThreadGroupSize[1]) };
         const uint32_t jobs_num = s_tileNum.product();
         s_workLoads = std::vector<PerThreadData>(jobs_num);
         s_bufferElements = std::vector<BufferElement>(jobs_num);
         for (size_t n = 0; n < s_workLoads.size(); n++)
         {
-            s_workLoads[n].index = n;
+            s_workLoads[n].index = (U32)n;
             s_workLoads[n].StartIndex = { (uint32_t)n % s_tileNum[0], (uint32_t)n / s_tileNum[0] };
             s_workLoads[n].quadBuffer.Create(L"Quad Buffer" + n, s_ThreadGroupSize[0], s_ThreadGroupSize[1], 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
             RandomColor((float*)&s_workLoads[n].quadColor);
             s_bufferElements[n] = s_workLoads[n].GetGpuElement();
         }
         s_mappedBuffer.Create(L"mapped buffer", jobs_num, sizeof(BufferElement), s_bufferElements.data());
-
+        s_constants_handles.resize(s_tileNum.product());
+        for (size_t i = 0; i < s_tileNum.product(); i++)
+        {
+            s_constants_handles[i] = s_mappedBuffer.CreateConstantBufferView(i * sizeof(BufferElement), sizeof(BufferElement));
+        }
     }
 
 
@@ -189,7 +213,7 @@ void MultiThread::RenderScene(void)
 
     gfxContext.TransitionResource(s_PixelBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
     gfxContext.SetDynamicDescriptor(GraphicRootParams::InputTextureSRV, 0, s_PixelBuffer.GetSRV());
-    gfxContext.SetDynamicDescriptor(GraphicRootParams::StructBufferParamSRV, 0, s_mappedBuffer.GetSRV());
+    //gfxContext.SetDynamicDescriptor(GraphicRootParams::StructBufferParamSRV, 0, s_mappedBuffer.GetSRV());
     gfxContext.SetDynamicConstantBufferView(GraphicRootParams::UniformBufferParamCBv, sizeof(gUniformData), &gUniformData);
 
     s_MainViewport.Width = (float)g_SceneColorBuffer.GetWidth();
@@ -205,7 +229,13 @@ void MultiThread::RenderScene(void)
     s_MainScissor.bottom = (LONG)g_SceneColorBuffer.GetHeight();
 
     gfxContext.SetViewportAndScissor(s_MainViewport, s_MainScissor);
-    gfxContext.DrawInstanced(4, s_tileNum.product(),0,0); // draw quad
+   
+      for(size_t i = 0;i< s_tileNum.product();i++)
+    {
+        gfxContext.SetDynamicDescriptor(GraphicRootParams::StructBufferParamSRV, 0, s_constants_handles[i]);
+        gfxContext.DrawInstanced(4, 1, 0, 0); // multi instance draw quad
+
+    }
     gfxContext.Finish();
 
 
