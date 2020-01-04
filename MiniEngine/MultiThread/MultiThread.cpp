@@ -45,7 +45,7 @@ namespace {
     U32x3 s_ThreadGroupSize = { 8,8,8 };
     std::vector<PerThreadData> s_workLoads;
     std::vector<BufferElement> s_bufferElements;
-    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> s_constants_handles;
+    std::vector<D3D12_GPU_VIRTUAL_ADDRESS> s_constants_handles;
     StructuredBuffer s_mappedBuffer;
     ColorBuffer s_PixelBuffer;
     
@@ -126,8 +126,9 @@ void MultiThread::Startup(void)
         s_GraphicsSig.Reset(GraphicRootParams::NumGraphicsParams, 1);
         s_GraphicsSig.InitStaticSampler(0, DefaultSamplerDesc, D3D12_SHADER_VISIBILITY_ALL);
         s_GraphicsSig[GraphicRootParams::UniformBufferParamCBv].InitAsConstantBuffer(SLOT::COMPUTE_BUFFER_SLOT, D3D12_SHADER_VISIBILITY_ALL);
-        s_GraphicsSig[GraphicRootParams::InputTextureSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_ALL);
-        s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,1, 1, D3D12_SHADER_VISIBILITY_ALL);
+        s_GraphicsSig[GraphicRootParams::InputTextureSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
+       // s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,1, 1, D3D12_SHADER_VISIBILITY_ALL);
+        s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsConstantBuffer( 1, D3D12_SHADER_VISIBILITY_ALL);
 
         //s_GraphicsSig[GraphicRootParams::StructBufferParamSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
         s_GraphicsSig.Finalize(L"Graphic");
@@ -164,9 +165,10 @@ void MultiThread::Startup(void)
         }
         s_mappedBuffer.Create(L"mapped buffer", jobs_num, sizeof(BufferElement), s_bufferElements.data());
         s_constants_handles.resize(s_tileNum.product());
+        auto first_address = s_mappedBuffer.GetGpuVirtualAddress();
         for (size_t i = 0; i < s_tileNum.product(); i++)
         {
-            s_constants_handles[i] = s_mappedBuffer.CreateConstantBufferView(i * sizeof(BufferElement), sizeof(BufferElement));
+            s_constants_handles[i] = first_address +  i * sizeof(BufferElement);
         }
     }
 
@@ -232,7 +234,8 @@ void MultiThread::RenderScene(void)
    
       for(size_t i = 0;i< s_tileNum.product();i++)
     {
-        gfxContext.SetDynamicDescriptor(GraphicRootParams::StructBufferParamSRV, 0, s_constants_handles[i]);
+          gfxContext.SetConstantBuffer(GraphicRootParams::StructBufferParamSRV, s_constants_handles[i]);
+        //gfxContext.SetDynamicDescriptor(GraphicRootParams::StructBufferParamSRV, 0, s_constants_handles[i]);
         gfxContext.DrawInstanced(4, 1, 0, 0); // multi instance draw quad
 
     }
