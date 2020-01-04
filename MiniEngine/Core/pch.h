@@ -74,14 +74,15 @@ using NotNull = gsl::not_null< T >;
 template<typename T, std::size_t N>
 struct Array :public std::array<T, N>
 {
+    static inline std::function<T(T, T)> multiply = [](T priview, T current) {
+        return priview * current;
+    };
 public:
     T product()
     {
-        auto multiply = [](T priview, T current) {
-            return priview * current;
-        };
         return std::accumulate(begin(), end(), 1, multiply);
     }
+    
 };
 
 using U32 = uint32_t;

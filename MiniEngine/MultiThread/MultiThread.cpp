@@ -5,7 +5,11 @@
 #include "CompiledShaders/fillCS.h"
 #pragma endregion
 
-
+struct IndirectCommand
+{
+    D3D12_GPU_VIRTUAL_ADDRESS cbv;
+    D3D12_DRAW_ARGUMENTS drawArguments;
+};
 
 
 __declspec(align(256)) struct BufferElement
@@ -46,8 +50,11 @@ namespace {
     std::vector<PerThreadData> s_workLoads;
     std::vector<BufferElement> s_bufferElements;
     std::vector<D3D12_GPU_VIRTUAL_ADDRESS> s_constants_handles;
+    std::vector<IndirectCommand> s_commands;
     StructuredBuffer s_mappedBuffer;
+    StructuredBuffer s_commandBuffer;
     ColorBuffer s_PixelBuffer;
+    CommandSignature s_indirectDrawSig(2);
     
     enum ComputeRootParams :unsigned char
     {
@@ -170,6 +177,19 @@ void MultiThread::Startup(void)
         {
             s_constants_handles[i] = first_address +  i * sizeof(BufferElement);
         }
+        s_commands.resize(s_tileNum.product());
+        for (size_t i = 0; i < s_tileNum.product(); i++)
+        {
+            s_commands[i].cbv = first_address + i * sizeof(BufferElement);;
+            s_commands[i].drawArguments.VertexCountPerInstance = 4;
+            s_commands[i].drawArguments.InstanceCount = 1;
+            s_commands[i].drawArguments.StartVertexLocation = 0;
+            s_commands[i].drawArguments.StartInstanceLocation = 0;
+        }
+        s_commandBuffer.Create(L"indirect draw buffer", s_tileNum.product(), sizeof(IndirectCommand), s_commands.data());
+        s_indirectDrawSig[0].ConstantBufferView(GraphicRootParams::StructBufferParamSRV);
+        s_indirectDrawSig[1].Draw();
+        s_indirectDrawSig.Finalize(&s_GraphicsSig);
     }
 
 
@@ -232,13 +252,14 @@ void MultiThread::RenderScene(void)
 
     gfxContext.SetViewportAndScissor(s_MainViewport, s_MainScissor);
    
-      for(size_t i = 0;i< s_tileNum.product();i++)
+      /*for(size_t i = 0;i< s_tileNum.product();i++)
     {
           gfxContext.SetConstantBuffer(GraphicRootParams::StructBufferParamSRV, s_constants_handles[i]);
         //gfxContext.SetDynamicDescriptor(GraphicRootParams::StructBufferParamSRV, 0, s_constants_handles[i]);
         gfxContext.DrawInstanced(4, 1, 0, 0); // multi instance draw quad
 
-    }
+    }*/
+    gfxContext.ExecuteIndirect(s_indirectDrawSig, s_commandBuffer, 0, s_tileNum.product());
     gfxContext.Finish();
 
 
