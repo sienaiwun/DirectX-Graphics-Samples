@@ -11,13 +11,11 @@ cbuffer ElementData: register(b1)
     float4 tap_array[12];
 };
 
-
-//StructuredBuffer<ElementData> g_ElementBuffer : register(t1);
-
 cbuffer uniformBlock : register(b0)
 {
     float2 screen_res : packoffset(c0);
-    float2 padding : packoffset(c0.z);
+    float time : packoffset(c0.z);
+    float padding : packoffset(c0.w);
     uint2 tile_num :packoffset(c1);
     uint2 tile_res :packoffset(c1.z);
 }
