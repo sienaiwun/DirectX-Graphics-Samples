@@ -7,8 +7,8 @@ struct IndirectCommand
     uint2 cbvAddress;
     uint4 drawArguments;
 };
-AppendStructuredBuffer<IndirectCommand> outputCommands : register(u1);
-StructuredBuffer<IndirectCommand> inputCommands : register(t1);
+AppendStructuredBuffer<IndirectCommand> outputCommands : register(u0);
+StructuredBuffer<IndirectCommand> inputCommands : register(t0);
 
 
 cbuffer uniformBlock : register(b0)
