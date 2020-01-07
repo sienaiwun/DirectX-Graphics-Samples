@@ -1,5 +1,5 @@
 #pragma region Header
-#include "MultiThread.hpp"
+#include "IndirectDraw.hpp"
 #include "CompiledShaders/drawQuadVS.h"
 #include "CompiledShaders/drawQuadPS.h"
 #include "CompiledShaders/fillCS.h"
@@ -65,9 +65,9 @@ namespace {
 };
 
 
-CREATE_APPLICATION(MultiThread)
+CREATE_APPLICATION(IndirectDraw)
 
-void MultiThread::Startup(void)
+void IndirectDraw::Startup(void)
 {
 
    {
@@ -149,15 +149,15 @@ void MultiThread::Startup(void)
 
 }
 
-void MultiThread::Cleanup(void)
+void IndirectDraw::Cleanup(void)
 {
 }
 
-void MultiThread::Update(float )
+void IndirectDraw::Update(float )
 {
 }
 
-void MultiThread::RenderScene(void)
+void IndirectDraw::RenderScene(void)
 {
     
     gUniformData.tile_res = { s_ThreadGroupSize[0], s_ThreadGroupSize[1] };

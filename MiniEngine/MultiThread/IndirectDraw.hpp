@@ -30,10 +30,10 @@
 using namespace GameCore;
 using namespace Math;
 using namespace Graphics;
-class MultiThread : public GameCore::IGameApp
+class IndirectDraw : public GameCore::IGameApp
 {
 public:
-    MultiThread(void) {}
+    IndirectDraw(void) {}
 
     virtual void Startup(void) override ;
     virtual void Cleanup(void) override ;

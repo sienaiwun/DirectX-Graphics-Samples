@@ -18,11 +18,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MultiThread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="Shader\drawQuadPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -34,7 +29,12 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MultiThread.hpp">
+    <ClCompile Include="IndirectDraw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="IndirectDraw.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
