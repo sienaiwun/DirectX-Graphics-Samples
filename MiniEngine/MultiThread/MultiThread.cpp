@@ -170,13 +170,8 @@ void MultiThread::RenderScene(void)
     ComputeContext& computeContext = gfxContext.GetComputeContext();
     computeContext.SetRootSignature(s_ComputeSig);
     computeContext.SetPipelineState(s_ComputePSO);
-
-    __declspec(align(16)) UINT zero = 0;
-
-    gfxContext.TransitionResource(s_precessedCommandBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
-    computeContext.WriteBuffer(s_precessedCommandBuffer.GetCounterBuffer(), 0, &zero, sizeof(UINT));
+    computeContext.ResetCounter(s_precessedCommandBuffer,0);
     computeContext.TransitionResource(s_commandBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    computeContext.TransitionResource(s_precessedCommandBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
     computeContext.SetDynamicDescriptor(ComputeRootParams::UAVParam, 0, s_precessedCommandBuffer.GetUAV());
     computeContext.SetDynamicDescriptor(ComputeRootParams::StructBufferParam, 0, s_commandBuffer.GetSRV());
     computeContext.SetDynamicConstantBufferView(ComputeRootParams::UniformBufferParam, sizeof(gUniformData), &gUniformData);
